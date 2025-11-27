@@ -64,4 +64,4 @@ static_sites:
     envs:
       - key: VITE_API_URL
         scope: BUILD_TIME
-        value: ${_self.PUBLIC_URL}/api
+        value: ${_self.PUBLIC_URL}api
