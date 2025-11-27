@@ -52,7 +52,7 @@ import { validate } from './config/env.validation';
             socket: {
               host: configService.get('REDIS_HOST'),
               port: configService.get<number>('REDIS_PORT', 6379),
-              tls: isProduction ? { rejectUnauthorized: false } : undefined,
+              tls: isProduction,
             },
             password: configService.get('REDIS_PASSWORD'),
             ttl: 60 * 1000, // 60 seconds default TTL
@@ -72,7 +72,7 @@ import { validate } from './config/env.validation';
             host: configService.get('REDIS_HOST'),
             port: configService.get<number>('REDIS_PORT', 6379),
             password: configService.get('REDIS_PASSWORD'),
-            tls: isProduction ? { rejectUnauthorized: false } : undefined,
+            tls: isProduction ? {} : undefined,
           },
         };
       },
