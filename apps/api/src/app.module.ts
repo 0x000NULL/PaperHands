@@ -3,6 +3,8 @@ import { ConfigModule, ConfigService } from '@nestjs/config';
 import { TypeOrmModule } from '@nestjs/typeorm';
 import { CacheModule } from '@nestjs/cache-manager';
 import { BullModule } from '@nestjs/bullmq';
+import { ThrottlerModule, ThrottlerGuard } from '@nestjs/throttler';
+import { APP_GUARD } from '@nestjs/core';
 import { redisStore } from 'cache-manager-redis-yet';
 import { AppController } from './app.controller';
 import { AppService } from './app.service';
@@ -11,13 +13,16 @@ import { UsersModule } from './users/users.module';
 import { PortfolioModule } from './portfolio/portfolio.module';
 import { OrdersModule } from './orders/orders.module';
 import { MarketDataModule } from './market-data/market-data.module';
+import { HealthModule } from './health/health.module';
+import { validate } from './config/env.validation';
 
 @Module({
   imports: [
-    // Config
+    // Config with validation
     ConfigModule.forRoot({
       isGlobal: true,
       envFilePath: '.env',
+      validate,
     }),
 
     // Database
@@ -28,9 +33,10 @@ import { MarketDataModule } from './market-data/market-data.module';
         url: configService.get('DATABASE_URL'),
         autoLoadEntities: true,
         synchronize: configService.get('NODE_ENV') !== 'production',
-        ssl: configService.get('NODE_ENV') === 'production'
-          ? { rejectUnauthorized: false }
-          : false,
+        ssl:
+          configService.get('NODE_ENV') === 'production'
+            ? { rejectUnauthorized: false }
+            : false,
       }),
       inject: [ConfigService],
     }),
@@ -65,14 +71,29 @@ import { MarketDataModule } from './market-data/market-data.module';
       inject: [ConfigService],
     }),
 
+    // Rate limiting
+    ThrottlerModule.forRoot([
+      {
+        ttl: 60000, // 1 minute
+        limit: 100, // 100 requests per minute
+      },
+    ]),
+
     // Feature modules
     AuthModule,
     UsersModule,
     PortfolioModule,
     OrdersModule,
     MarketDataModule,
+    HealthModule,
   ],
   controllers: [AppController],
-  providers: [AppService],
+  providers: [
+    AppService,
+    {
+      provide: APP_GUARD,
+      useClass: ThrottlerGuard,
+    },
+  ],
 })
 export class AppModule {}

@@ -5,6 +5,7 @@ import {
   CreateDateColumn,
   ManyToOne,
   JoinColumn,
+  Index,
 } from 'typeorm';
 import { User } from '../../users/entities/user.entity';
 
@@ -28,6 +29,7 @@ export class Order {
   @JoinColumn({ name: 'user_id' })
   user: User;
 
+  @Index()
   @Column()
   userId: string;
 
@@ -46,6 +48,7 @@ export class Order {
   @Column({ type: 'enum', enum: OrderStatus, default: OrderStatus.PENDING })
   status: OrderStatus;
 
+  @Index()
   @CreateDateColumn()
   createdAt: Date;
 }

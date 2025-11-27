@@ -6,6 +6,7 @@ import {
   UpdateDateColumn,
   OneToMany,
 } from 'typeorm';
+import { Exclude } from 'class-transformer';
 import { Position } from '../../portfolio/entities/position.entity';
 import { Order } from '../../orders/entities/order.entity';
 
@@ -18,6 +19,7 @@ export class User {
   email: string;
 
   @Column()
+  @Exclude()
   passwordHash: string;
 
   @Column('decimal', { precision: 12, scale: 2, default: 100000 })

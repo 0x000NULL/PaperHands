@@ -4,11 +4,11 @@ import {
   NotFoundException,
 } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { Repository, DataSource } from 'typeorm';
+import { Repository, DataSource, EntityManager } from 'typeorm';
 import { Order, OrderSide, OrderStatus } from './entities/order.entity';
 import { User } from '../users/entities/user.entity';
+import { Position } from '../portfolio/entities/position.entity';
 import { TradierService } from '../market-data/tradier.service';
-import { PortfolioService } from '../portfolio/portfolio.service';
 import { CreateOrderDto } from './dto/create-order.dto';
 
 @Injectable()
@@ -19,7 +19,6 @@ export class OrdersService {
     @InjectRepository(User)
     private userRepository: Repository<User>,
     private tradierService: TradierService,
-    private portfolioService: PortfolioService,
     private dataSource: DataSource,
   ) {}
 
@@ -72,11 +71,11 @@ export class OrdersService {
           cashBalance: Number(user.cashBalance) - totalCost,
         });
       } else {
-        // Check if user has enough shares
-        const position = await this.portfolioService.findPosition(
-          userId,
-          upperSymbol,
-        );
+        // Check if user has enough shares - WITH LOCK inside transaction
+        const position = await queryRunner.manager.findOne(Position, {
+          where: { userId, symbol: upperSymbol },
+          lock: { mode: 'pessimistic_write' },
+        });
 
         if (!position || Number(position.quantity) < quantity) {
           const availableQty = position ? Number(position.quantity) : 0;
@@ -92,7 +91,7 @@ export class OrdersService {
       }
 
       // Create order record
-      const order = this.orderRepository.create({
+      const order = queryRunner.manager.create(Order, {
         userId,
         symbol: upperSymbol,
         side,
@@ -103,8 +102,9 @@ export class OrdersService {
 
       await queryRunner.manager.save(order);
 
-      // Update position
-      await this.portfolioService.createOrUpdatePosition(
+      // Update position INSIDE the transaction
+      await this.updatePositionInTransaction(
+        queryRunner.manager,
         userId,
         upperSymbol,
         quantity,
@@ -129,6 +129,52 @@ export class OrdersService {
       throw error;
     } finally {
       await queryRunner.release();
+    }
+  }
+
+  private async updatePositionInTransaction(
+    manager: EntityManager,
+    userId: string,
+    symbol: string,
+    quantity: number,
+    price: number,
+    isBuy: boolean,
+  ): Promise<void> {
+    const existingPosition = await manager.findOne(Position, {
+      where: { userId, symbol },
+      lock: { mode: 'pessimistic_write' },
+    });
+
+    if (isBuy) {
+      if (existingPosition) {
+        const existingQty = Number(existingPosition.quantity);
+        const existingCost = Number(existingPosition.avgCostBasis);
+        const newTotalQty = existingQty + quantity;
+        const newAvgCost =
+          (existingQty * existingCost + quantity * price) / newTotalQty;
+        await manager.update(Position, existingPosition.id, {
+          quantity: newTotalQty,
+          avgCostBasis: newAvgCost,
+        });
+      } else {
+        const position = manager.create(Position, {
+          userId,
+          symbol,
+          quantity,
+          avgCostBasis: price,
+        });
+        await manager.save(position);
+      }
+    } else {
+      if (existingPosition) {
+        const existingQty = Number(existingPosition.quantity);
+        const newQty = existingQty - quantity;
+        if (newQty <= 0) {
+          await manager.remove(existingPosition);
+        } else {
+          await manager.update(Position, existingPosition.id, { quantity: newQty });
+        }
+      }
     }
   }
 

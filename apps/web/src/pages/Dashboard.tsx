@@ -10,19 +10,19 @@ export function Dashboard() {
   const [error, setError] = useState('');
 
   useEffect(() => {
+    const loadPortfolio = async () => {
+      try {
+        const data = await api.getPortfolio();
+        setPortfolio(data);
+      } catch (err) {
+        setError(err instanceof Error ? err.message : 'Failed to load portfolio');
+      } finally {
+        setLoading(false);
+      }
+    };
+
     loadPortfolio();
   }, []);
-
-  const loadPortfolio = async () => {
-    try {
-      const data = await api.getPortfolio();
-      setPortfolio(data);
-    } catch (err) {
-      setError(err instanceof Error ? err.message : 'Failed to load portfolio');
-    } finally {
-      setLoading(false);
-    }
-  };
 
   const formatCurrency = (value: number) =>
     new Intl.NumberFormat('en-US', {

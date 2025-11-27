@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useRef, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Layout } from '../components/Layout';
 import { api } from '../api/client';
@@ -14,6 +14,16 @@ export function Trade() {
   const [error, setError] = useState('');
   const [success, setSuccess] = useState('');
   const navigate = useNavigate();
+  const timeoutRef = useRef<number | null>(null);
+
+  // Cleanup timeout on unmount
+  useEffect(() => {
+    return () => {
+      if (timeoutRef.current) {
+        clearTimeout(timeoutRef.current);
+      }
+    };
+  }, []);
 
   const lookupQuote = async () => {
     if (!symbol.trim()) return;
@@ -67,7 +77,7 @@ export function Trade() {
       setSymbol('');
 
       // Navigate to dashboard after 2 seconds
-      setTimeout(() => navigate('/'), 2000);
+      timeoutRef.current = window.setTimeout(() => navigate('/'), 2000);
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Order failed');
     } finally {

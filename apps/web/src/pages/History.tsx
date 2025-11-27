@@ -9,19 +9,19 @@ export function History() {
   const [error, setError] = useState('');
 
   useEffect(() => {
+    const loadOrders = async () => {
+      try {
+        const data = await api.getOrders();
+        setOrders(data);
+      } catch (err) {
+        setError(err instanceof Error ? err.message : 'Failed to load orders');
+      } finally {
+        setLoading(false);
+      }
+    };
+
     loadOrders();
   }, []);
-
-  const loadOrders = async () => {
-    try {
-      const data = await api.getOrders();
-      setOrders(data);
-    } catch (err) {
-      setError(err instanceof Error ? err.message : 'Failed to load orders');
-    } finally {
-      setLoading(false);
-    }
-  };
 
   const formatCurrency = (value: number) =>
     new Intl.NumberFormat('en-US', {

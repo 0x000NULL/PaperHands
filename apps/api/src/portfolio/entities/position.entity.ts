@@ -6,10 +6,13 @@ import {
   UpdateDateColumn,
   ManyToOne,
   JoinColumn,
+  Unique,
+  Index,
 } from 'typeorm';
 import { User } from '../../users/entities/user.entity';
 
 @Entity('positions')
+@Unique(['userId', 'symbol'])
 export class Position {
   @PrimaryGeneratedColumn('uuid')
   id: string;
@@ -18,6 +21,7 @@ export class Position {
   @JoinColumn({ name: 'user_id' })
   user: User;
 
+  @Index()
   @Column()
   userId: string;
 
