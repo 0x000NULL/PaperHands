@@ -45,29 +45,37 @@ import { validate } from './config/env.validation';
     CacheModule.registerAsync({
       isGlobal: true,
       imports: [ConfigModule],
-      useFactory: async (configService: ConfigService) => ({
-        store: await redisStore({
-          socket: {
-            host: configService.get('REDIS_HOST'),
-            port: configService.get<number>('REDIS_PORT', 6379),
-          },
-          password: configService.get('REDIS_PASSWORD'),
-          ttl: 60 * 1000, // 60 seconds default TTL
-        }),
-      }),
+      useFactory: async (configService: ConfigService) => {
+        const isProduction = configService.get('NODE_ENV') === 'production';
+        return {
+          store: await redisStore({
+            socket: {
+              host: configService.get('REDIS_HOST'),
+              port: configService.get<number>('REDIS_PORT', 6379),
+              tls: isProduction ? { rejectUnauthorized: false } : undefined,
+            },
+            password: configService.get('REDIS_PASSWORD'),
+            ttl: 60 * 1000, // 60 seconds default TTL
+          }),
+        };
+      },
       inject: [ConfigService],
     }),
 
     // BullMQ Queue
     BullModule.forRootAsync({
       imports: [ConfigModule],
-      useFactory: (configService: ConfigService) => ({
-        connection: {
-          host: configService.get('REDIS_HOST'),
-          port: configService.get<number>('REDIS_PORT', 6379),
-          password: configService.get('REDIS_PASSWORD'),
-        },
-      }),
+      useFactory: (configService: ConfigService) => {
+        const isProduction = configService.get('NODE_ENV') === 'production';
+        return {
+          connection: {
+            host: configService.get('REDIS_HOST'),
+            port: configService.get<number>('REDIS_PORT', 6379),
+            password: configService.get('REDIS_PASSWORD'),
+            tls: isProduction ? { rejectUnauthorized: false } : undefined,
+          },
+        };
+      },
       inject: [ConfigService],
     }),
 

@@ -1,5 +1,5 @@
 name: paperhands
-region: nyc
+region: sfo3
 
 services:
   # Backend API
@@ -9,7 +9,7 @@ services:
       branch: main
       deploy_on_push: true
     source_dir: /
-    build_command: npm install -g pnpm && pnpm install && pnpm run build:api
+    build_command: pnpm install && pnpm run build:api
     run_command: node apps/api/dist/main.js
     environment_slug: node-js
     instance_count: 1
@@ -20,62 +20,47 @@ services:
       initial_delay_seconds: 15
       period_seconds: 30
       timeout_seconds: 5
+    routes:
+      - path: /api
+        preserve_path_prefix: false
     envs:
       - key: NODE_ENV
         value: production
       - key: PORT
         value: "3000"
       - key: DATABASE_URL
-        scope: RUN_TIME
-        value: ${db.DATABASE_URL}
+        type: SECRET
       - key: REDIS_HOST
-        scope: RUN_TIME
-        value: ${redis.HOSTNAME}
+        type: SECRET
       - key: REDIS_PORT
-        scope: RUN_TIME
-        value: ${redis.PORT}
+        value: "25061"
       - key: REDIS_PASSWORD
-        scope: RUN_TIME
-        value: ${redis.PASSWORD}
+        type: SECRET
       - key: JWT_SECRET
-        scope: RUN_TIME
         type: SECRET
       - key: TRADIER_API_TOKEN
-        scope: RUN_TIME
         type: SECRET
       - key: TRADIER_BASE_URL
         value: "https://sandbox.tradier.com/v1"
       - key: FRONTEND_URL
-        scope: RUN_TIME
-        value: ${paperhands-web.PUBLIC_URL}
+        value: ${_self.PUBLIC_URL}
 
 static_sites:
   # Frontend Web (Static React SPA)
-  - name: paperhands-web
+  - name: web
     github:
       repo: 0x000NULL/PaperHands
       branch: main
       deploy_on_push: true
     source_dir: /
-    build_command: npm install -g pnpm && pnpm install && pnpm run build:web
+    build_command: pnpm install && pnpm run build:web
     output_dir: apps/web/dist
     index_document: index.html
     error_document: index.html
     environment_slug: node-js
+    routes:
+      - path: /
     envs:
       - key: VITE_API_URL
         scope: BUILD_TIME
-        value: ${api.PUBLIC_URL}
-
-databases:
-  - name: db
-    engine: PG
-    version: "16"
-    size: db-s-dev-database
-    num_nodes: 1
-
-  - name: redis
-    engine: REDIS
-    version: "7"
-    size: db-s-dev-database
-    num_nodes: 1
+        value: ${_self.PUBLIC_URL}/api
