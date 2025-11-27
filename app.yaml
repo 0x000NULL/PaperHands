@@ -30,6 +30,7 @@ services:
         value: "3000"
       - key: DATABASE_URL
         type: SECRET
+        # Note: Use URL without sslmode param, TypeORM handles SSL config
       - key: REDIS_HOST
         type: SECRET
       - key: REDIS_PORT

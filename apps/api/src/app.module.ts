@@ -32,7 +32,7 @@ import { validate } from './config/env.validation';
         type: 'postgres',
         url: configService.get('DATABASE_URL'),
         autoLoadEntities: true,
-        synchronize: configService.get('NODE_ENV') !== 'production',
+        synchronize: true, // TODO: Use migrations in production
         ssl:
           configService.get('NODE_ENV') === 'production'
             ? { rejectUnauthorized: false }
