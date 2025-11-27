@@ -1,0 +1,18 @@
+{
+  "name": "paperhands",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Paper trading platform for stocks and options",
+  "scripts": {
+    "dev:api": "pnpm --filter api dev",
+    "dev:web": "pnpm --filter web dev",
+    "dev": "pnpm run --parallel dev:api dev:web",
+    "build:api": "pnpm --filter api build",
+    "build:web": "pnpm --filter web build",
+    "build": "pnpm run build:api && pnpm run build:web"
+  },
+  "keywords": ["paper-trading", "stocks", "options"],
+  "author": "",
+  "license": "ISC",
+  "packageManager": "pnpm@10.24.0"
+}
