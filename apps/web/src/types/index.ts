@@ -90,3 +90,27 @@ export interface CandleResponse {
   resolution: string;
   candles: Candle[];
 }
+
+// Watchlist types
+export interface WatchlistItem {
+  id: string;
+  symbol: string;
+  sortOrder: number;
+  addedAt: string;
+}
+
+export interface WatchlistSummary {
+  id: string;
+  name: string;
+  itemCount: number;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface WatchlistDetail {
+  id: string;
+  name: string;
+  items: WatchlistItem[];
+  createdAt: string;
+  updatedAt: string;
+}

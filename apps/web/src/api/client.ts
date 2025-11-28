@@ -8,6 +8,8 @@ import type {
   User,
   CandleResponse,
   Timeframe,
+  WatchlistSummary,
+  WatchlistDetail,
 } from '../types';
 
 // API base URL from build-time environment variable
@@ -105,4 +107,50 @@ export const api = {
     }),
 
   getOrders: () => request<Order[]>('/orders'),
+
+  // Watchlists
+  getWatchlists: () => request<WatchlistSummary[]>('/watchlists'),
+
+  getWatchlist: (id: string) => request<WatchlistDetail>(`/watchlists/${id}`),
+
+  createWatchlist: (name: string) =>
+    request<WatchlistDetail>('/watchlists', {
+      method: 'POST',
+      body: JSON.stringify({ name }),
+    }),
+
+  updateWatchlist: (id: string, name: string) =>
+    request<WatchlistDetail>(`/watchlists/${id}`, {
+      method: 'PATCH',
+      body: JSON.stringify({ name }),
+    }),
+
+  deleteWatchlist: (id: string) =>
+    request<void>(`/watchlists/${id}`, {
+      method: 'DELETE',
+    }),
+
+  addSymbolToWatchlist: (watchlistId: string, symbol: string) =>
+    request<WatchlistDetail>(`/watchlists/${watchlistId}/symbols`, {
+      method: 'POST',
+      body: JSON.stringify({ symbol: symbol.toUpperCase() }),
+    }),
+
+  removeSymbolFromWatchlist: (watchlistId: string, symbol: string) =>
+    request<WatchlistDetail>(
+      `/watchlists/${watchlistId}/symbols/${symbol.toUpperCase()}`,
+      {
+        method: 'DELETE',
+      },
+    ),
+
+  reorderWatchlistItems: (watchlistId: string, itemIds: string[]) =>
+    request<WatchlistDetail>(`/watchlists/${watchlistId}/reorder`, {
+      method: 'PATCH',
+      body: JSON.stringify({ itemIds }),
+    }),
+
+  // Batch quotes for watchlist
+  getQuotes: (symbols: string[]) =>
+    request<Quote[]>(`/market-data/quotes?symbols=${symbols.join(',')}`),
 };

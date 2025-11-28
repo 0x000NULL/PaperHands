@@ -15,6 +15,7 @@ import { PortfolioModule } from './portfolio/portfolio.module';
 import { OrdersModule } from './orders/orders.module';
 import { MarketDataModule } from './market-data/market-data.module';
 import { HealthModule } from './health/health.module';
+import { WatchlistsModule } from './watchlists/watchlists.module';
 import { validate } from './config/env.validation';
 
 @Module({
@@ -109,6 +110,7 @@ import { validate } from './config/env.validation';
     OrdersModule,
     MarketDataModule,
     HealthModule,
+    WatchlistsModule,
   ],
   controllers: [AppController],
   providers: [

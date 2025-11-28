@@ -83,6 +83,9 @@ export function Layout({ children }: LayoutProps) {
             <Link to="/" style={styles.navLink}>
               Dashboard
             </Link>
+            <Link to="/watchlists" style={styles.navLink}>
+              Watchlists
+            </Link>
             <span style={styles.userEmail}>{user?.email}</span>
             <button onClick={handleLogout} style={styles.logoutButton}>
               Logout

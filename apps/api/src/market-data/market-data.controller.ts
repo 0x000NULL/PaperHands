@@ -25,4 +25,13 @@ export class MarketDataController {
     // Use Tradier for historical data (better sandbox support)
     return this.tradierService.getCandles(symbol, query.period);
   }
+
+  @Get('quotes')
+  async getQuotes(@Query('symbols') symbols: string) {
+    if (!symbols) {
+      return [];
+    }
+    const symbolList = symbols.split(',').map((s) => s.trim().toUpperCase());
+    return this.finnhubService.getQuotes(symbolList);
+  }
 }

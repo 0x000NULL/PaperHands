@@ -5,6 +5,7 @@ import { ErrorBoundary } from './components/ErrorBoundary';
 import { Login } from './pages/Login';
 import { Register } from './pages/Register';
 import { Dashboard } from './pages/Dashboard';
+import { Watchlists } from './pages/Watchlists';
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -63,6 +64,14 @@ function App() {
               element={
                 <ProtectedRoute>
                   <Dashboard />
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/watchlists"
+              element={
+                <ProtectedRoute>
+                  <Watchlists />
                 </ProtectedRoute>
               }
             />

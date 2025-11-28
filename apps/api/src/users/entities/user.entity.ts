@@ -9,6 +9,7 @@ import {
 import { Exclude } from 'class-transformer';
 import { Position } from '../../portfolio/entities/position.entity';
 import { Order } from '../../orders/entities/order.entity';
+import { Watchlist } from '../../watchlists/entities/watchlist.entity';
 
 @Entity('users')
 export class User {
@@ -36,4 +37,7 @@ export class User {
 
   @OneToMany(() => Order, (order) => order.user)
   orders: Order[];
+
+  @OneToMany(() => Watchlist, (watchlist: Watchlist) => watchlist.user)
+  watchlists: Watchlist[];
 }
