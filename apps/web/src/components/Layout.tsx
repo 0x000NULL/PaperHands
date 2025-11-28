@@ -1,9 +1,66 @@
 import { Link, useNavigate } from 'react-router-dom';
+import type { CSSProperties } from 'react';
 import { useAuthStore } from '../store/authStore';
+import { theme } from '../theme/constants';
 
 interface LayoutProps {
   children: React.ReactNode;
 }
+
+const styles: Record<string, CSSProperties> = {
+  container: {
+    minHeight: '100vh',
+    backgroundColor: theme.colors.bgPrimary,
+  },
+  nav: {
+    backgroundColor: theme.colors.bgSecondary,
+    padding: `${theme.spacing.md} ${theme.spacing.xl}`,
+    display: 'flex',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    borderBottom: `1px solid ${theme.colors.border}`,
+  },
+  logo: {
+    color: theme.colors.accent,
+    textDecoration: 'none',
+    fontSize: theme.typography.xl,
+    fontWeight: theme.typography.bold,
+    letterSpacing: '-0.02em',
+  },
+  navLinks: {
+    display: 'flex',
+    gap: theme.spacing.lg,
+    alignItems: 'center',
+  },
+  navLink: {
+    color: theme.colors.textPrimary,
+    textDecoration: 'none',
+    fontSize: theme.typography.sm,
+    fontWeight: theme.typography.medium,
+    padding: `${theme.spacing.sm} ${theme.spacing.md}`,
+    borderRadius: theme.radius.md,
+    transition: theme.transitions.fast,
+  },
+  userEmail: {
+    color: theme.colors.textSecondary,
+    fontSize: theme.typography.sm,
+  },
+  logoutButton: {
+    backgroundColor: 'transparent',
+    color: theme.colors.textSecondary,
+    border: `1px solid ${theme.colors.border}`,
+    padding: `${theme.spacing.sm} ${theme.spacing.md}`,
+    borderRadius: theme.radius.md,
+    cursor: 'pointer',
+    fontSize: theme.typography.sm,
+    transition: theme.transitions.fast,
+  },
+  main: {
+    padding: theme.spacing.xl,
+    maxWidth: '1600px',
+    margin: '0 auto',
+  },
+};
 
 export function Layout({ children }: LayoutProps) {
   const { user, logout, isAuthenticated } = useAuthStore();
@@ -15,63 +72,26 @@ export function Layout({ children }: LayoutProps) {
   };
 
   return (
-    <div style={{ minHeight: '100vh', backgroundColor: '#f5f5f5' }}>
-      <nav
-        style={{
-          backgroundColor: '#1a1a2e',
-          padding: '1rem 2rem',
-          display: 'flex',
-          justifyContent: 'space-between',
-          alignItems: 'center',
-        }}
-      >
-        <Link
-          to="/"
-          style={{
-            color: '#fff',
-            textDecoration: 'none',
-            fontSize: '1.5rem',
-            fontWeight: 'bold',
-          }}
-        >
+    <div style={styles.container}>
+      <nav style={styles.nav}>
+        <Link to="/" style={styles.logo}>
           PaperHands
         </Link>
 
         {isAuthenticated() && (
-          <div style={{ display: 'flex', gap: '1rem', alignItems: 'center' }}>
-            <Link to="/" style={{ color: '#fff', textDecoration: 'none' }}>
+          <div style={styles.navLinks}>
+            <Link to="/" style={styles.navLink}>
               Dashboard
             </Link>
-            <Link to="/trade" style={{ color: '#fff', textDecoration: 'none' }}>
-              Trade
-            </Link>
-            <Link
-              to="/history"
-              style={{ color: '#fff', textDecoration: 'none' }}
-            >
-              History
-            </Link>
-            <span style={{ color: '#ccc' }}>{user?.email}</span>
-            <button
-              onClick={handleLogout}
-              style={{
-                backgroundColor: '#e74c3c',
-                color: '#fff',
-                border: 'none',
-                padding: '0.5rem 1rem',
-                borderRadius: '4px',
-                cursor: 'pointer',
-              }}
-            >
+            <span style={styles.userEmail}>{user?.email}</span>
+            <button onClick={handleLogout} style={styles.logoutButton}>
               Logout
             </button>
           </div>
         )}
       </nav>
 
-      <main style={{ padding: '2rem', maxWidth: '1200px', margin: '0 auto' }}>
-        {children}
-      </main>
+      <main style={styles.main}>{children}</main>
     </div>
   );
 }

@@ -42,7 +42,9 @@ export interface Portfolio {
 }
 
 export type OrderSide = 'buy' | 'sell';
-export type OrderStatus = 'pending' | 'filled' | 'cancelled';
+export type OrderStatus = 'pending' | 'filled' | 'cancelled' | 'rejected';
+export type OrderType = 'market' | 'limit' | 'stop' | 'stop_limit' | 'trailing_stop';
+export type TimeInForce = 'day' | 'gtc' | 'ioc' | 'fok';
 
 export interface Order {
   id: string;
@@ -51,6 +53,9 @@ export interface Order {
   quantity: number;
   filledPrice: number | null;
   status: OrderStatus;
+  orderType?: OrderType;
+  limitPrice?: number | null;
+  stopPrice?: number | null;
   totalValue?: number;
   createdAt: string;
 }
@@ -59,4 +64,10 @@ export interface CreateOrderRequest {
   symbol: string;
   side: OrderSide;
   quantity: number;
+  orderType?: OrderType;
+  timeInForce?: TimeInForce;
+  limitPrice?: number;
+  stopPrice?: number;
+  trailAmount?: number;
+  trailPercent?: number;
 }

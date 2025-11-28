@@ -1,4 +1,5 @@
 import { Component, type ReactNode } from 'react';
+import { theme } from '../theme/constants';
 
 interface Props {
   children: ReactNode;
@@ -33,32 +34,56 @@ export class ErrorBoundary extends Component<Props, State> {
       return (
         <div
           style={{
-            padding: '2rem',
-            textAlign: 'center',
-            backgroundColor: '#fee',
-            borderRadius: '8px',
-            margin: '1rem',
+            minHeight: '100vh',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            backgroundColor: theme.colors.bgPrimary,
           }}
         >
-          <h2 style={{ color: '#c00', marginBottom: '1rem' }}>
-            Something went wrong
-          </h2>
-          <p style={{ color: '#666', marginBottom: '1rem' }}>
-            {this.state.error?.message || 'An unexpected error occurred'}
-          </p>
-          <button
-            onClick={() => this.setState({ hasError: false, error: null })}
+          <div
             style={{
-              padding: '0.5rem 1rem',
-              backgroundColor: '#3498db',
-              color: '#fff',
-              border: 'none',
-              borderRadius: '4px',
-              cursor: 'pointer',
+              padding: theme.spacing.xl,
+              textAlign: 'center',
+              backgroundColor: theme.colors.bgSecondary,
+              borderRadius: theme.radius.lg,
+              border: `1px solid ${theme.colors.border}`,
+              maxWidth: '400px',
             }}
           >
-            Try Again
-          </button>
+            <h2
+              style={{
+                color: theme.colors.negative,
+                marginBottom: theme.spacing.md,
+                fontSize: theme.typography.xl,
+              }}
+            >
+              Something went wrong
+            </h2>
+            <p
+              style={{
+                color: theme.colors.textSecondary,
+                marginBottom: theme.spacing.lg,
+                fontSize: theme.typography.sm,
+              }}
+            >
+              {this.state.error?.message || 'An unexpected error occurred'}
+            </p>
+            <button
+              onClick={() => this.setState({ hasError: false, error: null })}
+              style={{
+                padding: `${theme.spacing.sm} ${theme.spacing.lg}`,
+                backgroundColor: theme.colors.accent,
+                color: theme.colors.bgPrimary,
+                border: 'none',
+                borderRadius: theme.radius.md,
+                cursor: 'pointer',
+                fontWeight: theme.typography.semibold,
+              }}
+            >
+              Try Again
+            </button>
+          </div>
         </div>
       );
     }
