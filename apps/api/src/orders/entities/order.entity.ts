@@ -88,7 +88,7 @@ export class Order {
   @Column({ type: 'enum', enum: OrderStatus, default: OrderStatus.PENDING })
   status: OrderStatus;
 
-  @Column({ nullable: true })
+  @Column('text', { nullable: true })
   rejectionReason: string | null;
 
   @Index()
