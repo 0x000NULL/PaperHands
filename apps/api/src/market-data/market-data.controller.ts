@@ -1,12 +1,16 @@
 import { Controller, Get, Param, Query, UseGuards } from '@nestjs/common';
 import { JwtAuthGuard } from '../common/guards/jwt-auth.guard';
 import { FinnhubService } from './finnhub.service';
+import { TradierService } from './tradier.service';
 import { CandleQueryDto } from './dto/candle-query.dto';
 
 @Controller('market-data')
 @UseGuards(JwtAuthGuard)
 export class MarketDataController {
-  constructor(private readonly finnhubService: FinnhubService) {}
+  constructor(
+    private readonly finnhubService: FinnhubService,
+    private readonly tradierService: TradierService,
+  ) {}
 
   @Get('quote/:symbol')
   async getQuote(@Param('symbol') symbol: string) {
@@ -18,6 +22,7 @@ export class MarketDataController {
     @Param('symbol') symbol: string,
     @Query() query: CandleQueryDto,
   ) {
-    return this.finnhubService.getCandles(symbol, query.period);
+    // Use Tradier for historical data (better sandbox support)
+    return this.tradierService.getCandles(symbol, query.period);
   }
 }

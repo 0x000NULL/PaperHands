@@ -2,6 +2,8 @@ import { Injectable, HttpException, Inject } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { CACHE_MANAGER } from '@nestjs/cache-manager';
 import type { Cache } from 'cache-manager';
+import { CandleResponseDto, CandleDto } from './dto/candle-response.dto';
+import { Period } from './dto/candle-query.dto';
 
 export interface Quote {
   symbol: string;
@@ -24,6 +26,84 @@ interface TradierQuotesResponse {
     quote: Quote | Quote[];
   } | null;
 }
+
+interface TradierHistoryDay {
+  date: string;
+  open: number;
+  high: number;
+  low: number;
+  close: number;
+  volume: number;
+}
+
+interface TradierHistoryResponse {
+  history: {
+    day: TradierHistoryDay | TradierHistoryDay[] | null;
+  } | null;
+}
+
+interface TradierTimeSaleData {
+  time: string;
+  timestamp: number;
+  price: number;
+  open: number;
+  high: number;
+  low: number;
+  close: number;
+  volume: number;
+}
+
+interface TradierTimeSalesResponse {
+  series: {
+    data: TradierTimeSaleData | TradierTimeSaleData[] | null;
+  } | null;
+}
+
+interface PeriodConfig {
+  interval: string; // Tradier interval
+  lookbackDays: number;
+  cacheTtlMs: number;
+  useTimesales: boolean; // true for intraday, false for daily/weekly/monthly
+}
+
+const PERIOD_CONFIG: Record<string, PeriodConfig> = {
+  '1D': {
+    interval: '5min',
+    lookbackDays: 1,
+    cacheTtlMs: 60_000,
+    useTimesales: true,
+  },
+  '1W': {
+    interval: '15min',
+    lookbackDays: 7,
+    cacheTtlMs: 300_000,
+    useTimesales: true,
+  },
+  '1M': {
+    interval: 'daily',
+    lookbackDays: 30,
+    cacheTtlMs: 900_000,
+    useTimesales: false,
+  },
+  '3M': {
+    interval: 'daily',
+    lookbackDays: 90,
+    cacheTtlMs: 3_600_000,
+    useTimesales: false,
+  },
+  '1Y': {
+    interval: 'daily',
+    lookbackDays: 365,
+    cacheTtlMs: 3_600_000,
+    useTimesales: false,
+  },
+  '5Y': {
+    interval: 'weekly',
+    lookbackDays: 1825,
+    cacheTtlMs: 3_600_000,
+    useTimesales: false,
+  },
+};
 
 @Injectable()
 export class TradierService {
@@ -168,5 +248,150 @@ export class TradierService {
       : [data.quotes.quote];
 
     return quotes;
+  }
+
+  async getCandles(symbol: string, period: Period): Promise<CandleResponseDto> {
+    const upperSymbol = symbol.toUpperCase();
+    const config = PERIOD_CONFIG[period];
+
+    if (!config) {
+      throw new HttpException(
+        `Invalid period: ${period}. Must be one of: 1D, 1W, 1M, 3M, 1Y, 5Y`,
+        400,
+      );
+    }
+
+    const cacheKey = `candles:${upperSymbol}:${period}`;
+
+    // Check cache first
+    const cached = await this.cacheManager.get<CandleResponseDto>(cacheKey);
+    if (cached) {
+      return cached;
+    }
+
+    // Calculate date range
+    const endDate = new Date();
+    const startDate = new Date();
+    startDate.setDate(startDate.getDate() - config.lookbackDays);
+
+    const formatDate = (d: Date) => d.toISOString().split('T')[0];
+
+    let candles: CandleDto[];
+
+    if (config.useTimesales) {
+      // Use timesales endpoint for intraday data
+      candles = await this.fetchTimeSales(
+        upperSymbol,
+        config.interval,
+        formatDate(startDate),
+        formatDate(endDate),
+      );
+    } else {
+      // Use history endpoint for daily/weekly/monthly
+      candles = await this.fetchHistory(
+        upperSymbol,
+        config.interval,
+        formatDate(startDate),
+        formatDate(endDate),
+      );
+    }
+
+    const result: CandleResponseDto = {
+      symbol: upperSymbol,
+      period,
+      resolution: config.interval,
+      candles,
+    };
+
+    // Cache with appropriate TTL
+    await this.cacheManager.set(cacheKey, result, config.cacheTtlMs);
+
+    return result;
+  }
+
+  private async fetchHistory(
+    symbol: string,
+    interval: string,
+    start: string,
+    end: string,
+  ): Promise<CandleDto[]> {
+    const response = await this.fetchWithRetry(
+      `${this.baseUrl}/markets/history?symbol=${symbol}&interval=${interval}&start=${start}&end=${end}`,
+      {
+        headers: {
+          Authorization: `Bearer ${this.apiToken}`,
+          Accept: 'application/json',
+        },
+      },
+    );
+
+    if (!response.ok) {
+      throw new HttpException(
+        `Failed to fetch history for ${symbol}`,
+        response.status,
+      );
+    }
+
+    const data = (await response.json()) as TradierHistoryResponse;
+
+    if (!data.history || !data.history.day) {
+      return [];
+    }
+
+    const days = Array.isArray(data.history.day)
+      ? data.history.day
+      : [data.history.day];
+
+    return days.map((day) => ({
+      timestamp: Math.floor(new Date(day.date).getTime() / 1000),
+      open: day.open,
+      high: day.high,
+      low: day.low,
+      close: day.close,
+      volume: day.volume,
+    }));
+  }
+
+  private async fetchTimeSales(
+    symbol: string,
+    interval: string,
+    start: string,
+    end: string,
+  ): Promise<CandleDto[]> {
+    const response = await this.fetchWithRetry(
+      `${this.baseUrl}/markets/timesales?symbol=${symbol}&interval=${interval}&start=${start}&end=${end}`,
+      {
+        headers: {
+          Authorization: `Bearer ${this.apiToken}`,
+          Accept: 'application/json',
+        },
+      },
+    );
+
+    if (!response.ok) {
+      throw new HttpException(
+        `Failed to fetch timesales for ${symbol}`,
+        response.status,
+      );
+    }
+
+    const data = (await response.json()) as TradierTimeSalesResponse;
+
+    if (!data.series || !data.series.data) {
+      return [];
+    }
+
+    const items = Array.isArray(data.series.data)
+      ? data.series.data
+      : [data.series.data];
+
+    return items.map((item) => ({
+      timestamp: item.timestamp,
+      open: item.open,
+      high: item.high,
+      low: item.low,
+      close: item.close,
+      volume: item.volume,
+    }));
   }
 }
