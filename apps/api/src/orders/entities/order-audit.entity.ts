@@ -34,7 +34,7 @@ export class OrderAudit {
   @Column('decimal', { precision: 12, scale: 2, nullable: true })
   triggerPrice: number | null;
 
-  @Column({ nullable: true })
+  @Column('text', { nullable: true })
   notes: string | null;
 
   @CreateDateColumn()

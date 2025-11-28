@@ -92,7 +92,7 @@ export class Order {
   rejectionReason: string | null;
 
   @Index()
-  @Column({ nullable: true, unique: true })
+  @Column('varchar', { nullable: true, unique: true })
   idempotencyKey: string | null;
 
   @Index()
