@@ -8,8 +8,10 @@ import type {
   User,
 } from '../types';
 
-// API base URL from build-time environment variable (v2)
-const API_BASE = import.meta.env.VITE_API_URL ?? 'http://localhost:3000';
+// API base URL from build-time environment variable
+// Normalize URL to remove any double slashes that may occur from env variable concatenation
+const rawApiUrl = import.meta.env.VITE_API_URL ?? 'http://localhost:3000';
+const API_BASE = rawApiUrl.replace(/([^:]\/)\/+/g, '$1');
 
 class ApiError extends Error {
   status: number;
