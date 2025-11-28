@@ -326,9 +326,14 @@ export class TradierService {
     );
 
     if (!response.ok) {
+      // Map external API errors to avoid triggering frontend logout on 401
+      const status =
+        response.status === 401 || response.status === 403
+          ? 503
+          : response.status;
       throw new HttpException(
-        `Failed to fetch history for ${symbol}`,
-        response.status,
+        `Market data service temporarily unavailable for ${symbol}`,
+        status,
       );
     }
 
@@ -369,9 +374,14 @@ export class TradierService {
     );
 
     if (!response.ok) {
+      // Map external API errors to avoid triggering frontend logout on 401
+      const status =
+        response.status === 401 || response.status === 403
+          ? 503
+          : response.status;
       throw new HttpException(
-        `Failed to fetch timesales for ${symbol}`,
-        response.status,
+        `Market data service temporarily unavailable for ${symbol}`,
+        status,
       );
     }
 
