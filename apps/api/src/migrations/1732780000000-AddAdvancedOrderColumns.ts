@@ -140,6 +140,11 @@ export class AddAdvancedOrderColumns1732780000000 implements MigrationInterface 
       ADD COLUMN IF NOT EXISTS "cancelledAt" timestamp DEFAULT NULL
     `);
 
+    await queryRunner.query(`
+      ALTER TABLE "orders"
+      ADD COLUMN IF NOT EXISTS "updatedAt" timestamp DEFAULT NOW()
+    `);
+
     // Create indexes for performance
     await queryRunner.query(`
       CREATE INDEX IF NOT EXISTS "IDX_orders_status_symbol" ON "orders" ("status", "symbol")
@@ -166,6 +171,7 @@ export class AddAdvancedOrderColumns1732780000000 implements MigrationInterface 
     await queryRunner.query(`DROP INDEX IF EXISTS "IDX_orders_status_symbol"`);
 
     // Drop columns
+    await queryRunner.query(`ALTER TABLE "orders" DROP COLUMN IF EXISTS "updatedAt"`);
     await queryRunner.query(`ALTER TABLE "orders" DROP COLUMN IF EXISTS "cancelledAt"`);
     await queryRunner.query(`ALTER TABLE "orders" DROP COLUMN IF EXISTS "filledAt"`);
     await queryRunner.query(`ALTER TABLE "orders" DROP COLUMN IF EXISTS "triggeredAt"`);
