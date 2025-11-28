@@ -56,6 +56,10 @@ import { validate } from './config/env.validation';
               host: configService.get('REDIS_HOST'),
               port: configService.get<number>('REDIS_PORT', 6379),
               tls: isProduction,
+              reconnectStrategy: (retries: number) => {
+                // Exponential backoff: 100ms, 200ms, 400ms... up to 30s
+                return Math.min(retries * 100, 30000);
+              },
             },
             password: configService.get('REDIS_PASSWORD'),
             ttl: 60 * 1000, // 60 seconds default TTL
@@ -76,6 +80,11 @@ import { validate } from './config/env.validation';
             port: configService.get<number>('REDIS_PORT', 6379),
             password: configService.get('REDIS_PASSWORD'),
             tls: isProduction ? {} : undefined,
+            retryStrategy: (times: number) => {
+              // Exponential backoff up to 30s
+              return Math.min(times * 100, 30000);
+            },
+            maxRetriesPerRequest: null, // Disable max retries for BullMQ
           },
         };
       },
