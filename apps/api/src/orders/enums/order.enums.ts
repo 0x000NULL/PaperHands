@@ -1,0 +1,37 @@
+export enum OrderSide {
+  BUY = 'buy',
+  SELL = 'sell',
+}
+
+export enum OrderType {
+  MARKET = 'market',
+  LIMIT = 'limit',
+  STOP = 'stop',
+  STOP_LIMIT = 'stop_limit',
+  TRAILING_STOP = 'trailing_stop',
+}
+
+export enum TimeInForce {
+  DAY = 'day',
+  GTC = 'gtc',
+}
+
+export enum OrderStatus {
+  PENDING = 'pending',
+  OPEN = 'open',
+  PARTIALLY_FILLED = 'partially_filled',
+  FILLED = 'filled',
+  CANCELLED = 'cancelled',
+  EXPIRED = 'expired',
+  REJECTED = 'rejected',
+}
+
+export enum AuditAction {
+  CREATED = 'created',
+  MODIFIED = 'modified',
+  TRIGGERED = 'triggered',
+  PARTIALLY_FILLED = 'partially_filled',
+  FILLED = 'filled',
+  CANCELLED = 'cancelled',
+  EXPIRED = 'expired',
+}

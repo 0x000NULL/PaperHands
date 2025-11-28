@@ -3,18 +3,39 @@ import { getRepositoryToken } from '@nestjs/typeorm';
 import { DataSource } from 'typeorm';
 import { BadRequestException, NotFoundException } from '@nestjs/common';
 import { OrdersService } from './orders.service';
-import { Order, OrderSide, OrderStatus } from './entities/order.entity';
+import { Order } from './entities/order.entity';
+import { OrderAudit } from './entities/order-audit.entity';
+import { OrderSide, OrderStatus, OrderType } from './enums/order.enums';
 import { User } from '../users/entities/user.entity';
+import { Position } from '../portfolio/entities/position.entity';
 import { FinnhubService } from '../market-data/finnhub.service';
+import { MarketHoursService } from '../common/services/market-hours.service';
 
 describe('OrdersService', () => {
   let service: OrdersService;
   let mockOrderRepository: {
     find: jest.Mock;
     findOne: jest.Mock;
+    create: jest.Mock;
+    save: jest.Mock;
+    createQueryBuilder: jest.Mock;
   };
-  let mockUserRepository: Record<string, jest.Mock>;
+  let mockOrderAuditRepository: {
+    create: jest.Mock;
+    save: jest.Mock;
+    find: jest.Mock;
+  };
+  let mockUserRepository: {
+    findOne: jest.Mock;
+  };
+  let mockPositionRepository: {
+    findOne: jest.Mock;
+  };
   let mockFinnhubService: { getQuote: jest.Mock };
+  let mockMarketHoursService: {
+    getCurrentSession: jest.Mock;
+    calculateExpirationTime: jest.Mock;
+  };
   let mockDataSource: { createQueryRunner: jest.Mock };
   let mockQueryRunner: {
     connect: jest.Mock;
@@ -56,12 +77,42 @@ describe('OrdersService', () => {
     mockOrderRepository = {
       find: jest.fn(),
       findOne: jest.fn(),
+      create: jest.fn(),
+      save: jest.fn(),
+      createQueryBuilder: jest.fn().mockReturnValue({
+        select: jest.fn().mockReturnThis(),
+        where: jest.fn().mockReturnThis(),
+        andWhere: jest.fn().mockReturnThis(),
+        orderBy: jest.fn().mockReturnThis(),
+        skip: jest.fn().mockReturnThis(),
+        take: jest.fn().mockReturnThis(),
+        getMany: jest.fn().mockResolvedValue([]),
+        getRawOne: jest.fn().mockResolvedValue({ reserved: null }),
+        getRawMany: jest.fn().mockResolvedValue([]),
+      }),
     };
 
-    mockUserRepository = {};
+    mockOrderAuditRepository = {
+      create: jest.fn().mockReturnValue({}),
+      save: jest.fn().mockResolvedValue({}),
+      find: jest.fn().mockResolvedValue([]),
+    };
+
+    mockUserRepository = {
+      findOne: jest.fn(),
+    };
+
+    mockPositionRepository = {
+      findOne: jest.fn(),
+    };
 
     mockFinnhubService = {
       getQuote: jest.fn(),
+    };
+
+    mockMarketHoursService = {
+      getCurrentSession: jest.fn().mockReturnValue('regular'),
+      calculateExpirationTime: jest.fn().mockReturnValue(null),
     };
 
     mockQueryRunner = {
@@ -91,12 +142,24 @@ describe('OrdersService', () => {
           useValue: mockOrderRepository,
         },
         {
+          provide: getRepositoryToken(OrderAudit),
+          useValue: mockOrderAuditRepository,
+        },
+        {
           provide: getRepositoryToken(User),
           useValue: mockUserRepository,
         },
         {
+          provide: getRepositoryToken(Position),
+          useValue: mockPositionRepository,
+        },
+        {
           provide: FinnhubService,
           useValue: mockFinnhubService,
+        },
+        {
+          provide: MarketHoursService,
+          useValue: mockMarketHoursService,
         },
         {
           provide: DataSource,
@@ -117,6 +180,7 @@ describe('OrdersService', () => {
       symbol: 'aapl',
       side: OrderSide.BUY,
       quantity: 10,
+      orderType: OrderType.MARKET,
     };
 
     it('should create a buy order successfully', async () => {
@@ -129,10 +193,14 @@ describe('OrdersService', () => {
         userId: mockUser.id,
         symbol: 'AAPL',
         side: OrderSide.BUY,
+        orderType: OrderType.MARKET,
         quantity: 10,
+        filledQuantity: 10,
         filledPrice: 150.1,
+        avgFillPrice: 150.1,
         status: OrderStatus.FILLED,
         createdAt: new Date(),
+        updatedAt: new Date(),
       });
       mockQueryRunner.manager.save.mockResolvedValue(undefined);
 
@@ -157,8 +225,7 @@ describe('OrdersService', () => {
     it('should throw BadRequestException if price is invalid', async () => {
       mockFinnhubService.getQuote.mockResolvedValue({
         ...mockQuote,
-        ask: 0,
-        bid: 0,
+        last: 0,
       });
 
       await expect(
@@ -185,11 +252,15 @@ describe('OrdersService', () => {
         userId: mockUser.id,
         symbol: 'AAPL',
         side: OrderSide.BUY,
+        orderType: OrderType.MARKET,
         quantity: 10,
+        filledQuantity: 10,
         filledPrice: 150.1,
+        avgFillPrice: 150.1,
         status: OrderStatus.FILLED,
         idempotencyKey: 'idempotency-123',
         createdAt: new Date(),
+        updatedAt: new Date(),
       };
 
       mockOrderRepository.findOne.mockResolvedValue(existingOrder);
@@ -211,36 +282,54 @@ describe('OrdersService', () => {
           id: 'order-1',
           symbol: 'AAPL',
           side: OrderSide.BUY,
+          orderType: OrderType.MARKET,
           quantity: 10,
+          filledQuantity: 10,
           filledPrice: 150,
+          avgFillPrice: 150,
           status: OrderStatus.FILLED,
           createdAt: new Date(),
+          updatedAt: new Date(),
         },
         {
           id: 'order-2',
           symbol: 'GOOGL',
           side: OrderSide.SELL,
+          orderType: OrderType.MARKET,
           quantity: 5,
+          filledQuantity: 5,
           filledPrice: 2800,
+          avgFillPrice: 2800,
           status: OrderStatus.FILLED,
           createdAt: new Date(),
+          updatedAt: new Date(),
         },
       ];
 
-      mockOrderRepository.find.mockResolvedValue(mockOrders);
+      mockOrderRepository.createQueryBuilder.mockReturnValue({
+        where: jest.fn().mockReturnThis(),
+        andWhere: jest.fn().mockReturnThis(),
+        orderBy: jest.fn().mockReturnThis(),
+        skip: jest.fn().mockReturnThis(),
+        take: jest.fn().mockReturnThis(),
+        getMany: jest.fn().mockResolvedValue(mockOrders),
+      });
 
       const result = await service.getOrders(mockUser.id!);
 
-      expect(mockOrderRepository.find).toHaveBeenCalledWith({
-        where: { userId: mockUser.id },
-        order: { createdAt: 'DESC' },
-      });
       expect(result).toHaveLength(2);
       expect(result[0].symbol).toBe('AAPL');
     });
 
     it('should return empty array if no orders', async () => {
-      mockOrderRepository.find.mockResolvedValue([]);
+      mockOrderRepository.createQueryBuilder.mockReturnValue({
+        where: jest.fn().mockReturnThis(),
+        andWhere: jest.fn().mockReturnThis(),
+        orderBy: jest.fn().mockReturnThis(),
+        skip: jest.fn().mockReturnThis(),
+        take: jest.fn().mockReturnThis(),
+        getMany: jest.fn().mockResolvedValue([]),
+      });
 
       const result = await service.getOrders(mockUser.id!);
 

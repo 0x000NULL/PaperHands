@@ -3,6 +3,7 @@ import { ConfigModule, ConfigService } from '@nestjs/config';
 import { TypeOrmModule } from '@nestjs/typeorm';
 import { CacheModule } from '@nestjs/cache-manager';
 import { BullModule } from '@nestjs/bullmq';
+import { ScheduleModule } from '@nestjs/schedule';
 import { ThrottlerModule, ThrottlerGuard } from '@nestjs/throttler';
 import { APP_GUARD } from '@nestjs/core';
 import { redisStore } from 'cache-manager-redis-yet';
@@ -88,6 +89,9 @@ import { validate } from './config/env.validation';
         limit: 100, // 100 requests per minute
       },
     ]),
+
+    // Scheduling for cron jobs
+    ScheduleModule.forRoot(),
 
     // Feature modules
     AuthModule,
