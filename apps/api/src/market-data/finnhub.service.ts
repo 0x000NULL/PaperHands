@@ -2,6 +2,8 @@ import { Injectable, HttpException, Inject } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { CACHE_MANAGER } from '@nestjs/cache-manager';
 import type { Cache } from 'cache-manager';
+import { CandleResponseDto, CandleDto } from './dto/candle-response.dto';
+import { Period } from './dto/candle-query.dto';
 
 export interface Quote {
   symbol: string;
@@ -35,6 +37,31 @@ interface FinnhubProfileResponse {
   ticker: string;
   // ... other fields we don't need
 }
+
+interface FinnhubCandleResponse {
+  c: number[]; // Close prices
+  h: number[]; // High prices
+  l: number[]; // Low prices
+  o: number[]; // Open prices
+  t: number[]; // Timestamps (Unix seconds)
+  v: number[]; // Volumes
+  s: string; // Status: 'ok' or 'no_data'
+}
+
+interface PeriodConfig {
+  resolution: string; // Finnhub resolution
+  lookbackDays: number; // How far back to fetch
+  cacheTtlMs: number; // Cache duration in milliseconds
+}
+
+const PERIOD_CONFIG: Record<string, PeriodConfig> = {
+  '1D': { resolution: '5', lookbackDays: 1, cacheTtlMs: 60_000 },
+  '1W': { resolution: '15', lookbackDays: 7, cacheTtlMs: 300_000 },
+  '1M': { resolution: '60', lookbackDays: 30, cacheTtlMs: 900_000 },
+  '3M': { resolution: 'D', lookbackDays: 90, cacheTtlMs: 3_600_000 },
+  '1Y': { resolution: 'D', lookbackDays: 365, cacheTtlMs: 3_600_000 },
+  '5Y': { resolution: 'W', lookbackDays: 1825, cacheTtlMs: 3_600_000 },
+};
 
 @Injectable()
 export class FinnhubService {
@@ -211,5 +238,72 @@ export class FinnhubService {
     );
 
     return quotes.filter((q): q is Quote => q !== null);
+  }
+
+  async getCandles(symbol: string, period: Period): Promise<CandleResponseDto> {
+    const upperSymbol = symbol.toUpperCase();
+    const config = PERIOD_CONFIG[period];
+
+    if (!config) {
+      throw new HttpException(
+        `Invalid period: ${period}. Must be one of: 1D, 1W, 1M, 3M, 1Y, 5Y`,
+        400,
+      );
+    }
+
+    const cacheKey = `candles:${upperSymbol}:${period}`;
+
+    // Check cache first
+    const cached = await this.cacheManager.get<CandleResponseDto>(cacheKey);
+    if (cached) {
+      return cached;
+    }
+
+    // Calculate from/to timestamps
+    const now = Math.floor(Date.now() / 1000);
+    const from = now - config.lookbackDays * 24 * 60 * 60;
+
+    const response = await this.fetchWithRetry(
+      `${this.baseUrl}/stock/candle?symbol=${upperSymbol}&resolution=${config.resolution}&from=${from}&to=${now}&token=${this.apiKey}`,
+      {
+        headers: { Accept: 'application/json' },
+      },
+    );
+
+    if (!response.ok) {
+      throw new HttpException(
+        `Failed to fetch candles for ${upperSymbol}`,
+        response.status,
+      );
+    }
+
+    const data = (await response.json()) as FinnhubCandleResponse;
+
+    // Finnhub returns { s: 'no_data' } for invalid symbols or no data
+    if (data.s === 'no_data' || !data.t || data.t.length === 0) {
+      throw new HttpException(`No candle data found for ${upperSymbol}`, 404);
+    }
+
+    // Transform parallel arrays to array of candle objects
+    const candles: CandleDto[] = data.t.map((timestamp, i) => ({
+      timestamp,
+      open: data.o[i],
+      high: data.h[i],
+      low: data.l[i],
+      close: data.c[i],
+      volume: data.v[i],
+    }));
+
+    const result: CandleResponseDto = {
+      symbol: upperSymbol,
+      period,
+      resolution: config.resolution,
+      candles,
+    };
+
+    // Cache with appropriate TTL
+    await this.cacheManager.set(cacheKey, result, config.cacheTtlMs);
+
+    return result;
   }
 }

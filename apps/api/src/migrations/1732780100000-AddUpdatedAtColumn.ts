@@ -17,6 +17,8 @@ export class AddUpdatedAtColumn1732780100000 implements MigrationInterface {
   }
 
   public async down(queryRunner: QueryRunner): Promise<void> {
-    await queryRunner.query(`ALTER TABLE "orders" DROP COLUMN IF EXISTS "updatedAt"`);
+    await queryRunner.query(
+      `ALTER TABLE "orders" DROP COLUMN IF EXISTS "updatedAt"`,
+    );
   }
 }

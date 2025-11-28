@@ -71,3 +71,22 @@ export interface CreateOrderRequest {
   trailAmount?: number;
   trailPercent?: number;
 }
+
+// Chart types
+export type Timeframe = '1D' | '1W' | '1M' | '3M' | '1Y' | '5Y';
+
+export interface Candle {
+  timestamp: number;
+  open: number;
+  high: number;
+  low: number;
+  close: number;
+  volume: number;
+}
+
+export interface CandleResponse {
+  symbol: string;
+  period: Timeframe;
+  resolution: string;
+  candles: Candle[];
+}

@@ -6,6 +6,8 @@ import type {
   Order,
   CreateOrderRequest,
   User,
+  CandleResponse,
+  Timeframe,
 } from '../types';
 
 // API base URL from build-time environment variable
@@ -88,6 +90,9 @@ export const api = {
 
   // Market Data
   getQuote: (symbol: string) => request<Quote>(`/market-data/quote/${symbol}`),
+
+  getHistoricalData: (symbol: string, period: Timeframe) =>
+    request<CandleResponse>(`/market-data/candles/${symbol}?period=${period}`),
 
   // Portfolio
   getPortfolio: () => request<Portfolio>('/portfolio'),

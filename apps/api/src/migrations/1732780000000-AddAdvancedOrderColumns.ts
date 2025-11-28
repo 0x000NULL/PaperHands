@@ -171,24 +171,60 @@ export class AddAdvancedOrderColumns1732780000000 implements MigrationInterface 
     await queryRunner.query(`DROP INDEX IF EXISTS "IDX_orders_status_symbol"`);
 
     // Drop columns
-    await queryRunner.query(`ALTER TABLE "orders" DROP COLUMN IF EXISTS "updatedAt"`);
-    await queryRunner.query(`ALTER TABLE "orders" DROP COLUMN IF EXISTS "cancelledAt"`);
-    await queryRunner.query(`ALTER TABLE "orders" DROP COLUMN IF EXISTS "filledAt"`);
-    await queryRunner.query(`ALTER TABLE "orders" DROP COLUMN IF EXISTS "triggeredAt"`);
-    await queryRunner.query(`ALTER TABLE "orders" DROP COLUMN IF EXISTS "expiresAt"`);
-    await queryRunner.query(`ALTER TABLE "orders" DROP COLUMN IF EXISTS "idempotencyKey"`);
-    await queryRunner.query(`ALTER TABLE "orders" DROP COLUMN IF EXISTS "rejectionReason"`);
-    await queryRunner.query(`ALTER TABLE "orders" DROP COLUMN IF EXISTS "avgFillPrice"`);
-    await queryRunner.query(`ALTER TABLE "orders" DROP COLUMN IF EXISTS "currentTriggerPrice"`);
-    await queryRunner.query(`ALTER TABLE "orders" DROP COLUMN IF EXISTS "trailingPeakPrice"`);
-    await queryRunner.query(`ALTER TABLE "orders" DROP COLUMN IF EXISTS "trailPercent"`);
-    await queryRunner.query(`ALTER TABLE "orders" DROP COLUMN IF EXISTS "trailAmount"`);
-    await queryRunner.query(`ALTER TABLE "orders" DROP COLUMN IF EXISTS "stopPrice"`);
-    await queryRunner.query(`ALTER TABLE "orders" DROP COLUMN IF EXISTS "limitPrice"`);
-    await queryRunner.query(`ALTER TABLE "orders" DROP COLUMN IF EXISTS "filledQuantity"`);
-    await queryRunner.query(`ALTER TABLE "orders" DROP COLUMN IF EXISTS "extendedHours"`);
-    await queryRunner.query(`ALTER TABLE "orders" DROP COLUMN IF EXISTS "timeInForce"`);
-    await queryRunner.query(`ALTER TABLE "orders" DROP COLUMN IF EXISTS "orderType"`);
+    await queryRunner.query(
+      `ALTER TABLE "orders" DROP COLUMN IF EXISTS "updatedAt"`,
+    );
+    await queryRunner.query(
+      `ALTER TABLE "orders" DROP COLUMN IF EXISTS "cancelledAt"`,
+    );
+    await queryRunner.query(
+      `ALTER TABLE "orders" DROP COLUMN IF EXISTS "filledAt"`,
+    );
+    await queryRunner.query(
+      `ALTER TABLE "orders" DROP COLUMN IF EXISTS "triggeredAt"`,
+    );
+    await queryRunner.query(
+      `ALTER TABLE "orders" DROP COLUMN IF EXISTS "expiresAt"`,
+    );
+    await queryRunner.query(
+      `ALTER TABLE "orders" DROP COLUMN IF EXISTS "idempotencyKey"`,
+    );
+    await queryRunner.query(
+      `ALTER TABLE "orders" DROP COLUMN IF EXISTS "rejectionReason"`,
+    );
+    await queryRunner.query(
+      `ALTER TABLE "orders" DROP COLUMN IF EXISTS "avgFillPrice"`,
+    );
+    await queryRunner.query(
+      `ALTER TABLE "orders" DROP COLUMN IF EXISTS "currentTriggerPrice"`,
+    );
+    await queryRunner.query(
+      `ALTER TABLE "orders" DROP COLUMN IF EXISTS "trailingPeakPrice"`,
+    );
+    await queryRunner.query(
+      `ALTER TABLE "orders" DROP COLUMN IF EXISTS "trailPercent"`,
+    );
+    await queryRunner.query(
+      `ALTER TABLE "orders" DROP COLUMN IF EXISTS "trailAmount"`,
+    );
+    await queryRunner.query(
+      `ALTER TABLE "orders" DROP COLUMN IF EXISTS "stopPrice"`,
+    );
+    await queryRunner.query(
+      `ALTER TABLE "orders" DROP COLUMN IF EXISTS "limitPrice"`,
+    );
+    await queryRunner.query(
+      `ALTER TABLE "orders" DROP COLUMN IF EXISTS "filledQuantity"`,
+    );
+    await queryRunner.query(
+      `ALTER TABLE "orders" DROP COLUMN IF EXISTS "extendedHours"`,
+    );
+    await queryRunner.query(
+      `ALTER TABLE "orders" DROP COLUMN IF EXISTS "timeInForce"`,
+    );
+    await queryRunner.query(
+      `ALTER TABLE "orders" DROP COLUMN IF EXISTS "orderType"`,
+    );
 
     // Drop enum types
     await queryRunner.query(`DROP TYPE IF EXISTS "order_timeinforce_enum"`);

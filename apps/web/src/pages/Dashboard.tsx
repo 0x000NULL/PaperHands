@@ -7,6 +7,7 @@ import {
   QuotePanel,
   TradeForm,
   OrderHistory,
+  ChartPanel,
 } from '../components/dashboard';
 
 const styles: Record<string, CSSProperties> = {
@@ -35,6 +36,10 @@ const styles: Record<string, CSSProperties> = {
     flexDirection: 'column',
   },
   bottomSection: {
+    display: 'flex',
+    flexDirection: 'column',
+  },
+  chartSection: {
     display: 'flex',
     flexDirection: 'column',
   },
@@ -72,6 +77,11 @@ export function Dashboard() {
           <div style={responsiveStyles.tradeColumn}>
             <TradeForm />
           </div>
+        </div>
+
+        {/* Chart Section */}
+        <div style={responsiveStyles.chartSection}>
+          <ChartPanel />
         </div>
 
         {/* Bottom - Order History */}
