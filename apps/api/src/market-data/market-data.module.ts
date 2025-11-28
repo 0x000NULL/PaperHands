@@ -1,10 +1,10 @@
 import { Module } from '@nestjs/common';
-import { TradierService } from './tradier.service';
+import { FinnhubService } from './finnhub.service';
 import { MarketDataController } from './market-data.controller';
 
 @Module({
   controllers: [MarketDataController],
-  providers: [TradierService],
-  exports: [TradierService],
+  providers: [FinnhubService],
+  exports: [FinnhubService],
 })
 export class MarketDataModule {}

@@ -4,7 +4,7 @@ import { NotFoundException } from '@nestjs/common';
 import { PortfolioService } from './portfolio.service';
 import { Position } from './entities/position.entity';
 import { User } from '../users/entities/user.entity';
-import { TradierService } from '../market-data/tradier.service';
+import { FinnhubService } from '../market-data/finnhub.service';
 
 describe('PortfolioService', () => {
   let service: PortfolioService;
@@ -17,7 +17,7 @@ describe('PortfolioService', () => {
     remove: jest.Mock;
   };
   let mockUserRepository: { findOne: jest.Mock };
-  let mockTradierService: { getQuotes: jest.Mock };
+  let mockFinnhubService: { getQuotes: jest.Mock };
 
   const mockUser: Partial<User> = {
     id: 'user-123',
@@ -71,7 +71,7 @@ describe('PortfolioService', () => {
       findOne: jest.fn(),
     };
 
-    mockTradierService = {
+    mockFinnhubService = {
       getQuotes: jest.fn(),
     };
 
@@ -87,8 +87,8 @@ describe('PortfolioService', () => {
           useValue: mockUserRepository,
         },
         {
-          provide: TradierService,
-          useValue: mockTradierService,
+          provide: FinnhubService,
+          useValue: mockFinnhubService,
         },
       ],
     }).compile();
@@ -104,7 +104,7 @@ describe('PortfolioService', () => {
     it('should return portfolio with positions and values', async () => {
       mockUserRepository.findOne.mockResolvedValue(mockUser);
       mockPositionRepository.find.mockResolvedValue(mockPositions);
-      mockTradierService.getQuotes.mockResolvedValue(mockQuotes);
+      mockFinnhubService.getQuotes.mockResolvedValue(mockQuotes);
 
       const result = await service.getPortfolio(mockUser.id!);
 
@@ -114,7 +114,7 @@ describe('PortfolioService', () => {
       expect(mockPositionRepository.find).toHaveBeenCalledWith({
         where: { userId: mockUser.id },
       });
-      expect(mockTradierService.getQuotes).toHaveBeenCalledWith([
+      expect(mockFinnhubService.getQuotes).toHaveBeenCalledWith([
         'AAPL',
         'GOOGL',
       ]);
@@ -147,7 +147,7 @@ describe('PortfolioService', () => {
       expect(result.cashBalance).toBe(50000);
       expect(result.positions).toEqual([]);
       expect(result.totalValue).toBe(50000);
-      expect(mockTradierService.getQuotes).not.toHaveBeenCalled();
+      expect(mockFinnhubService.getQuotes).not.toHaveBeenCalled();
     });
 
     it('should throw NotFoundException if user not found', async () => {

@@ -23,11 +23,19 @@ class EnvironmentVariables {
   JWT_EXPIRES_IN: string = '7d';
 
   @IsString()
-  TRADIER_API_TOKEN: string;
+  @IsOptional()
+  TRADIER_API_TOKEN?: string;
 
   @IsString()
   @IsOptional()
   TRADIER_BASE_URL: string = 'https://sandbox.tradier.com/v1';
+
+  @IsString()
+  FINNHUB_API_KEY: string;
+
+  @IsString()
+  @IsOptional()
+  FINNHUB_BASE_URL: string = 'https://finnhub.io/api/v1';
 
   @IsNumber()
   @IsOptional()

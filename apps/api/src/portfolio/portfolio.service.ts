@@ -3,7 +3,7 @@ import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { Position } from './entities/position.entity';
 import { User } from '../users/entities/user.entity';
-import { TradierService } from '../market-data/tradier.service';
+import { FinnhubService } from '../market-data/finnhub.service';
 
 export interface PortfolioPosition {
   symbol: string;
@@ -28,7 +28,7 @@ export class PortfolioService {
     private positionRepository: Repository<Position>,
     @InjectRepository(User)
     private userRepository: Repository<User>,
-    private tradierService: TradierService,
+    private finnhubService: FinnhubService,
   ) {}
 
   async getPortfolio(userId: string): Promise<Portfolio> {
@@ -53,7 +53,7 @@ export class PortfolioService {
 
     // Get current quotes for all positions
     const symbols = positions.map((p) => p.symbol);
-    const quotes = await this.tradierService.getQuotes(symbols);
+    const quotes = await this.finnhubService.getQuotes(symbols);
     const quoteMap = new Map(quotes.map((q) => [q.symbol, q]));
 
     // Calculate portfolio positions with current values

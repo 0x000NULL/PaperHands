@@ -8,7 +8,7 @@ import { Repository, DataSource, EntityManager } from 'typeorm';
 import { Order, OrderSide, OrderStatus } from './entities/order.entity';
 import { User } from '../users/entities/user.entity';
 import { Position } from '../portfolio/entities/position.entity';
-import { TradierService } from '../market-data/tradier.service';
+import { FinnhubService } from '../market-data/finnhub.service';
 import { CreateOrderDto } from './dto/create-order.dto';
 
 @Injectable()
@@ -18,7 +18,7 @@ export class OrdersService {
     private orderRepository: Repository<Order>,
     @InjectRepository(User)
     private userRepository: Repository<User>,
-    private tradierService: TradierService,
+    private finnhubService: FinnhubService,
     private dataSource: DataSource,
   ) {}
 
@@ -51,7 +51,7 @@ export class OrdersService {
     }
 
     // Get current quote
-    const quote = await this.tradierService.getQuote(upperSymbol);
+    const quote = await this.finnhubService.getQuote(upperSymbol);
     if (!quote) {
       throw new NotFoundException(`Quote not found for ${upperSymbol}`);
     }

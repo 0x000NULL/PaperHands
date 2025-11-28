@@ -5,7 +5,7 @@ import { BadRequestException, NotFoundException } from '@nestjs/common';
 import { OrdersService } from './orders.service';
 import { Order, OrderSide, OrderStatus } from './entities/order.entity';
 import { User } from '../users/entities/user.entity';
-import { TradierService } from '../market-data/tradier.service';
+import { FinnhubService } from '../market-data/finnhub.service';
 
 describe('OrdersService', () => {
   let service: OrdersService;
@@ -14,7 +14,7 @@ describe('OrdersService', () => {
     findOne: jest.Mock;
   };
   let mockUserRepository: Record<string, jest.Mock>;
-  let mockTradierService: { getQuote: jest.Mock };
+  let mockFinnhubService: { getQuote: jest.Mock };
   let mockDataSource: { createQueryRunner: jest.Mock };
   let mockQueryRunner: {
     connect: jest.Mock;
@@ -60,7 +60,7 @@ describe('OrdersService', () => {
 
     mockUserRepository = {};
 
-    mockTradierService = {
+    mockFinnhubService = {
       getQuote: jest.fn(),
     };
 
@@ -95,8 +95,8 @@ describe('OrdersService', () => {
           useValue: mockUserRepository,
         },
         {
-          provide: TradierService,
-          useValue: mockTradierService,
+          provide: FinnhubService,
+          useValue: mockFinnhubService,
         },
         {
           provide: DataSource,
@@ -120,7 +120,7 @@ describe('OrdersService', () => {
     };
 
     it('should create a buy order successfully', async () => {
-      mockTradierService.getQuote.mockResolvedValue(mockQuote);
+      mockFinnhubService.getQuote.mockResolvedValue(mockQuote);
       mockQueryRunner.manager.findOne
         .mockResolvedValueOnce(mockUser) // User lookup
         .mockResolvedValueOnce(null); // Position lookup (for buy, this happens in updatePosition)
@@ -138,7 +138,7 @@ describe('OrdersService', () => {
 
       const result = await service.createOrder(mockUser.id!, createOrderDto);
 
-      expect(mockTradierService.getQuote).toHaveBeenCalledWith('AAPL');
+      expect(mockFinnhubService.getQuote).toHaveBeenCalledWith('AAPL');
       expect(mockQueryRunner.startTransaction).toHaveBeenCalled();
       expect(mockQueryRunner.commitTransaction).toHaveBeenCalled();
       expect(mockQueryRunner.release).toHaveBeenCalled();
@@ -147,7 +147,7 @@ describe('OrdersService', () => {
     });
 
     it('should throw NotFoundException if quote not found', async () => {
-      mockTradierService.getQuote.mockResolvedValue(null);
+      mockFinnhubService.getQuote.mockResolvedValue(null);
 
       await expect(
         service.createOrder(mockUser.id!, createOrderDto),
@@ -155,7 +155,7 @@ describe('OrdersService', () => {
     });
 
     it('should throw BadRequestException if price is invalid', async () => {
-      mockTradierService.getQuote.mockResolvedValue({
+      mockFinnhubService.getQuote.mockResolvedValue({
         ...mockQuote,
         ask: 0,
         bid: 0,
@@ -167,7 +167,7 @@ describe('OrdersService', () => {
     });
 
     it('should throw BadRequestException if insufficient funds for buy', async () => {
-      mockTradierService.getQuote.mockResolvedValue(mockQuote);
+      mockFinnhubService.getQuote.mockResolvedValue(mockQuote);
       mockQueryRunner.manager.findOne.mockResolvedValueOnce({
         ...mockUser,
         cashBalance: 100, // Not enough for 10 shares at $150.1
@@ -200,7 +200,7 @@ describe('OrdersService', () => {
       });
 
       expect(result.id).toBe('order-123');
-      expect(mockTradierService.getQuote).not.toHaveBeenCalled();
+      expect(mockFinnhubService.getQuote).not.toHaveBeenCalled();
     });
   });
 

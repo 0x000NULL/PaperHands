@@ -1,14 +1,14 @@
 import { Controller, Get, Param, UseGuards } from '@nestjs/common';
 import { JwtAuthGuard } from '../common/guards/jwt-auth.guard';
-import { TradierService } from './tradier.service';
+import { FinnhubService } from './finnhub.service';
 
 @Controller('market-data')
 @UseGuards(JwtAuthGuard)
 export class MarketDataController {
-  constructor(private readonly tradierService: TradierService) {}
+  constructor(private readonly finnhubService: FinnhubService) {}
 
   @Get('quote/:symbol')
   async getQuote(@Param('symbol') symbol: string) {
-    return this.tradierService.getQuote(symbol);
+    return this.finnhubService.getQuote(symbol);
   }
 }

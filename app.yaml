@@ -39,10 +39,10 @@ services:
         type: SECRET
       - key: JWT_SECRET
         type: SECRET
-      - key: TRADIER_API_TOKEN
+      - key: FINNHUB_API_KEY
         type: SECRET
-      - key: TRADIER_BASE_URL
-        value: "https://sandbox.tradier.com/v1"
+      - key: FINNHUB_BASE_URL
+        value: "https://finnhub.io/api/v1"
       - key: FRONTEND_URL
         value: ${_self.PUBLIC_URL}
 
