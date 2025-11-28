@@ -5,6 +5,9 @@ import {
   Min,
   Matches,
   MaxLength,
+  IsOptional,
+  IsUUID,
+  IsPositive,
 } from 'class-validator';
 import { OrderSide } from '../entities/order.entity';
 
@@ -18,6 +21,12 @@ export class CreateOrderDto {
   side: OrderSide;
 
   @IsNumber()
-  @Min(0.0001)
+  @IsPositive({ message: 'Quantity must be a positive number' })
+  @Min(0.0001, { message: 'Minimum quantity is 0.0001' })
   quantity: number;
+
+  @IsOptional()
+  @IsString()
+  @IsUUID('4', { message: 'Idempotency key must be a valid UUID v4' })
+  idempotencyKey?: string;
 }

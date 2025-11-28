@@ -25,6 +25,7 @@ export class Position {
   @Column()
   userId: string;
 
+  @Index()
   @Column()
   symbol: string;
 

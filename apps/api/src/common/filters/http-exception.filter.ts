@@ -4,11 +4,15 @@ import {
   ArgumentsHost,
   HttpException,
   HttpStatus,
+  Logger,
 } from '@nestjs/common';
 import { Response } from 'express';
 
 @Catch()
 export class AllExceptionsFilter implements ExceptionFilter {
+  private readonly logger = new Logger(AllExceptionsFilter.name);
+  private readonly isProduction = process.env.NODE_ENV === 'production';
+
   catch(exception: unknown, host: ArgumentsHost) {
     const ctx = host.switchToHttp();
     const response = ctx.getResponse<Response>();
@@ -25,8 +29,18 @@ export class AllExceptionsFilter implements ExceptionFilter {
           : (exceptionResponse as { message?: string }).message || message;
     }
 
-    // Log error (don't expose stack trace in production)
-    console.error('Exception:', exception);
+    // Log error with appropriate detail level
+    if (this.isProduction) {
+      // In production, log sanitized error without stack trace
+      this.logger.error(`${status} - ${message}`);
+    } else {
+      // In development, log full error with stack trace
+      if (exception instanceof Error) {
+        this.logger.error(`${status} - ${message}`, exception.stack);
+      } else {
+        this.logger.error(`${status} - ${message}`, String(exception));
+      }
+    }
 
     response.status(status).json({
       statusCode: status,

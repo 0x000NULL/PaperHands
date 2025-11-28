@@ -1,28 +1,9 @@
-import { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { Layout } from '../components/Layout';
-import { api } from '../api/client';
-import type { Portfolio } from '../types';
+import { usePortfolio } from '../hooks';
 
 export function Dashboard() {
-  const [portfolio, setPortfolio] = useState<Portfolio | null>(null);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState('');
-
-  useEffect(() => {
-    const loadPortfolio = async () => {
-      try {
-        const data = await api.getPortfolio();
-        setPortfolio(data);
-      } catch (err) {
-        setError(err instanceof Error ? err.message : 'Failed to load portfolio');
-      } finally {
-        setLoading(false);
-      }
-    };
-
-    loadPortfolio();
-  }, []);
+  const { data: portfolio, isLoading, error } = usePortfolio();
 
   const formatCurrency = (value: number) =>
     new Intl.NumberFormat('en-US', {
@@ -33,7 +14,7 @@ export function Dashboard() {
   const formatPercent = (value: number) =>
     `${value >= 0 ? '+' : ''}${value.toFixed(2)}%`;
 
-  if (loading) {
+  if (isLoading) {
     return (
       <Layout>
         <div style={{ textAlign: 'center', padding: '2rem' }}>Loading...</div>
@@ -52,7 +33,7 @@ export function Dashboard() {
             borderRadius: '4px',
           }}
         >
-          {error}
+          {error instanceof Error ? error.message : 'Failed to load portfolio'}
         </div>
       </Layout>
     );

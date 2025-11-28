@@ -18,10 +18,19 @@ export interface Quote {
   close: number | null;
 }
 
+// Tradier API response types
+interface TradierQuotesResponse {
+  quotes: {
+    quote: Quote | Quote[];
+  } | null;
+}
+
 @Injectable()
 export class TradierService {
   private readonly baseUrl: string;
   private readonly apiToken: string;
+  private readonly requestTimeout = 10000; // 10 seconds
+  private readonly maxRetries = 3;
 
   constructor(
     private configService: ConfigService,
@@ -34,6 +43,57 @@ export class TradierService {
     this.apiToken = this.configService.get<string>('TRADIER_API_TOKEN', '');
   }
 
+  private async fetchWithTimeout(
+    url: string,
+    options: RequestInit,
+  ): Promise<Response> {
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), this.requestTimeout);
+
+    try {
+      const response = await fetch(url, {
+        ...options,
+        signal: controller.signal,
+      });
+      return response;
+    } finally {
+      clearTimeout(timeoutId);
+    }
+  }
+
+  private async fetchWithRetry(
+    url: string,
+    options: RequestInit,
+  ): Promise<Response> {
+    let lastError: Error | null = null;
+
+    for (let attempt = 0; attempt < this.maxRetries; attempt++) {
+      try {
+        const response = await this.fetchWithTimeout(url, options);
+        // Don't retry on client errors (4xx), only on server errors (5xx)
+        if (response.ok || response.status < 500) {
+          return response;
+        }
+        lastError = new Error(`Server error: ${response.status}`);
+      } catch (err) {
+        lastError = err instanceof Error ? err : new Error(String(err));
+        // Don't retry if the request was aborted (timeout)
+        if (lastError.name === 'AbortError') {
+          throw new HttpException('Request timeout', 408);
+        }
+      }
+
+      // Exponential backoff: 1s, 2s, 4s
+      if (attempt < this.maxRetries - 1) {
+        await new Promise((resolve) =>
+          setTimeout(resolve, 1000 * Math.pow(2, attempt)),
+        );
+      }
+    }
+
+    throw new HttpException(lastError?.message || 'Max retries exceeded', 503);
+  }
+
   async getQuote(symbol: string): Promise<Quote> {
     const upperSymbol = symbol.toUpperCase();
     const cacheKey = `quote:${upperSymbol}`;
@@ -44,7 +104,7 @@ export class TradierService {
       return cached;
     }
 
-    const response = await fetch(
+    const response = await this.fetchWithRetry(
       `${this.baseUrl}/markets/quotes?symbols=${upperSymbol}`,
       {
         headers: {
@@ -61,13 +121,16 @@ export class TradierService {
       );
     }
 
-    const data = await response.json();
+    const data = (await response.json()) as TradierQuotesResponse;
 
     if (!data.quotes || !data.quotes.quote) {
       throw new HttpException(`Quote not found for ${upperSymbol}`, 404);
     }
 
-    const quote = data.quotes.quote;
+    // Tradier returns single object for single symbol request
+    const quote = Array.isArray(data.quotes.quote)
+      ? data.quotes.quote[0]
+      : data.quotes.quote;
 
     // Cache for 5 seconds
     await this.cacheManager.set(cacheKey, quote, 5000);
@@ -79,7 +142,7 @@ export class TradierService {
     const upperSymbols = symbols.map((s) => s.toUpperCase());
     const symbolsParam = upperSymbols.join(',');
 
-    const response = await fetch(
+    const response = await this.fetchWithRetry(
       `${this.baseUrl}/markets/quotes?symbols=${symbolsParam}`,
       {
         headers: {
@@ -93,14 +156,14 @@ export class TradierService {
       throw new HttpException('Failed to fetch quotes', response.status);
     }
 
-    const data = await response.json();
+    const data = (await response.json()) as TradierQuotesResponse;
 
     if (!data.quotes || !data.quotes.quote) {
       return [];
     }
 
     // Tradier returns single object if one symbol, array if multiple
-    const quotes = Array.isArray(data.quotes.quote)
+    const quotes: Quote[] = Array.isArray(data.quotes.quote)
       ? data.quotes.quote
       : [data.quotes.quote];
 

@@ -2,10 +2,13 @@ import {
   Injectable,
   ConflictException,
   UnauthorizedException,
+  Inject,
 } from '@nestjs/common';
 import { JwtService } from '@nestjs/jwt';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
+import { CACHE_MANAGER } from '@nestjs/cache-manager';
+import type { Cache } from 'cache-manager';
 import * as bcrypt from 'bcrypt';
 import { User } from '../users/entities/user.entity';
 import { RegisterDto } from './dto/register.dto';
@@ -18,6 +21,8 @@ export class AuthService {
     @InjectRepository(User)
     private userRepository: Repository<User>,
     private jwtService: JwtService,
+    @Inject(CACHE_MANAGER)
+    private cacheManager: Cache,
   ) {}
 
   async register(registerDto: RegisterDto) {
@@ -96,5 +101,11 @@ export class AuthService {
     };
 
     return this.jwtService.sign(payload);
+  }
+
+  async logout(userId: string): Promise<void> {
+    // Clear user from cache to invalidate cached session
+    const cacheKey = `user:${userId}`;
+    await this.cacheManager.del(cacheKey);
   }
 }

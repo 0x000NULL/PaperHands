@@ -23,8 +23,32 @@ export class OrdersService {
   ) {}
 
   async createOrder(userId: string, createOrderDto: CreateOrderDto) {
-    const { symbol, side, quantity } = createOrderDto;
+    const { symbol, side, quantity, idempotencyKey } = createOrderDto;
     const upperSymbol = symbol.toUpperCase();
+
+    // Check for idempotency - return existing order if same key used
+    if (idempotencyKey) {
+      const existingOrder = await this.orderRepository.findOne({
+        where: { userId, idempotencyKey },
+      });
+
+      if (existingOrder) {
+        return {
+          id: existingOrder.id,
+          symbol: existingOrder.symbol,
+          side: existingOrder.side,
+          quantity: Number(existingOrder.quantity),
+          filledPrice: existingOrder.filledPrice
+            ? Number(existingOrder.filledPrice)
+            : null,
+          status: existingOrder.status,
+          totalValue:
+            Number(existingOrder.quantity) *
+            (existingOrder.filledPrice ? Number(existingOrder.filledPrice) : 0),
+          createdAt: existingOrder.createdAt,
+        };
+      }
+    }
 
     // Get current quote
     const quote = await this.tradierService.getQuote(upperSymbol);
@@ -98,6 +122,7 @@ export class OrdersService {
         quantity,
         filledPrice: executionPrice,
         status: OrderStatus.FILLED,
+        idempotencyKey,
       });
 
       await queryRunner.manager.save(order);
@@ -172,7 +197,9 @@ export class OrdersService {
         if (newQty <= 0) {
           await manager.remove(existingPosition);
         } else {
-          await manager.update(Position, existingPosition.id, { quantity: newQty });
+          await manager.update(Position, existingPosition.id, {
+            quantity: newQty,
+          });
         }
       }
     }

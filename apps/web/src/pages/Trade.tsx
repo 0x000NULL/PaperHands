@@ -1,20 +1,25 @@
 import { useState, useRef, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Layout } from '../components/Layout';
-import { api } from '../api/client';
-import type { Quote, OrderSide } from '../types';
+import { useQuote, usePlaceOrder } from '../hooks';
+import type { OrderSide } from '../types';
 
 export function Trade() {
   const [symbol, setSymbol] = useState('');
-  const [quote, setQuote] = useState<Quote | null>(null);
+  const [searchSymbol, setSearchSymbol] = useState('');
   const [quantity, setQuantity] = useState('');
   const [side, setSide] = useState<OrderSide>('buy');
-  const [loading, setLoading] = useState(false);
-  const [quoteLoading, setQuoteLoading] = useState(false);
-  const [error, setError] = useState('');
   const [success, setSuccess] = useState('');
   const navigate = useNavigate();
   const timeoutRef = useRef<number | null>(null);
+
+  const {
+    data: quote,
+    isLoading: quoteLoading,
+    error: quoteError,
+  } = useQuote(searchSymbol, searchSymbol.length > 0);
+
+  const placeOrderMutation = usePlaceOrder();
 
   // Cleanup timeout on unmount
   useEffect(() => {
@@ -25,64 +30,46 @@ export function Trade() {
     };
   }, []);
 
-  const lookupQuote = async () => {
+  const lookupQuote = () => {
     if (!symbol.trim()) return;
-
-    setQuoteLoading(true);
-    setError('');
-    setQuote(null);
-
-    try {
-      const data = await api.getQuote(symbol.trim());
-      setQuote(data);
-    } catch (err) {
-      setError(err instanceof Error ? err.message : 'Failed to fetch quote');
-    } finally {
-      setQuoteLoading(false);
-    }
+    setSearchSymbol(symbol.trim().toUpperCase());
   };
 
-  const handleSubmit = async (e: React.FormEvent) => {
+  const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    setError('');
     setSuccess('');
 
     if (!quote) {
-      setError('Please look up a stock first');
       return;
     }
 
     const qty = parseFloat(quantity);
     if (isNaN(qty) || qty <= 0) {
-      setError('Please enter a valid quantity');
       return;
     }
 
-    setLoading(true);
-
-    try {
-      const order = await api.placeOrder({
+    placeOrderMutation.mutate(
+      {
         symbol: quote.symbol,
         side,
         quantity: qty,
-      });
+      },
+      {
+        onSuccess: (order) => {
+          setSuccess(
+            `Order filled: ${side.toUpperCase()} ${qty} ${quote.symbol} @ $${order.filledPrice?.toFixed(2)}`,
+          );
 
-      setSuccess(
-        `Order filled: ${side.toUpperCase()} ${qty} ${quote.symbol} @ $${order.filledPrice?.toFixed(2)}`,
-      );
+          // Reset form
+          setQuantity('');
+          setSearchSymbol('');
+          setSymbol('');
 
-      // Reset form
-      setQuantity('');
-      setQuote(null);
-      setSymbol('');
-
-      // Navigate to dashboard after 2 seconds
-      timeoutRef.current = window.setTimeout(() => navigate('/'), 2000);
-    } catch (err) {
-      setError(err instanceof Error ? err.message : 'Order failed');
-    } finally {
-      setLoading(false);
-    }
+          // Navigate to dashboard after 2 seconds
+          timeoutRef.current = window.setTimeout(() => navigate('/'), 2000);
+        },
+      },
+    );
   };
 
   const formatCurrency = (value: number) =>
@@ -94,6 +81,13 @@ export function Trade() {
   const estimatedCost = quote
     ? parseFloat(quantity || '0') * (side === 'buy' ? quote.ask : quote.bid)
     : 0;
+
+  const error =
+    quoteError instanceof Error
+      ? quoteError.message
+      : placeOrderMutation.error instanceof Error
+        ? placeOrderMutation.error.message
+        : null;
 
   return (
     <Layout>
@@ -331,7 +325,7 @@ export function Trade() {
 
               <button
                 type="submit"
-                disabled={loading || !quantity}
+                disabled={placeOrderMutation.isPending || !quantity}
                 style={{
                   width: '100%',
                   padding: '1rem',
@@ -341,11 +335,11 @@ export function Trade() {
                   borderRadius: '4px',
                   fontSize: '1rem',
                   fontWeight: 'bold',
-                  cursor: loading ? 'not-allowed' : 'pointer',
-                  opacity: loading || !quantity ? 0.7 : 1,
+                  cursor: placeOrderMutation.isPending ? 'not-allowed' : 'pointer',
+                  opacity: placeOrderMutation.isPending || !quantity ? 0.7 : 1,
                 }}
               >
-                {loading
+                {placeOrderMutation.isPending
                   ? 'Placing Order...'
                   : `${side.toUpperCase()} ${quote.symbol}`}
               </button>

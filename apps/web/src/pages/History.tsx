@@ -1,27 +1,8 @@
-import { useEffect, useState } from 'react';
 import { Layout } from '../components/Layout';
-import { api } from '../api/client';
-import type { Order } from '../types';
+import { useOrders } from '../hooks';
 
 export function History() {
-  const [orders, setOrders] = useState<Order[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState('');
-
-  useEffect(() => {
-    const loadOrders = async () => {
-      try {
-        const data = await api.getOrders();
-        setOrders(data);
-      } catch (err) {
-        setError(err instanceof Error ? err.message : 'Failed to load orders');
-      } finally {
-        setLoading(false);
-      }
-    };
-
-    loadOrders();
-  }, []);
+  const { data: orders, isLoading, error } = useOrders();
 
   const formatCurrency = (value: number) =>
     new Intl.NumberFormat('en-US', {
@@ -32,7 +13,7 @@ export function History() {
   const formatDate = (dateString: string) =>
     new Date(dateString).toLocaleString();
 
-  if (loading) {
+  if (isLoading) {
     return (
       <Layout>
         <div style={{ textAlign: 'center', padding: '2rem' }}>Loading...</div>
@@ -54,7 +35,7 @@ export function History() {
             marginBottom: '1rem',
           }}
         >
-          {error}
+          {error instanceof Error ? error.message : 'Failed to load orders'}
         </div>
       )}
 
@@ -66,7 +47,7 @@ export function History() {
           overflow: 'hidden',
         }}
       >
-        {orders.length === 0 ? (
+        {!orders || orders.length === 0 ? (
           <div style={{ padding: '2rem', textAlign: 'center', color: '#666' }}>
             No orders yet.
           </div>

@@ -23,34 +23,50 @@ class ApiError extends Error {
   }
 }
 
+const REQUEST_TIMEOUT = 15000; // 15 seconds
+
 async function request<T>(
   endpoint: string,
   options: RequestInit = {},
 ): Promise<T> {
   const token = useAuthStore.getState().token;
+  const controller = new AbortController();
+  const timeoutId = setTimeout(() => controller.abort(), REQUEST_TIMEOUT);
 
-  const response = await fetch(`${API_BASE}${endpoint}`, {
-    ...options,
-    headers: {
-      'Content-Type': 'application/json',
-      ...(token && { Authorization: `Bearer ${token}` }),
-      ...options.headers,
-    },
-  });
+  try {
+    const response = await fetch(`${API_BASE}${endpoint}`, {
+      ...options,
+      signal: controller.signal,
+      headers: {
+        'Content-Type': 'application/json',
+        ...(token && { Authorization: `Bearer ${token}` }),
+        ...options.headers,
+      },
+    });
 
-  if (!response.ok) {
-    if (response.status === 401) {
-      useAuthStore.getState().logout();
+    if (!response.ok) {
+      if (response.status === 401) {
+        useAuthStore.getState().logout();
+      }
+
+      const errorData = (await response.json().catch(() => ({}))) as {
+        message?: string;
+      };
+      throw new ApiError(
+        response.status,
+        errorData.message || `Request failed with status ${response.status}`,
+      );
     }
 
-    const errorData = await response.json().catch(() => ({}));
-    throw new ApiError(
-      response.status,
-      errorData.message || `Request failed with status ${response.status}`,
-    );
+    return response.json() as Promise<T>;
+  } catch (error) {
+    if (error instanceof Error && error.name === 'AbortError') {
+      throw new ApiError(408, 'Request timeout');
+    }
+    throw error;
+  } finally {
+    clearTimeout(timeoutId);
   }
-
-  return response.json();
 }
 
 export const api = {

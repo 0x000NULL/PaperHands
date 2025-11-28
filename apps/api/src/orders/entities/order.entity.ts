@@ -33,6 +33,7 @@ export class Order {
   @Column()
   userId: string;
 
+  @Index()
   @Column()
   symbol: string;
 
@@ -45,8 +46,13 @@ export class Order {
   @Column('decimal', { precision: 12, scale: 4, nullable: true })
   filledPrice: number | null;
 
+  @Index()
   @Column({ type: 'enum', enum: OrderStatus, default: OrderStatus.PENDING })
   status: OrderStatus;
+
+  @Index()
+  @Column({ nullable: true })
+  idempotencyKey?: string;
 
   @Index()
   @CreateDateColumn()
