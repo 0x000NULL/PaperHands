@@ -36,6 +36,42 @@ export function SpotlightTour() {
 
   const currentStop = TOUR_STOPS[tourStep];
 
+  // Calculate and set positions for spotlight and tooltip
+  const updatePositions = useCallback((element: Element) => {
+    const rect = element.getBoundingClientRect();
+    setTargetRect(rect);
+
+    // Calculate tooltip position (below the element by default)
+    const tooltipWidth = 320;
+    const tooltipHeight = 180;
+    const padding = 16;
+
+    let top = rect.bottom + padding;
+    let left = rect.left + rect.width / 2 - tooltipWidth / 2;
+
+    // Keep tooltip in viewport
+    if (left < padding) left = padding;
+    if (left + tooltipWidth > window.innerWidth - padding) {
+      left = window.innerWidth - tooltipWidth - padding;
+    }
+
+    // If tooltip would go below viewport, position it above
+    if (top + tooltipHeight > window.innerHeight - padding) {
+      top = rect.top - tooltipHeight - padding;
+    }
+
+    // If still out of bounds, position to the side
+    if (top < padding) {
+      top = rect.top;
+      left = rect.right + padding;
+      if (left + tooltipWidth > window.innerWidth - padding) {
+        left = rect.left - tooltipWidth - padding;
+      }
+    }
+
+    setTooltipPosition({ top, left });
+  }, []);
+
   // Find and position the spotlight on the target element
   useEffect(() => {
     if (!isTourActive || !currentStop) return;
@@ -44,46 +80,29 @@ export function SpotlightTour() {
     const element = document.querySelector(`[data-tour-id="${elementId}"]`);
 
     if (element) {
+      // Check if element is already in viewport
       const rect = element.getBoundingClientRect();
-      setTargetRect(rect);
+      const isInViewport = rect.top >= 0 && rect.bottom <= window.innerHeight;
 
-      // Calculate tooltip position (below the element by default)
-      const tooltipWidth = 320;
-      const tooltipHeight = 180;
-      const padding = 16;
+      if (isInViewport) {
+        // Element is visible, just update positions
+        updatePositions(element);
+      } else {
+        // Scroll element into view with minimal movement, then update positions
+        element.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
 
-      let top = rect.bottom + padding;
-      let left = rect.left + rect.width / 2 - tooltipWidth / 2;
+        // Wait for scroll to complete, then recalculate positions
+        const scrollTimeout = setTimeout(() => {
+          updatePositions(element);
+        }, 400);
 
-      // Keep tooltip in viewport
-      if (left < padding) left = padding;
-      if (left + tooltipWidth > window.innerWidth - padding) {
-        left = window.innerWidth - tooltipWidth - padding;
+        return () => clearTimeout(scrollTimeout);
       }
-
-      // If tooltip would go below viewport, position it above
-      if (top + tooltipHeight > window.innerHeight - padding) {
-        top = rect.top - tooltipHeight - padding;
-      }
-
-      // If still out of bounds, position to the side
-      if (top < padding) {
-        top = rect.top;
-        left = rect.right + padding;
-        if (left + tooltipWidth > window.innerWidth - padding) {
-          left = rect.left - tooltipWidth - padding;
-        }
-      }
-
-      setTooltipPosition({ top, left });
-
-      // Scroll element into view if needed
-      element.scrollIntoView({ behavior: 'smooth', block: 'center' });
     } else {
       setTargetRect(null);
       setTooltipPosition({ top: window.innerHeight / 2 - 90, left: window.innerWidth / 2 - 160 });
     }
-  }, [isTourActive, tourStep, currentStop]);
+  }, [isTourActive, tourStep, currentStop, updatePositions]);
 
   const handleNext = useCallback(async () => {
     if (tourStep >= TOUR_STOPS.length - 1) {
