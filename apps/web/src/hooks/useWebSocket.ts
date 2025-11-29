@@ -8,21 +8,29 @@ import {
   type StreamingTimesale,
 } from '../store/streamingStore';
 
-// Socket.io URL - uses HTTP for initial handshake, handles upgrade internally
+// Socket.io configuration - handles API behind path prefix (e.g., /api)
 const rawApiUrl = import.meta.env.VITE_API_URL ?? 'http://localhost:3000';
-const socketUrl = rawApiUrl.replace(/\/+$/, '');
 
-// Extract the path prefix from the API URL (e.g., '/api' from 'https://example.com/api')
-const getSocketPath = () => {
+// Parse the API URL to get origin and path separately
+const getSocketConfig = () => {
   try {
     const url = new URL(rawApiUrl);
     const pathPrefix = url.pathname.replace(/\/+$/, '');
-    // Socket.io path must include the prefix if API is behind a path
-    return pathPrefix ? `${pathPrefix}/socket.io` : '/socket.io';
+    return {
+      // Socket.io connects to origin only, namespace is separate
+      origin: url.origin,
+      // Transport path includes the API prefix
+      path: pathPrefix ? `${pathPrefix}/socket.io` : '/socket.io',
+    };
   } catch {
-    return '/socket.io';
+    return {
+      origin: rawApiUrl.replace(/\/+$/, ''),
+      path: '/socket.io',
+    };
   }
 };
+
+const socketConfig = getSocketConfig();
 
 interface StreamEventPayload<T> {
   symbol: string;
@@ -53,9 +61,11 @@ export function useWebSocket() {
     setConnectionStatus('connecting');
     setError(null);
 
-    const socket = io(`${socketUrl}/streaming`, {
+    // Connect to origin with /streaming namespace
+    // The path option handles the API prefix (e.g., /api/socket.io)
+    const socket = io(`${socketConfig.origin}/streaming`, {
       auth: { token },
-      path: getSocketPath(),
+      path: socketConfig.path,
       transports: ['websocket'],
       reconnection: true,
       reconnectionAttempts: 5,
