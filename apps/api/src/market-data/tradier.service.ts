@@ -590,4 +590,302 @@ export class TradierService {
 
     return result;
   }
+
+  /**
+   * Get quote for a specific option contract
+   * @param optionSymbol OCC option symbol (e.g., AAPL240119C00190000)
+   */
+  async getOptionQuote(optionSymbol: string): Promise<{
+    symbol: string;
+    bid: number;
+    ask: number;
+    last: number | null;
+    volume: number;
+    openInterest: number;
+    greeks: {
+      delta: number;
+      gamma: number;
+      theta: number;
+      vega: number;
+      rho: number;
+      iv: number;
+    } | null;
+  } | null> {
+    const cacheKey = `option:quote:${optionSymbol}`;
+
+    // Check cache first (15 seconds TTL - shorter for trading)
+    const cached = await this.cacheManager.get<{
+      symbol: string;
+      bid: number;
+      ask: number;
+      last: number | null;
+      volume: number;
+      openInterest: number;
+      greeks: {
+        delta: number;
+        gamma: number;
+        theta: number;
+        vega: number;
+        rho: number;
+        iv: number;
+      } | null;
+    }>(cacheKey);
+    if (cached) {
+      return cached;
+    }
+
+    // Fetch option quote with Greeks
+    const response = await this.fetchWithRetry(
+      `${this.baseUrl}/markets/quotes?symbols=${optionSymbol}&greeks=true`,
+      {
+        headers: {
+          Authorization: `Bearer ${this.apiToken}`,
+          Accept: 'application/json',
+        },
+      },
+    );
+
+    if (!response.ok) {
+      // Map external API errors to avoid triggering frontend logout on 401
+      const status =
+        response.status === 401 || response.status === 403
+          ? 503
+          : response.status;
+      throw new HttpException(
+        `Option quote not available for ${optionSymbol}`,
+        status,
+      );
+    }
+
+    const data = (await response.json()) as {
+      quotes: {
+        quote: {
+          symbol: string;
+          bid: number;
+          ask: number;
+          last: number | null;
+          volume: number;
+          open_interest: number;
+          greeks?: {
+            delta: number;
+            gamma: number;
+            theta: number;
+            vega: number;
+            rho: number;
+            mid_iv: number;
+          };
+        } | null;
+      } | null;
+    };
+
+    if (!data.quotes || !data.quotes.quote) {
+      return null;
+    }
+
+    const opt = data.quotes.quote;
+    const result = {
+      symbol: opt.symbol,
+      bid: opt.bid,
+      ask: opt.ask,
+      last: opt.last,
+      volume: opt.volume,
+      openInterest: opt.open_interest,
+      greeks: opt.greeks
+        ? {
+            delta: opt.greeks.delta,
+            gamma: opt.greeks.gamma,
+            theta: opt.greeks.theta,
+            vega: opt.greeks.vega,
+            rho: opt.greeks.rho,
+            iv: opt.greeks.mid_iv,
+          }
+        : null,
+    };
+
+    // Cache for 15 seconds
+    await this.cacheManager.set(cacheKey, result, 15_000);
+
+    return result;
+  }
+
+  /**
+   * Get quotes for multiple option contracts at once
+   * Batches into chunks of 100 symbols (Tradier limit)
+   * @param optionSymbols Array of OCC option symbols
+   */
+  async getOptionQuotes(optionSymbols: string[]): Promise<
+    Map<
+      string,
+      {
+        symbol: string;
+        bid: number;
+        ask: number;
+        last: number | null;
+        volume: number;
+        openInterest: number;
+        greeks: {
+          delta: number;
+          gamma: number;
+          theta: number;
+          vega: number;
+          rho: number;
+          iv: number;
+        } | null;
+      }
+    >
+  > {
+    const results = new Map<
+      string,
+      {
+        symbol: string;
+        bid: number;
+        ask: number;
+        last: number | null;
+        volume: number;
+        openInterest: number;
+        greeks: {
+          delta: number;
+          gamma: number;
+          theta: number;
+          vega: number;
+          rho: number;
+          iv: number;
+        } | null;
+      }
+    >();
+
+    if (optionSymbols.length === 0) {
+      return results;
+    }
+
+    // Check cache for each symbol first
+    const uncachedSymbols: string[] = [];
+    for (const symbol of optionSymbols) {
+      const cacheKey = `option:quote:${symbol}`;
+      const cached = await this.cacheManager.get<{
+        symbol: string;
+        bid: number;
+        ask: number;
+        last: number | null;
+        volume: number;
+        openInterest: number;
+        greeks: {
+          delta: number;
+          gamma: number;
+          theta: number;
+          vega: number;
+          rho: number;
+          iv: number;
+        } | null;
+      }>(cacheKey);
+
+      if (cached) {
+        results.set(symbol, cached);
+      } else {
+        uncachedSymbols.push(symbol);
+      }
+    }
+
+    // Batch fetch uncached symbols (max 100 per request)
+    const BATCH_SIZE = 100;
+    for (let i = 0; i < uncachedSymbols.length; i += BATCH_SIZE) {
+      const batch = uncachedSymbols.slice(i, i + BATCH_SIZE);
+      const symbolsParam = batch.join(',');
+
+      try {
+        const response = await this.fetchWithRetry(
+          `${this.baseUrl}/markets/quotes?symbols=${symbolsParam}&greeks=true`,
+          {
+            headers: {
+              Authorization: `Bearer ${this.apiToken}`,
+              Accept: 'application/json',
+            },
+          },
+        );
+
+        if (!response.ok) {
+          continue; // Skip failed batches, continue with others
+        }
+
+        const data = (await response.json()) as {
+          quotes: {
+            quote:
+              | {
+                  symbol: string;
+                  bid: number;
+                  ask: number;
+                  last: number | null;
+                  volume: number;
+                  open_interest: number;
+                  greeks?: {
+                    delta: number;
+                    gamma: number;
+                    theta: number;
+                    vega: number;
+                    rho: number;
+                    mid_iv: number;
+                  };
+                }
+              | Array<{
+                  symbol: string;
+                  bid: number;
+                  ask: number;
+                  last: number | null;
+                  volume: number;
+                  open_interest: number;
+                  greeks?: {
+                    delta: number;
+                    gamma: number;
+                    theta: number;
+                    vega: number;
+                    rho: number;
+                    mid_iv: number;
+                  };
+                }>
+              | null;
+          } | null;
+        };
+
+        if (!data.quotes || !data.quotes.quote) {
+          continue;
+        }
+
+        const quotes = Array.isArray(data.quotes.quote)
+          ? data.quotes.quote
+          : [data.quotes.quote];
+
+        for (const opt of quotes) {
+          const result = {
+            symbol: opt.symbol,
+            bid: opt.bid,
+            ask: opt.ask,
+            last: opt.last,
+            volume: opt.volume,
+            openInterest: opt.open_interest,
+            greeks: opt.greeks
+              ? {
+                  delta: opt.greeks.delta,
+                  gamma: opt.greeks.gamma,
+                  theta: opt.greeks.theta,
+                  vega: opt.greeks.vega,
+                  rho: opt.greeks.rho,
+                  iv: opt.greeks.mid_iv,
+                }
+              : null,
+          };
+
+          results.set(opt.symbol, result);
+
+          // Cache each result individually
+          const cacheKey = `option:quote:${opt.symbol}`;
+          await this.cacheManager.set(cacheKey, result, 15_000);
+        }
+      } catch {
+        // Log but continue with other batches
+        continue;
+      }
+    }
+
+    return results;
+  }
 }

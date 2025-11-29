@@ -12,6 +12,14 @@ import type {
   WatchlistDetail,
   MarketStatus,
   OptionsChainResponse,
+  OptionPosition,
+  PortfolioGreeksSummary,
+  UnderlyingGreeks,
+  ExpirationBucket,
+  ThetaProjection,
+  DeltaExposure,
+  SensitivityResult,
+  ExpirationCalendarItem,
 } from '../types';
 
 // API base URL from build-time environment variable
@@ -102,6 +110,31 @@ export const api = {
 
   // Portfolio
   getPortfolio: () => request<Portfolio>('/portfolio'),
+  getOptionPositions: () => request<OptionPosition[]>('/portfolio/options'),
+
+  // Greeks
+  getPortfolioGreeks: () =>
+    request<PortfolioGreeksSummary>('/portfolio/greeks'),
+
+  getGreeksByUnderlying: () =>
+    request<UnderlyingGreeks[]>('/portfolio/greeks/by-underlying'),
+
+  getGreeksByExpiration: () =>
+    request<ExpirationBucket[]>('/portfolio/greeks/by-expiration'),
+
+  getThetaDecayProjection: (days: number = 30) =>
+    request<ThetaProjection[]>(`/portfolio/greeks/theta-projection?days=${days}`),
+
+  getDeltaExposure: (symbol?: string) =>
+    request<DeltaExposure[]>(
+      `/portfolio/greeks/delta-exposure${symbol ? `?symbol=${symbol}` : ''}`,
+    ),
+
+  getGreeksSensitivity: (symbol: string) =>
+    request<SensitivityResult>(`/portfolio/greeks/sensitivity/${symbol}`),
+
+  getOptionExpirations: () =>
+    request<ExpirationCalendarItem[]>('/portfolio/options/expirations'),
 
   // Orders
   placeOrder: (order: CreateOrderRequest) =>
@@ -217,6 +250,31 @@ export const api = {
 
   getCostBasisSettings: () =>
     request<CostBasisSettings>('/analytics/settings/cost-basis'),
+
+  // Option Closures
+  getOptionClosures: (options?: {
+    symbol?: string;
+    closureType?: OptionClosureType;
+    limit?: number;
+  }) => {
+    const params = new URLSearchParams();
+    if (options?.symbol) params.set('symbol', options.symbol);
+    if (options?.closureType) params.set('closureType', options.closureType);
+    if (options?.limit) params.set('limit', options.limit.toString());
+    return request<OptionClosure[]>(
+      `/analytics/option-closures?${params.toString()}`,
+    );
+  },
+
+  getOptionRealizedGains: (year?: number) =>
+    request<OptionRealizedGainsSummary>(
+      `/analytics/option-realized-gains${year ? `?year=${year}` : ''}`,
+    ),
+
+  getCombinedRealizedGains: (year?: number) =>
+    request<CombinedRealizedGainsSummary>(
+      `/analytics/combined-realized-gains${year ? `?year=${year}` : ''}`,
+    ),
 };
 
 // Analytics types
@@ -337,4 +395,47 @@ export interface DividendSummary {
 export interface CostBasisSettings {
   defaultMethod: 'fifo' | 'lifo' | 'hifo' | 'specific';
   symbolOverrides: Record<string, string>;
+}
+
+// Option Closure types
+export type OptionClosureType =
+  | 'sold_to_close'
+  | 'expired_worthless'
+  | 'exercised'
+  | 'assigned';
+
+export interface OptionClosure {
+  id: string;
+  optionSymbol: string;
+  underlyingSymbol: string;
+  optionType: 'call' | 'put';
+  strikePrice: number;
+  expirationDate: string;
+  closureType: OptionClosureType;
+  quantityClosed: number;
+  openingPremium: number;
+  closingPremium: number | null;
+  realizedGain: number;
+  proceeds: number;
+  costBasis: number;
+  gainType: 'short_term' | 'long_term';
+  holdingDays: number;
+  closedAt: string;
+}
+
+export interface OptionRealizedGainsSummary {
+  shortTermGains: number;
+  shortTermLosses: number;
+  longTermGains: number;
+  longTermLosses: number;
+  totalShortTerm: number;
+  totalLongTerm: number;
+  totalRealized: number;
+  transactionCount: number;
+}
+
+export interface CombinedRealizedGainsSummary {
+  stocks: RealizedGainsSummary;
+  options: OptionRealizedGainsSummary;
+  combined: OptionRealizedGainsSummary;
 }

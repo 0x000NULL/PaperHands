@@ -3,8 +3,10 @@ import { getRepositoryToken } from '@nestjs/typeorm';
 import { NotFoundException } from '@nestjs/common';
 import { PortfolioService } from './portfolio.service';
 import { Position } from './entities/position.entity';
+import { OptionPosition } from './entities/option-position.entity';
 import { User } from '../users/entities/user.entity';
 import { FinnhubService } from '../market-data/finnhub.service';
+import { TradierService } from '../market-data/tradier.service';
 
 describe('PortfolioService', () => {
   let service: PortfolioService;
@@ -16,8 +18,13 @@ describe('PortfolioService', () => {
     update: jest.Mock;
     remove: jest.Mock;
   };
+  let mockOptionPositionRepository: {
+    find: jest.Mock;
+    findOne: jest.Mock;
+  };
   let mockUserRepository: { findOne: jest.Mock };
   let mockFinnhubService: { getQuotes: jest.Mock };
+  let mockTradierService: { getOptionQuotes: jest.Mock };
 
   const mockUser: Partial<User> = {
     id: 'user-123',
@@ -67,12 +74,21 @@ describe('PortfolioService', () => {
       remove: jest.fn(),
     };
 
+    mockOptionPositionRepository = {
+      find: jest.fn().mockResolvedValue([]),
+      findOne: jest.fn(),
+    };
+
     mockUserRepository = {
       findOne: jest.fn(),
     };
 
     mockFinnhubService = {
       getQuotes: jest.fn(),
+    };
+
+    mockTradierService = {
+      getOptionQuotes: jest.fn().mockResolvedValue(new Map()),
     };
 
     const module: TestingModule = await Test.createTestingModule({
@@ -83,12 +99,20 @@ describe('PortfolioService', () => {
           useValue: mockPositionRepository,
         },
         {
+          provide: getRepositoryToken(OptionPosition),
+          useValue: mockOptionPositionRepository,
+        },
+        {
           provide: getRepositoryToken(User),
           useValue: mockUserRepository,
         },
         {
           provide: FinnhubService,
           useValue: mockFinnhubService,
+        },
+        {
+          provide: TradierService,
+          useValue: mockTradierService,
         },
       ],
     }).compile();

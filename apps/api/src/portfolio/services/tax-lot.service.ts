@@ -189,7 +189,9 @@ export class TaxLotService {
       .where('sale.userId = :userId', { userId });
 
     if (options?.symbol) {
-      queryBuilder.andWhere('sale.symbol = :symbol', { symbol: options.symbol });
+      queryBuilder.andWhere('sale.symbol = :symbol', {
+        symbol: options.symbol,
+      });
     }
     if (options?.startDate) {
       queryBuilder.andWhere('sale.soldAt >= :startDate', {
@@ -225,8 +227,14 @@ export class TaxLotService {
     const results = await this.lotSaleRepository
       .createQueryBuilder('sale')
       .select('sale.gainType', 'gainType')
-      .addSelect('SUM(CASE WHEN sale.realizedGain > 0 THEN sale.realizedGain ELSE 0 END)', 'gains')
-      .addSelect('SUM(CASE WHEN sale.realizedGain < 0 THEN sale.realizedGain ELSE 0 END)', 'losses')
+      .addSelect(
+        'SUM(CASE WHEN sale.realizedGain > 0 THEN sale.realizedGain ELSE 0 END)',
+        'gains',
+      )
+      .addSelect(
+        'SUM(CASE WHEN sale.realizedGain < 0 THEN sale.realizedGain ELSE 0 END)',
+        'losses',
+      )
       .addSelect('SUM(sale.realizedGain)', 'totalGain')
       .addSelect('SUM(sale.proceeds)', 'totalProceeds')
       .addSelect('SUM(sale.costBasis)', 'totalCostBasis')
@@ -243,7 +251,12 @@ export class TaxLotService {
     let longTermLosses = 0;
     let transactionCount = 0;
 
-    for (const row of results) {
+    for (const row of results as Array<{
+      gainType: GainType;
+      gains: string | number;
+      losses: string | number;
+      transactionCount: string | number;
+    }>) {
       const gains = Number(row.gains) || 0;
       const losses = Number(row.losses) || 0;
       const count = Number(row.transactionCount) || 0;

@@ -9,6 +9,7 @@ import {
   OrderHistory,
   ChartPanel,
   OptionsChainPanel,
+  ExpirationCalendar,
 } from '../components/dashboard';
 
 const styles: Record<string, CSSProperties> = {
@@ -47,6 +48,11 @@ const styles: Record<string, CSSProperties> = {
   optionsSection: {
     display: 'flex',
     flexDirection: 'column',
+  },
+  bottomGrid: {
+    display: 'grid',
+    gridTemplateColumns: '2fr 1fr',
+    gap: theme.spacing.lg,
   },
 };
 
@@ -94,9 +100,14 @@ export function Dashboard() {
           <OptionsChainPanel />
         </div>
 
-        {/* Bottom - Order History */}
-        <div style={responsiveStyles.bottomSection}>
-          <OrderHistory />
+        {/* Bottom - Order History & Expiration Calendar */}
+        <div style={responsiveStyles.bottomGrid}>
+          <div style={responsiveStyles.bottomSection}>
+            <OrderHistory />
+          </div>
+          <div>
+            <ExpirationCalendar />
+          </div>
         </div>
       </div>
     </Layout>

@@ -3,6 +3,16 @@ export enum OrderSide {
   SELL = 'sell',
 }
 
+export enum OrderCategory {
+  EQUITY = 'equity',
+  OPTION = 'option',
+}
+
+export enum OptionType {
+  CALL = 'call',
+  PUT = 'put',
+}
+
 export enum OrderType {
   MARKET = 'market',
   LIMIT = 'limit',

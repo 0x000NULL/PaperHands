@@ -11,3 +11,4 @@ export { OptionsChainPanel } from './OptionsChainPanel';
 export { ExpirationTabs } from './ExpirationTabs';
 export { OptionsChainTable } from './OptionsChainTable';
 export { OptionDetailModal } from './OptionDetailModal';
+export { ExpirationCalendar } from './ExpirationCalendar';

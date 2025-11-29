@@ -17,6 +17,8 @@ export const theme = {
     negative: '#ff4757',       // Losses/Sell (red)
     warning: '#ffa502',        // Warnings (orange)
     info: '#3498db',           // Info (blue)
+    success: '#00ff88',        // Alias for positive
+    error: '#ff4757',          // Alias for negative
 
     // Text colors
     textPrimary: '#ffffff',    // Primary text (white)

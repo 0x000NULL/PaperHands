@@ -1,8 +1,7 @@
 import { Injectable, Logger } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { Repository, Between, LessThanOrEqual, MoreThanOrEqual } from 'typeorm';
+import { Repository, Between } from 'typeorm';
 import { Order } from '../orders/entities/order.entity';
-import { OrderStatus, OrderSide } from '../orders/enums/order.enums';
 import { Position } from '../portfolio/entities/position.entity';
 import { TaxLot } from '../portfolio/entities/tax-lot.entity';
 import { LotSale } from '../portfolio/entities/lot-sale.entity';
@@ -149,12 +148,14 @@ export class AnalyticsService {
         ? Math.abs(Math.min(...losses.map((s) => Number(s.realizedGain))))
         : 0;
 
-    const profitFactor = totalLosses > 0 ? totalWins / totalLosses : totalWins > 0 ? Infinity : 0;
+    const profitFactor =
+      totalLosses > 0 ? totalWins / totalLosses : totalWins > 0 ? Infinity : 0;
 
     const totalRealized = totalWins - totalLosses;
 
     // Calculate max drawdown and Sharpe ratio from snapshots
-    const { maxDrawdown, sharpeRatio } = await this.calculateRiskMetrics(userId);
+    const { maxDrawdown, sharpeRatio } =
+      await this.calculateRiskMetrics(userId);
 
     return {
       totalTrades: lotSales.length,
@@ -267,7 +268,10 @@ export class AnalyticsService {
     let shortTermRealized = 0;
     let longTermRealized = 0;
 
-    for (const row of realizedResult) {
+    for (const row of realizedResult as Array<{
+      gainType: GainType;
+      total: string | number;
+    }>) {
       if (row.gainType === GainType.SHORT_TERM) {
         shortTermRealized = Number(row.total) || 0;
       } else {
@@ -300,13 +304,23 @@ export class AnalyticsService {
     const portfolio = await this.getPerformanceHistory(userId, period);
 
     // Get benchmark historical data
-    const timeframe = this.periodToTimeframe(period) as '1D' | '1W' | '1M' | '3M' | '1Y' | '5Y';
+    const timeframe = this.periodToTimeframe(period) as
+      | '1D'
+      | '1W'
+      | '1M'
+      | '3M'
+      | '1Y'
+      | '5Y';
     const benchmarkResponse = await this.finnhubService.getCandles(
       benchmarkSymbol,
       timeframe,
     );
 
-    if (!benchmarkResponse || !benchmarkResponse.candles || benchmarkResponse.candles.length === 0) {
+    if (
+      !benchmarkResponse ||
+      !benchmarkResponse.candles ||
+      benchmarkResponse.candles.length === 0
+    ) {
       return { portfolio, benchmark: [] };
     }
 
@@ -314,8 +328,7 @@ export class AnalyticsService {
     const firstPrice = candles[0].close;
     const benchmark: PerformanceDataPoint[] = candles.map((candle) => {
       const change = candle.close - firstPrice;
-      const changePercent =
-        firstPrice > 0 ? (change / firstPrice) * 100 : 0;
+      const changePercent = firstPrice > 0 ? (change / firstPrice) * 100 : 0;
       return {
         date: new Date(candle.timestamp * 1000).toISOString().split('T')[0],
         value: candle.close,
@@ -349,7 +362,9 @@ export class AnalyticsService {
     });
 
     if (existing) {
-      this.logger.log(`Snapshot already exists for user ${userId} on ${today}`);
+      this.logger.log(
+        `Snapshot already exists for user ${userId} on ${today.toISOString().split('T')[0]}`,
+      );
       return existing;
     }
 

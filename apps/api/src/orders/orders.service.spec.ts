@@ -8,8 +8,12 @@ import { OrderAudit } from './entities/order-audit.entity';
 import { OrderSide, OrderStatus, OrderType } from './enums/order.enums';
 import { User } from '../users/entities/user.entity';
 import { Position } from '../portfolio/entities/position.entity';
+import { OptionPosition } from '../portfolio/entities/option-position.entity';
 import { FinnhubService } from '../market-data/finnhub.service';
+import { TradierService } from '../market-data/tradier.service';
 import { MarketHoursService } from '../common/services/market-hours.service';
+import { TaxLotService } from '../portfolio/services/tax-lot.service';
+import { OptionTaxService } from '../portfolio/services/option-tax.service';
 
 describe('OrdersService', () => {
   let service: OrdersService;
@@ -31,10 +35,24 @@ describe('OrdersService', () => {
   let mockPositionRepository: {
     findOne: jest.Mock;
   };
+  let mockOptionPositionRepository: {
+    findOne: jest.Mock;
+    find: jest.Mock;
+  };
   let mockFinnhubService: { getQuote: jest.Mock };
+  let mockTradierService: { getOptionQuote: jest.Mock };
   let mockMarketHoursService: {
     getCurrentSession: jest.Mock;
     calculateExpirationTime: jest.Mock;
+  };
+  let mockTaxLotService: {
+    createTaxLot: jest.Mock;
+    sellSharesFIFO: jest.Mock;
+  };
+  let mockOptionTaxService: {
+    recordOptionPurchase: jest.Mock;
+    recordSoldToClose: jest.Mock;
+    recordBuyToClose: jest.Mock;
   };
   let mockDataSource: { createQueryRunner: jest.Mock };
   let mockQueryRunner: {
@@ -106,13 +124,35 @@ describe('OrdersService', () => {
       findOne: jest.fn(),
     };
 
+    mockOptionPositionRepository = {
+      findOne: jest.fn(),
+      find: jest.fn().mockResolvedValue([]),
+    };
+
     mockFinnhubService = {
       getQuote: jest.fn(),
+    };
+
+    mockTradierService = {
+      getOptionQuote: jest.fn(),
     };
 
     mockMarketHoursService = {
       getCurrentSession: jest.fn().mockReturnValue('regular'),
       calculateExpirationTime: jest.fn().mockReturnValue(null),
+    };
+
+    mockTaxLotService = {
+      createTaxLot: jest.fn().mockResolvedValue({}),
+      sellSharesFIFO: jest
+        .fn()
+        .mockResolvedValue({ totalRealized: 0, lotSales: [] }),
+    };
+
+    mockOptionTaxService = {
+      recordOptionPurchase: jest.fn().mockResolvedValue({}),
+      recordSoldToClose: jest.fn().mockResolvedValue({}),
+      recordBuyToClose: jest.fn().mockResolvedValue({}),
     };
 
     mockQueryRunner = {
@@ -154,12 +194,28 @@ describe('OrdersService', () => {
           useValue: mockPositionRepository,
         },
         {
+          provide: getRepositoryToken(OptionPosition),
+          useValue: mockOptionPositionRepository,
+        },
+        {
           provide: FinnhubService,
           useValue: mockFinnhubService,
         },
         {
+          provide: TradierService,
+          useValue: mockTradierService,
+        },
+        {
           provide: MarketHoursService,
           useValue: mockMarketHoursService,
+        },
+        {
+          provide: TaxLotService,
+          useValue: mockTaxLotService,
+        },
+        {
+          provide: OptionTaxService,
+          useValue: mockOptionTaxService,
         },
         {
           provide: DataSource,

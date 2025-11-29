@@ -276,15 +276,25 @@ export function OptionDetailModal({
     }
   };
 
+  // Extract underlying symbol from OCC symbol (e.g., "AAPL240119C00190000" -> "AAPL")
+  const underlyingSymbol = contract.symbol.replace(/\d.*$/, '');
+
   const handleTrade = async (side: 'buy' | 'sell') => {
     setMessage(null);
 
     try {
       await placeOrder.mutateAsync({
-        symbol: contract.symbol,
+        symbol: underlyingSymbol, // Display symbol
         side,
         quantity,
         orderType: 'market',
+        // Option-specific fields
+        orderCategory: 'option',
+        optionSymbol: contract.symbol,
+        underlyingSymbol: underlyingSymbol,
+        optionType: contract.optionType,
+        strikePrice: contract.strike,
+        expirationDate: contract.expiration,
       });
 
       setMessage({

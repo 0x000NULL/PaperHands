@@ -15,12 +15,17 @@ import {
   OrderStatus,
   TimeInForce,
   AuditAction,
+  OrderCategory,
+  OptionType,
 } from './enums/order.enums';
 import { User } from '../users/entities/user.entity';
 import { Position } from '../portfolio/entities/position.entity';
+import { OptionPosition } from '../portfolio/entities/option-position.entity';
 import { FinnhubService } from '../market-data/finnhub.service';
+import { TradierService } from '../market-data/tradier.service';
 import { MarketHoursService } from '../common/services/market-hours.service';
 import { TaxLotService } from '../portfolio/services/tax-lot.service';
+import { OptionTaxService } from '../portfolio/services/option-tax.service';
 import { CostBasisMethod } from '../portfolio/enums/cost-basis.enums';
 import { CreateOrderDto } from './dto/create-order.dto';
 import { UpdateOrderDto } from './dto/update-order.dto';
@@ -39,9 +44,13 @@ export class OrdersService {
     private userRepository: Repository<User>,
     @InjectRepository(Position)
     private positionRepository: Repository<Position>,
+    @InjectRepository(OptionPosition)
+    private optionPositionRepository: Repository<OptionPosition>,
     private finnhubService: FinnhubService,
+    private tradierService: TradierService,
     private marketHoursService: MarketHoursService,
     private taxLotService: TaxLotService,
+    private optionTaxService: OptionTaxService,
     private dataSource: DataSource,
   ) {}
 
@@ -49,6 +58,11 @@ export class OrdersService {
    * Create a new order
    */
   async createOrder(userId: string, createOrderDto: CreateOrderDto) {
+    // Route option orders to the dedicated handler
+    if (createOrderDto.orderCategory === OrderCategory.OPTION) {
+      return this.createOptionOrder(userId, createOrderDto);
+    }
+
     const {
       symbol,
       side,
@@ -1160,7 +1174,7 @@ export class OrdersService {
           );
         } catch (error) {
           this.logger.warn(
-            `Failed to create lot sales for order ${orderId}: ${error.message}`,
+            `Failed to create lot sales for order ${orderId}: ${error instanceof Error ? error.message : String(error)}`,
           );
           // Continue with position update even if lot sale fails
           // This can happen for legacy positions without tax lots
@@ -1264,7 +1278,7 @@ export class OrdersService {
   }
 
   private formatOrderResponse(order: Order) {
-    return {
+    const response: Record<string, unknown> = {
       id: order.id,
       symbol: order.symbol,
       side: order.side,
@@ -1290,6 +1304,607 @@ export class OrdersService {
       triggeredAt: order.triggeredAt,
       filledAt: order.filledAt,
       cancelledAt: order.cancelledAt,
+      orderCategory: order.orderCategory,
     };
+
+    // Add option-specific fields if this is an option order
+    if (order.orderCategory === OrderCategory.OPTION) {
+      response.optionSymbol = order.optionSymbol;
+      response.underlyingSymbol = order.underlyingSymbol;
+      response.optionType = order.optionType;
+      response.strikePrice = order.strikePrice
+        ? Number(order.strikePrice)
+        : null;
+      response.expirationDate = order.expirationDate;
+      response.contractMultiplier = order.contractMultiplier;
+      response.greeksAtFill = order.greeksAtFill;
+    }
+
+    return response;
+  }
+
+  // ============ Option Order Methods ============
+
+  /**
+   * Create an option order
+   */
+  private async createOptionOrder(userId: string, dto: CreateOrderDto) {
+    const {
+      symbol, // Use as display symbol (underlying)
+      side,
+      quantity,
+      orderType,
+      timeInForce = TimeInForce.DAY,
+      limitPrice,
+      idempotencyKey,
+      optionSymbol,
+      underlyingSymbol,
+      optionType,
+      strikePrice,
+      expirationDate,
+    } = dto;
+
+    if (
+      !optionSymbol ||
+      !underlyingSymbol ||
+      !optionType ||
+      !strikePrice ||
+      !expirationDate
+    ) {
+      throw new BadRequestException(
+        'Option orders require optionSymbol, underlyingSymbol, optionType, strikePrice, and expirationDate',
+      );
+    }
+
+    // Check for idempotency
+    if (idempotencyKey) {
+      const existingOrder = await this.orderRepository.findOne({
+        where: { userId, idempotencyKey },
+      });
+      if (existingOrder) {
+        return this.formatOrderResponse(existingOrder);
+      }
+    }
+
+    // Get option quote from Tradier
+    const quote = await this.tradierService.getOptionQuote(optionSymbol);
+    if (!quote) {
+      throw new NotFoundException(`Quote not found for ${optionSymbol}`);
+    }
+
+    // For sell-to-open (short), check margin requirements
+    const existingPosition = await this.optionPositionRepository.findOne({
+      where: { userId, optionSymbol },
+    });
+
+    const isOpeningShort =
+      side === OrderSide.SELL &&
+      (!existingPosition || Number(existingPosition.quantity) <= 0);
+    const isClosingLong =
+      side === OrderSide.SELL &&
+      existingPosition &&
+      Number(existingPosition.quantity) > 0;
+    const isOpeningLong =
+      side === OrderSide.BUY &&
+      (!existingPosition || Number(existingPosition.quantity) >= 0);
+    const isClosingShort =
+      side === OrderSide.BUY &&
+      existingPosition &&
+      Number(existingPosition.quantity) < 0;
+
+    // Only support market orders for options MVP
+    if (orderType !== OrderType.MARKET && orderType !== OrderType.LIMIT) {
+      throw new BadRequestException(
+        'Options only support market and limit orders currently',
+      );
+    }
+
+    // Get execution price (use mid-price for estimates)
+    const executionPrice = side === OrderSide.BUY ? quote.ask : quote.bid;
+    if (!executionPrice || executionPrice <= 0) {
+      throw new BadRequestException(
+        `Invalid price for ${optionSymbol}. The option may not be trading.`,
+      );
+    }
+
+    // Total cost = premium * quantity * multiplier (100)
+    const contractMultiplier = 100;
+    const totalPremium = executionPrice * quantity * contractMultiplier;
+
+    // Validate funds/positions
+    if (isOpeningLong || isClosingShort) {
+      // Buying options - need cash for premium
+      const availableCash = await this.getAvailableCash(userId);
+      if (availableCash < totalPremium) {
+        throw new BadRequestException(
+          `Insufficient funds. Required: $${totalPremium.toFixed(2)}, Available: $${availableCash.toFixed(2)}`,
+        );
+      }
+    } else if (isClosingLong) {
+      // Selling to close long position
+      const availableContracts = Number(existingPosition.quantity);
+      if (availableContracts < quantity) {
+        throw new BadRequestException(
+          `Insufficient contracts. Required: ${quantity}, Available: ${availableContracts}`,
+        );
+      }
+    } else if (isOpeningShort) {
+      // Selling to open (writing options) - need margin
+      const marginRequired = await this.calculateOptionMarginRequirement(
+        underlyingSymbol,
+        optionType,
+        strikePrice,
+        quantity,
+        contractMultiplier,
+      );
+      const availableCash = await this.getAvailableCash(userId);
+      if (availableCash < marginRequired) {
+        throw new BadRequestException(
+          `Insufficient margin. Required: $${marginRequired.toFixed(2)}, Available: $${availableCash.toFixed(2)}`,
+        );
+      }
+    }
+
+    // For market orders during market hours, execute immediately
+    if (orderType === OrderType.MARKET) {
+      const session = this.marketHoursService.getCurrentSession();
+      if (session === 'regular') {
+        return this.executeOptionMarketOrder(
+          userId,
+          optionSymbol,
+          underlyingSymbol,
+          symbol,
+          side,
+          quantity,
+          optionType,
+          strikePrice,
+          expirationDate,
+          quote,
+          idempotencyKey,
+        );
+      }
+    }
+
+    // Create pending/limit order
+    const expiresAt =
+      this.marketHoursService.calculateExpirationTime(timeInForce);
+
+    const order = this.orderRepository.create({
+      userId,
+      symbol,
+      side,
+      orderType,
+      timeInForce,
+      quantity,
+      filledQuantity: 0,
+      limitPrice: limitPrice || null,
+      status:
+        orderType === OrderType.MARKET
+          ? OrderStatus.QUEUED
+          : OrderStatus.PENDING,
+      idempotencyKey: idempotencyKey || null,
+      expiresAt,
+      orderCategory: OrderCategory.OPTION,
+      optionSymbol,
+      underlyingSymbol,
+      optionType,
+      strikePrice,
+      expirationDate: new Date(expirationDate),
+      contractMultiplier,
+    });
+
+    await this.orderRepository.save(order);
+    await this.createAuditRecord(
+      order,
+      AuditAction.CREATED,
+      null,
+      executionPrice,
+    );
+
+    return this.formatOrderResponse(order);
+  }
+
+  /**
+   * Execute an option market order immediately
+   */
+  private async executeOptionMarketOrder(
+    userId: string,
+    optionSymbol: string,
+    underlyingSymbol: string,
+    displaySymbol: string,
+    side: OrderSide,
+    quantity: number,
+    optionType: OptionType,
+    strikePrice: number,
+    expirationDate: string,
+    quote: {
+      bid: number;
+      ask: number;
+      greeks: {
+        delta: number;
+        gamma: number;
+        theta: number;
+        vega: number;
+        rho: number;
+        iv: number;
+      } | null;
+    },
+    idempotencyKey?: string,
+  ) {
+    const executionPrice = side === OrderSide.BUY ? quote.ask : quote.bid;
+    const contractMultiplier = 100;
+    const totalPremium = executionPrice * quantity * contractMultiplier;
+
+    const queryRunner = this.dataSource.createQueryRunner();
+    await queryRunner.connect();
+    await queryRunner.startTransaction('SERIALIZABLE');
+
+    try {
+      const user = await queryRunner.manager.findOne(User, {
+        where: { id: userId },
+        lock: { mode: 'pessimistic_write' },
+      });
+
+      if (!user) {
+        throw new NotFoundException('User not found');
+      }
+
+      // Get existing option position
+      const existingPosition = await queryRunner.manager.findOne(
+        OptionPosition,
+        {
+          where: { userId, optionSymbol },
+          lock: { mode: 'pessimistic_write' },
+        },
+      );
+
+      const currentQty = existingPosition
+        ? Number(existingPosition.quantity)
+        : 0;
+      const isBuying = side === OrderSide.BUY;
+
+      // Determine order effect
+      let cashChange: number;
+
+      if (isBuying) {
+        // Buying: deduct premium from cash, increase position
+        cashChange = -totalPremium;
+
+        if (Number(user.cashBalance) < totalPremium) {
+          throw new BadRequestException(
+            `Insufficient funds. Required: $${totalPremium.toFixed(2)}, Available: $${Number(user.cashBalance).toFixed(2)}`,
+          );
+        }
+      } else {
+        // Selling: add premium to cash, decrease position
+        cashChange = totalPremium;
+
+        // If closing long position, validate quantity
+        if (currentQty > 0 && currentQty < quantity) {
+          throw new BadRequestException(
+            `Insufficient contracts. Required: ${quantity}, Available: ${currentQty}`,
+          );
+        }
+      }
+
+      // Update user cash
+      await queryRunner.manager.update(User, userId, {
+        cashBalance: Number(user.cashBalance) + cashChange,
+      });
+
+      // Create filled order
+      const order = queryRunner.manager.create(Order, {
+        userId,
+        symbol: displaySymbol,
+        side,
+        orderType: OrderType.MARKET,
+        timeInForce: TimeInForce.DAY,
+        quantity,
+        filledQuantity: quantity,
+        filledPrice: executionPrice,
+        avgFillPrice: executionPrice,
+        status: OrderStatus.FILLED,
+        idempotencyKey: idempotencyKey || null,
+        filledAt: new Date(),
+        orderCategory: OrderCategory.OPTION,
+        optionSymbol,
+        underlyingSymbol,
+        optionType,
+        strikePrice,
+        expirationDate: new Date(expirationDate),
+        contractMultiplier,
+        greeksAtFill: quote.greeks,
+      });
+
+      const savedOrder = await queryRunner.manager.save(order);
+
+      // Update option position
+      await this.updateOptionPositionInTransaction(
+        queryRunner.manager,
+        userId,
+        optionSymbol,
+        underlyingSymbol,
+        optionType,
+        strikePrice,
+        expirationDate,
+        quantity,
+        executionPrice,
+        isBuying,
+        quote.greeks,
+        savedOrder.id,
+        savedOrder.filledAt ?? new Date(),
+      );
+
+      await queryRunner.commitTransaction();
+
+      await this.createAuditRecord(
+        order,
+        AuditAction.FILLED,
+        null,
+        executionPrice,
+      );
+
+      return this.formatOrderResponse(order);
+    } catch (error) {
+      await queryRunner.rollbackTransaction();
+      throw error;
+    } finally {
+      await queryRunner.release();
+    }
+  }
+
+  /**
+   * Update option position after a fill
+   */
+  private async updateOptionPositionInTransaction(
+    manager: EntityManager,
+    userId: string,
+    optionSymbol: string,
+    underlyingSymbol: string,
+    optionType: OptionType,
+    strikePrice: number,
+    expirationDate: string,
+    quantity: number,
+    price: number,
+    isBuy: boolean,
+    greeks: {
+      delta: number;
+      gamma: number;
+      theta: number;
+      vega: number;
+      rho: number;
+      iv: number;
+    } | null,
+    orderId: string,
+    filledAt: Date,
+  ): Promise<void> {
+    const existingPosition = await manager.findOne(OptionPosition, {
+      where: { userId, optionSymbol },
+      lock: { mode: 'pessimistic_write' },
+    });
+
+    const quantityChange = isBuy ? quantity : -quantity;
+
+    if (existingPosition) {
+      const currentQty = Number(existingPosition.quantity);
+      const currentCost = Number(existingPosition.avgCostBasis);
+      const newQty = currentQty + quantityChange;
+
+      if (Math.abs(newQty) < 0.0001) {
+        // Position fully closed
+        if (currentQty > 0 && !isBuy) {
+          // Long position being sold (sell-to-close)
+          await this.optionTaxService.recordSoldToClose(
+            manager,
+            userId,
+            existingPosition,
+            quantity,
+            price,
+            orderId,
+            filledAt,
+          );
+        } else if (currentQty < 0 && isBuy) {
+          // Short position being bought back (buy-to-close)
+          await this.optionTaxService.recordBuyToClose(
+            manager,
+            userId,
+            existingPosition,
+            quantity,
+            price,
+            orderId,
+            filledAt,
+          );
+        }
+        await manager.remove(existingPosition);
+      } else if (
+        (currentQty > 0 && newQty > 0) ||
+        (currentQty < 0 && newQty < 0)
+      ) {
+        // Adding to existing position - calculate new average cost
+        if ((isBuy && currentQty >= 0) || (!isBuy && currentQty <= 0)) {
+          // Adding to position
+          const newAvgCost =
+            (Math.abs(currentQty) * currentCost + quantity * price) /
+            Math.abs(newQty);
+          await manager.update(OptionPosition, existingPosition.id, {
+            quantity: newQty,
+            avgCostBasis: newAvgCost,
+            greeksSnapshot: greeks,
+          });
+        } else {
+          // Reducing position - record partial closure
+          if (currentQty > 0 && !isBuy) {
+            // Reducing long position (sell-to-close)
+            await this.optionTaxService.recordSoldToClose(
+              manager,
+              userId,
+              existingPosition,
+              quantity,
+              price,
+              orderId,
+              filledAt,
+            );
+          } else if (currentQty < 0 && isBuy) {
+            // Reducing short position (buy-to-close)
+            await this.optionTaxService.recordBuyToClose(
+              manager,
+              userId,
+              existingPosition,
+              quantity,
+              price,
+              orderId,
+              filledAt,
+            );
+          }
+          await manager.update(OptionPosition, existingPosition.id, {
+            quantity: newQty,
+            greeksSnapshot: greeks,
+          });
+        }
+      } else {
+        // Position flip (long to short or vice versa)
+        // First close the existing position fully
+        if (currentQty > 0) {
+          // Closing a long position - record sell-to-close for the long portion
+          await this.optionTaxService.recordSoldToClose(
+            manager,
+            userId,
+            existingPosition,
+            Math.abs(currentQty),
+            price,
+            orderId,
+            filledAt,
+          );
+        } else if (currentQty < 0) {
+          // Closing a short position - record buy-to-close for the short portion
+          await this.optionTaxService.recordBuyToClose(
+            manager,
+            userId,
+            existingPosition,
+            Math.abs(currentQty),
+            price,
+            orderId,
+            filledAt,
+          );
+        }
+        await manager.update(OptionPosition, existingPosition.id, {
+          quantity: newQty,
+          avgCostBasis: price,
+          greeksSnapshot: greeks,
+        });
+      }
+    } else {
+      // Create new position
+      const position = manager.create(OptionPosition, {
+        userId,
+        optionSymbol,
+        underlyingSymbol,
+        optionType,
+        strikePrice,
+        expirationDate: new Date(expirationDate),
+        quantity: quantityChange,
+        avgCostBasis: price,
+        greeksSnapshot: greeks,
+      });
+      await manager.save(position);
+    }
+  }
+
+  /**
+   * Calculate margin requirement for writing (shorting) options
+   * Uses a simplified model: 20% of underlying price + option premium - out of the money amount
+   */
+  private async calculateOptionMarginRequirement(
+    underlyingSymbol: string,
+    optionType: OptionType,
+    strikePrice: number,
+    quantity: number,
+    contractMultiplier: number,
+  ): Promise<number> {
+    const underlyingQuote =
+      await this.finnhubService.getQuote(underlyingSymbol);
+    if (!underlyingQuote || !underlyingQuote.last) {
+      throw new BadRequestException(
+        `Cannot get quote for underlying ${underlyingSymbol}`,
+      );
+    }
+
+    const underlyingPrice = underlyingQuote.last;
+
+    // Calculate out-of-the-money amount
+    let otmAmount = 0;
+    if (optionType === OptionType.CALL) {
+      otmAmount = Math.max(0, strikePrice - underlyingPrice);
+    } else {
+      otmAmount = Math.max(0, underlyingPrice - strikePrice);
+    }
+
+    // Simplified margin: 20% of underlying value - OTM amount, minimum 10%
+    const baseMargin = underlyingPrice * 0.2;
+    const adjustedMargin = Math.max(
+      baseMargin - otmAmount,
+      underlyingPrice * 0.1,
+    );
+
+    return adjustedMargin * quantity * contractMultiplier;
+  }
+
+  /**
+   * Get user's option positions
+   */
+  async getOptionPositions(userId: string) {
+    const positions = await this.optionPositionRepository.find({
+      where: { userId },
+      order: { expirationDate: 'ASC' },
+    });
+
+    return positions.map((pos) => ({
+      id: pos.id,
+      optionSymbol: pos.optionSymbol,
+      underlyingSymbol: pos.underlyingSymbol,
+      optionType: pos.optionType,
+      strikePrice: Number(pos.strikePrice),
+      expirationDate: pos.expirationDate,
+      quantity: Number(pos.quantity),
+      avgCostBasis: Number(pos.avgCostBasis),
+      greeksSnapshot: pos.greeksSnapshot,
+      createdAt: pos.createdAt,
+      updatedAt: pos.updatedAt,
+    }));
+  }
+
+  /**
+   * Get available option contracts for selling (closing long position)
+   */
+  async getAvailableOptionContracts(
+    userId: string,
+    optionSymbol: string,
+  ): Promise<number> {
+    const position = await this.optionPositionRepository.findOne({
+      where: { userId, optionSymbol },
+    });
+
+    if (!position || Number(position.quantity) <= 0) {
+      return 0;
+    }
+
+    // Check for pending sell orders on this option
+    const result = await this.orderRepository
+      .createQueryBuilder('order')
+      .select('SUM(order.quantity - order.filledQuantity)', 'reserved')
+      .where('order.userId = :userId', { userId })
+      .andWhere('order.optionSymbol = :optionSymbol', { optionSymbol })
+      .andWhere('order.status IN (:...statuses)', {
+        statuses: [
+          OrderStatus.PENDING,
+          OrderStatus.OPEN,
+          OrderStatus.PARTIALLY_FILLED,
+        ],
+      })
+      .andWhere('order.side = :side', { side: OrderSide.SELL })
+      .getRawOne<{ reserved: string | null }>();
+
+    const reserved = Number(result?.reserved) || 0;
+    return Math.max(0, Number(position.quantity) - reserved);
   }
 }

@@ -35,6 +35,22 @@ export interface Position {
   gainLossPercent: number;
 }
 
+export interface OptionPosition {
+  id: string;
+  optionSymbol: string;
+  underlyingSymbol: string;
+  optionType: 'call' | 'put';
+  strikePrice: number;
+  expirationDate: string;
+  quantity: number; // Positive = long, negative = short
+  avgCostBasis: number;
+  currentPrice: number;
+  marketValue: number;
+  gainLoss: number;
+  gainLossPercent: number;
+  greeksSnapshot: OptionGreeks | null;
+}
+
 export interface Portfolio {
   cashBalance: number;
   positions: Position[];
@@ -45,6 +61,8 @@ export type OrderSide = 'buy' | 'sell';
 export type OrderStatus = 'pending' | 'queued' | 'filled' | 'cancelled' | 'rejected';
 export type OrderType = 'market' | 'limit' | 'stop' | 'stop_limit' | 'trailing_stop';
 export type TimeInForce = 'day' | 'gtc' | 'ioc' | 'fok';
+export type OrderCategory = 'equity' | 'option';
+export type OptionType = 'call' | 'put';
 
 // Market Status
 export type TradingSession = 'pre_market' | 'regular' | 'after_hours' | 'closed';
@@ -68,6 +86,15 @@ export interface Order {
   stopPrice?: number | null;
   totalValue?: number;
   createdAt: string;
+  // Option-specific fields
+  orderCategory?: OrderCategory;
+  optionSymbol?: string | null;
+  underlyingSymbol?: string | null;
+  optionType?: OptionType | null;
+  strikePrice?: number | null;
+  expirationDate?: string | null;
+  contractMultiplier?: number;
+  greeksAtFill?: OptionGreeks | null;
 }
 
 export interface CreateOrderRequest {
@@ -80,6 +107,13 @@ export interface CreateOrderRequest {
   stopPrice?: number;
   trailAmount?: number;
   trailPercent?: number;
+  // Option-specific fields
+  orderCategory?: OrderCategory;
+  optionSymbol?: string;
+  underlyingSymbol?: string;
+  optionType?: OptionType;
+  strikePrice?: number;
+  expirationDate?: string;
 }
 
 // Chart types
@@ -155,4 +189,96 @@ export interface OptionsChainResponse {
   underlyingPrice: number;
   calls: OptionContract[];
   puts: OptionContract[];
+}
+
+// Greeks Dashboard types
+export interface PortfolioGreeksSummary {
+  netDelta: number;
+  netGamma: number;
+  netTheta: number;
+  netVega: number;
+  netRho: number;
+  longDelta: number;
+  shortDelta: number;
+  totalDailyDecay: number;
+  weeklyDecayProjection: number;
+  totalPositions: number;
+  positionsByExpiration: ExpirationBucket[];
+  notionalExposure: number;
+}
+
+export interface ExpirationBucket {
+  expirationDate: string;
+  daysToExpiration: number;
+  positionCount: number;
+  netDelta: number;
+  netTheta: number;
+}
+
+export interface UnderlyingGreeks {
+  underlyingSymbol: string;
+  underlyingPrice: number;
+  positions: PositionGreeks[];
+  totalDelta: number;
+  totalGamma: number;
+  totalTheta: number;
+  totalVega: number;
+  stockPosition?: {
+    quantity: number;
+    marketValue: number;
+  };
+}
+
+export interface PositionGreeks {
+  optionSymbol: string;
+  optionType: 'call' | 'put';
+  strikePrice: number;
+  expirationDate: string;
+  quantity: number;
+  marketValue: number;
+  delta: number;
+  gamma: number;
+  theta: number;
+  vega: number;
+  rho: number;
+  iv: number;
+  daysToExpiration: number;
+}
+
+export interface ThetaProjection {
+  date: string;
+  cumulativeDecay: number;
+  dailyDecay: number;
+  remainingPositions: number;
+}
+
+export interface DeltaExposure {
+  priceLevel: number;
+  percentChange: number;
+  portfolioPnL: number;
+  deltaDollars: number;
+}
+
+export interface SensitivityResult {
+  symbol: string;
+  currentPrice: number;
+  scenarios: SensitivityScenario[];
+}
+
+export interface SensitivityScenario {
+  priceChange: number;
+  ivChange: number;
+  newPrice: number;
+  newIV: number;
+  pnlEstimate: number;
+  newDelta: number;
+  newTheta: number;
+}
+
+export interface ExpirationCalendarItem {
+  expirationDate: string;
+  daysToExpiration: number;
+  totalContracts: number;
+  positionCount: number;
+  positions: OptionPosition[];
 }

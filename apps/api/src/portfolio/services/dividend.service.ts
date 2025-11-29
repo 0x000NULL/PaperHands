@@ -1,6 +1,6 @@
 import { Injectable, Logger } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { Repository, LessThanOrEqual, MoreThanOrEqual, Between } from 'typeorm';
+import { Repository, LessThanOrEqual, MoreThanOrEqual } from 'typeorm';
 import { Dividend } from '../entities/dividend.entity';
 import { Position } from '../entities/position.entity';
 import { User } from '../../users/entities/user.entity';
@@ -112,7 +112,9 @@ export class DividendService {
       order: { payDate: 'DESC' },
     });
 
-    const pending = dividends.filter((d) => d.status === DividendStatus.PENDING);
+    const pending = dividends.filter(
+      (d) => d.status === DividendStatus.PENDING,
+    );
     const paid = dividends.filter((d) => d.status === DividendStatus.PAID);
 
     const totalPending = pending.reduce(
@@ -128,10 +130,12 @@ export class DividendService {
 
     let portfolioValue = 0;
     for (const position of positions) {
-      portfolioValue += Number(position.quantity) * Number(position.avgCostBasis);
+      portfolioValue +=
+        Number(position.quantity) * Number(position.avgCostBasis);
     }
 
-    const annualYield = portfolioValue > 0 ? (totalPaid / portfolioValue) * 100 : 0;
+    const annualYield =
+      portfolioValue > 0 ? (totalPaid / portfolioValue) * 100 : 0;
 
     // Get upcoming dividends (next 30 days)
     const thirtyDaysFromNow = new Date();
@@ -210,7 +214,8 @@ export class DividendService {
 
         if (user) {
           await this.userRepository.update(user.id, {
-            cashBalance: Number(user.cashBalance) + Number(dividend.totalAmount),
+            cashBalance:
+              Number(user.cashBalance) + Number(dividend.totalAmount),
           });
 
           await this.dividendRepository.update(dividend.id, {
@@ -223,7 +228,7 @@ export class DividendService {
         }
       } catch (error) {
         this.logger.error(
-          `Failed to process dividend ${dividend.id}: ${error.message}`,
+          `Failed to process dividend ${dividend.id}: ${error instanceof Error ? error.message : String(error)}`,
         );
       }
     }
@@ -254,7 +259,13 @@ export class DividendService {
       .orderBy('totalAmount', 'DESC')
       .getRawMany();
 
-    return result.map((row) => ({
+    return (
+      result as Array<{
+        symbol: string;
+        totalAmount: string;
+        paymentCount: string;
+      }>
+    ).map((row) => ({
       symbol: row.symbol,
       totalAmount: Number(row.totalAmount),
       paymentCount: Number(row.paymentCount),

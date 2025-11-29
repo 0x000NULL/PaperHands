@@ -193,7 +193,9 @@ export class CreateAnalyticsTables1732780500000 implements MigrationInterface {
     `);
 
     // Drop tables
-    await queryRunner.query(`DROP TABLE IF EXISTS "user_cost_basis_preferences"`);
+    await queryRunner.query(
+      `DROP TABLE IF EXISTS "user_cost_basis_preferences"`,
+    );
     await queryRunner.query(`DROP TABLE IF EXISTS "dividends"`);
     await queryRunner.query(`DROP TABLE IF EXISTS "portfolio_snapshots"`);
     await queryRunner.query(`DROP TABLE IF EXISTS "lot_sales"`);

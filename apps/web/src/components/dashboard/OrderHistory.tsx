@@ -1,8 +1,11 @@
-import type { CSSProperties } from 'react';
+import { useState, type CSSProperties } from 'react';
 import { theme } from '../../theme/constants';
 import { useOrders } from '../../hooks';
 import { useDashboardStore } from '../../store/dashboardStore';
 import { Widget } from './Widget';
+import type { Order, OrderCategory } from '../../types';
+
+type FilterCategory = 'all' | OrderCategory;
 
 const styles: Record<string, CSSProperties> = {
   table: {
@@ -89,6 +92,33 @@ const styles: Record<string, CSSProperties> = {
     backgroundColor: 'rgba(255, 71, 87, 0.1)',
     borderRadius: theme.radius.md,
   },
+  filterContainer: {
+    display: 'flex',
+    gap: theme.spacing.xs,
+    padding: `${theme.spacing.sm} ${theme.spacing.md}`,
+    borderBottom: `1px solid ${theme.colors.border}`,
+  },
+  filterButton: {
+    padding: `${theme.spacing.xs} ${theme.spacing.sm}`,
+    backgroundColor: 'transparent',
+    border: `1px solid ${theme.colors.border}`,
+    borderRadius: theme.radius.sm,
+    color: theme.colors.textSecondary,
+    fontSize: theme.typography.xs,
+    fontWeight: theme.typography.medium,
+    cursor: 'pointer',
+    transition: theme.transitions.fast,
+  },
+  filterButtonActive: {
+    backgroundColor: theme.colors.accent,
+    borderColor: theme.colors.accent,
+    color: theme.colors.bgPrimary,
+  },
+  optionSymbol: {
+    fontSize: theme.typography.xs,
+    color: theme.colors.textSecondary,
+    marginLeft: theme.spacing.xs,
+  },
 };
 
 const formatCurrency = (value: number) =>
@@ -128,13 +158,44 @@ const getStatusBadgeStyle = (status: string): CSSProperties => {
   };
 };
 
+const filterOrders = (orders: Order[], category: FilterCategory): Order[] => {
+  if (category === 'all') return orders;
+  return orders.filter((order) => order.orderCategory === category);
+};
+
+const filters: { value: FilterCategory; label: string }[] = [
+  { value: 'all', label: 'All' },
+  { value: 'equity', label: 'Stocks' },
+  { value: 'option', label: 'Options' },
+];
+
 export function OrderHistory() {
+  const [categoryFilter, setCategoryFilter] = useState<FilterCategory>('all');
   const { data: orders, isLoading, error } = useOrders();
   const setSelectedSymbol = useDashboardStore((state) => state.setSelectedSymbol);
 
   const handleSymbolClick = (symbol: string) => {
     setSelectedSymbol(symbol);
   };
+
+  const filteredOrders = orders ? filterOrders(orders, categoryFilter) : [];
+
+  const renderFilter = () => (
+    <div style={styles.filterContainer}>
+      {filters.map((filter) => (
+        <button
+          key={filter.value}
+          style={{
+            ...styles.filterButton,
+            ...(categoryFilter === filter.value ? styles.filterButtonActive : {}),
+          }}
+          onClick={() => setCategoryFilter(filter.value)}
+        >
+          {filter.label}
+        </button>
+      ))}
+    </div>
+  );
 
   if (isLoading) {
     return (
@@ -164,53 +225,67 @@ export function OrderHistory() {
 
   return (
     <Widget title="Order History" noPadding>
-      <table style={styles.table}>
-        <thead>
-          <tr>
-            <th style={styles.th}>Date</th>
-            <th style={styles.th}>Symbol</th>
-            <th style={styles.thCenter}>Side</th>
-            <th style={styles.thRight}>Qty</th>
-            <th style={styles.thRight}>Price</th>
-            <th style={styles.thRight}>Total</th>
-            <th style={styles.thCenter}>Status</th>
-          </tr>
-        </thead>
-        <tbody>
-          {orders.map((order) => (
-            <tr key={order.id}>
-              <td style={styles.td}>{formatDate(order.createdAt)}</td>
-              <td style={styles.td}>
-                <span
-                  style={styles.symbolLink}
-                  onClick={() => handleSymbolClick(order.symbol)}
-                >
-                  {order.symbol}
-                </span>
-              </td>
-              <td style={styles.tdCenter}>
-                <span style={getSideBadgeStyle(order.side)}>
-                  {order.side.toUpperCase()}
-                </span>
-              </td>
-              <td style={styles.tdRight}>{order.quantity.toFixed(4)}</td>
-              <td style={styles.tdRight}>
-                {order.filledPrice ? formatCurrency(order.filledPrice) : '-'}
-              </td>
-              <td style={styles.tdRight}>
-                {order.filledPrice
-                  ? formatCurrency(order.quantity * order.filledPrice)
-                  : '-'}
-              </td>
-              <td style={styles.tdCenter}>
-                <span style={getStatusBadgeStyle(order.status)}>
-                  {order.status.toUpperCase()}
-                </span>
-              </td>
+      {renderFilter()}
+      {filteredOrders.length === 0 ? (
+        <div style={styles.empty}>
+          No {categoryFilter === 'option' ? 'option' : 'stock'} orders found.
+        </div>
+      ) : (
+        <table style={styles.table}>
+          <thead>
+            <tr>
+              <th style={styles.th}>Date</th>
+              <th style={styles.th}>Symbol</th>
+              <th style={styles.thCenter}>Side</th>
+              <th style={styles.thRight}>Qty</th>
+              <th style={styles.thRight}>Price</th>
+              <th style={styles.thRight}>Total</th>
+              <th style={styles.thCenter}>Status</th>
             </tr>
-          ))}
-        </tbody>
-      </table>
+          </thead>
+          <tbody>
+            {filteredOrders.map((order) => (
+              <tr key={order.id}>
+                <td style={styles.td}>{formatDate(order.createdAt)}</td>
+                <td style={styles.td}>
+                  <span
+                    style={styles.symbolLink}
+                    onClick={() =>
+                      handleSymbolClick(order.underlyingSymbol || order.symbol)
+                    }
+                  >
+                    {order.underlyingSymbol || order.symbol}
+                    {order.orderCategory === 'option' && order.optionSymbol && (
+                      <span style={styles.optionSymbol}>
+                        {order.optionSymbol}
+                      </span>
+                    )}
+                  </span>
+                </td>
+                <td style={styles.tdCenter}>
+                  <span style={getSideBadgeStyle(order.side)}>
+                    {order.side.toUpperCase()}
+                  </span>
+                </td>
+                <td style={styles.tdRight}>{order.quantity.toFixed(4)}</td>
+                <td style={styles.tdRight}>
+                  {order.filledPrice ? formatCurrency(order.filledPrice) : '-'}
+                </td>
+                <td style={styles.tdRight}>
+                  {order.filledPrice
+                    ? formatCurrency(order.quantity * order.filledPrice)
+                    : '-'}
+                </td>
+                <td style={styles.tdCenter}>
+                  <span style={getStatusBadgeStyle(order.status)}>
+                    {order.status.toUpperCase()}
+                  </span>
+                </td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      )}
     </Widget>
   );
 }

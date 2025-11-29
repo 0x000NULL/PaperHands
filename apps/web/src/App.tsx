@@ -7,6 +7,7 @@ import { Register } from './pages/Register';
 import { Dashboard } from './pages/Dashboard';
 import { Watchlists } from './pages/Watchlists';
 import { Analytics } from './pages/Analytics';
+import { Greeks } from './pages/Greeks';
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -81,6 +82,14 @@ function App() {
               element={
                 <ProtectedRoute>
                   <Analytics />
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/greeks"
+              element={
+                <ProtectedRoute>
+                  <Greeks />
                 </ProtectedRoute>
               }
             />

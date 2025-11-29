@@ -14,10 +14,28 @@ import {
   OrderType,
   OrderStatus,
   TimeInForce,
+  OrderCategory,
+  OptionType,
 } from '../enums/order.enums';
 
 // Re-export enums for backward compatibility
-export { OrderSide, OrderType, OrderStatus, TimeInForce };
+export {
+  OrderSide,
+  OrderType,
+  OrderStatus,
+  TimeInForce,
+  OrderCategory,
+  OptionType,
+};
+
+export interface OptionGreeks {
+  delta: number;
+  gamma: number;
+  theta: number;
+  vega: number;
+  rho: number;
+  iv: number;
+}
 
 @Entity('orders')
 @Index(['status', 'symbol']) // For price monitoring queries
@@ -114,4 +132,30 @@ export class Order {
 
   @Column({ type: 'timestamp', nullable: true })
   cancelledAt: Date | null;
+
+  // Option-specific fields
+  @Column({ type: 'varchar', default: OrderCategory.EQUITY })
+  orderCategory: OrderCategory;
+
+  @Index()
+  @Column({ type: 'varchar', length: 30, nullable: true })
+  optionSymbol: string | null;
+
+  @Column({ type: 'varchar', length: 10, nullable: true })
+  underlyingSymbol: string | null;
+
+  @Column({ type: 'varchar', length: 4, nullable: true })
+  optionType: OptionType | null;
+
+  @Column('decimal', { precision: 12, scale: 4, nullable: true })
+  strikePrice: number | null;
+
+  @Column({ type: 'date', nullable: true })
+  expirationDate: Date | null;
+
+  @Column({ type: 'int', default: 100 })
+  contractMultiplier: number;
+
+  @Column({ type: 'jsonb', nullable: true })
+  greeksAtFill: OptionGreeks | null;
 }

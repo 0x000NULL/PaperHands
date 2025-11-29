@@ -2,8 +2,10 @@ import { Injectable, NotFoundException } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { Position } from './entities/position.entity';
+import { OptionPosition } from './entities/option-position.entity';
 import { User } from '../users/entities/user.entity';
 import { FinnhubService } from '../market-data/finnhub.service';
+import { TradierService } from '../market-data/tradier.service';
 
 export interface PortfolioPosition {
   symbol: string;
@@ -21,14 +23,40 @@ export interface Portfolio {
   totalValue: number;
 }
 
+export interface OptionPortfolioPosition {
+  id: string;
+  optionSymbol: string;
+  underlyingSymbol: string;
+  optionType: string;
+  strikePrice: number;
+  expirationDate: Date;
+  quantity: number; // Positive = long, negative = short
+  avgCostBasis: number;
+  currentPrice: number;
+  marketValue: number;
+  gainLoss: number;
+  gainLossPercent: number;
+  greeksSnapshot: {
+    delta: number;
+    gamma: number;
+    theta: number;
+    vega: number;
+    rho: number;
+    iv: number;
+  } | null;
+}
+
 @Injectable()
 export class PortfolioService {
   constructor(
     @InjectRepository(Position)
     private positionRepository: Repository<Position>,
+    @InjectRepository(OptionPosition)
+    private optionPositionRepository: Repository<OptionPosition>,
     @InjectRepository(User)
     private userRepository: Repository<User>,
     private finnhubService: FinnhubService,
+    private tradierService: TradierService,
   ) {}
 
   async getPortfolio(userId: string): Promise<Portfolio> {
@@ -148,5 +176,59 @@ export class PortfolioService {
         }
       }
     }
+  }
+
+  async getOptionPositions(userId: string): Promise<OptionPortfolioPosition[]> {
+    const positions = await this.optionPositionRepository.find({
+      where: { userId },
+      order: { expirationDate: 'ASC' },
+    });
+
+    if (positions.length === 0) {
+      return [];
+    }
+
+    // Fetch current prices for all option positions
+    const optionPositions: OptionPortfolioPosition[] = [];
+
+    for (const pos of positions) {
+      const quote = await this.tradierService.getOptionQuote(pos.optionSymbol);
+      const quantity = Number(pos.quantity);
+      const avgCostBasis = Number(pos.avgCostBasis);
+
+      // Use mid price for valuation
+      const currentPrice = quote ? (quote.bid + quote.ask) / 2 : avgCostBasis;
+
+      const contractMultiplier = 100;
+      // For long positions (positive qty), value = currentPrice * qty * multiplier
+      // For short positions (negative qty), the value represents liability
+      const marketValue =
+        currentPrice * Math.abs(quantity) * contractMultiplier;
+      const costBasis = avgCostBasis * Math.abs(quantity) * contractMultiplier;
+
+      // For long positions: gain when price goes up
+      // For short positions: gain when price goes down
+      const gainLoss =
+        quantity > 0 ? marketValue - costBasis : costBasis - marketValue;
+      const gainLossPercent = costBasis > 0 ? (gainLoss / costBasis) * 100 : 0;
+
+      optionPositions.push({
+        id: pos.id,
+        optionSymbol: pos.optionSymbol,
+        underlyingSymbol: pos.underlyingSymbol,
+        optionType: pos.optionType,
+        strikePrice: Number(pos.strikePrice),
+        expirationDate: pos.expirationDate,
+        quantity,
+        avgCostBasis,
+        currentPrice,
+        marketValue: quantity > 0 ? marketValue : -marketValue, // Negative for short positions (liability)
+        gainLoss,
+        gainLossPercent,
+        greeksSnapshot: quote?.greeks ?? pos.greeksSnapshot,
+      });
+    }
+
+    return optionPositions;
   }
 }

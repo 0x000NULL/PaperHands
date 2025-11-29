@@ -16,7 +16,13 @@ import {
   ValidationOptions,
 } from 'class-validator';
 import { Type } from 'class-transformer';
-import { OrderSide, OrderType, TimeInForce } from '../enums/order.enums';
+import {
+  OrderSide,
+  OrderType,
+  TimeInForce,
+  OrderCategory,
+  OptionType,
+} from '../enums/order.enums';
 
 // Custom decorator for requiring a field for specific order types
 function RequiredForOrderTypes(
@@ -132,4 +138,47 @@ export class CreateOrderDto {
   @IsString()
   @IsUUID('4', { message: 'Idempotency key must be a valid UUID v4' })
   idempotencyKey?: string;
+
+  // Option-specific fields
+  @IsOptional()
+  @IsEnum(OrderCategory, {
+    message: 'Order category must be "equity" or "option"',
+  })
+  orderCategory?: OrderCategory = OrderCategory.EQUITY;
+
+  // OCC symbol format: ROOT(1-6) + YYMMDD + C/P + STRIKE(8 digits)
+  // Example: AAPL240119C00190000
+  @ValidateIf((o: CreateOrderDto) => o.orderCategory === OrderCategory.OPTION)
+  @IsString()
+  @Matches(/^[A-Z]{1,6}\d{6}[CP]\d{8}$/, {
+    message: 'Invalid OCC option symbol format (e.g., AAPL240119C00190000)',
+  })
+  optionSymbol?: string;
+
+  @ValidateIf((o: CreateOrderDto) => o.orderCategory === OrderCategory.OPTION)
+  @IsString()
+  @Matches(/^[A-Z]{1,5}$/, {
+    message: 'Underlying symbol must be 1-5 uppercase letters',
+  })
+  underlyingSymbol?: string;
+
+  @ValidateIf((o: CreateOrderDto) => o.orderCategory === OrderCategory.OPTION)
+  @IsEnum(OptionType, { message: 'Option type must be "call" or "put"' })
+  optionType?: OptionType;
+
+  @ValidateIf((o: CreateOrderDto) => o.orderCategory === OrderCategory.OPTION)
+  @IsNumber(
+    { maxDecimalPlaces: 4 },
+    { message: 'Strike price must have at most 4 decimal places' },
+  )
+  @IsPositive({ message: 'Strike price must be positive' })
+  @Type(() => Number)
+  strikePrice?: number;
+
+  @ValidateIf((o: CreateOrderDto) => o.orderCategory === OrderCategory.OPTION)
+  @IsString()
+  @Matches(/^\d{4}-\d{2}-\d{2}$/, {
+    message: 'Expiration date must be in YYYY-MM-DD format',
+  })
+  expirationDate?: string;
 }

@@ -11,8 +11,13 @@ import { User } from '../users/entities/user.entity';
 import { AnalyticsService } from './analytics.service';
 import type { AnalyticsPeriod } from './analytics.service';
 import { TaxLotService } from '../portfolio/services/tax-lot.service';
+import { OptionTaxService } from '../portfolio/services/option-tax.service';
 import { DividendService } from '../portfolio/services/dividend.service';
-import { DividendStatus } from '../portfolio/enums/cost-basis.enums';
+import {
+  CostBasisMethod,
+  DividendStatus,
+  OptionClosureType,
+} from '../portfolio/enums/cost-basis.enums';
 
 @Controller('analytics')
 @UseGuards(JwtAuthGuard)
@@ -20,6 +25,7 @@ export class AnalyticsController {
   constructor(
     private readonly analyticsService: AnalyticsService,
     private readonly taxLotService: TaxLotService,
+    private readonly optionTaxService: OptionTaxService,
     private readonly dividendService: DividendService,
   ) {}
 
@@ -60,7 +66,9 @@ export class AnalyticsController {
       start = new Date(`${year}-01-01`);
       end = new Date(`${year}-12-31`);
     } else {
-      start = startDate ? new Date(startDate) : new Date(new Date().getFullYear(), 0, 1);
+      start = startDate
+        ? new Date(startDate)
+        : new Date(new Date().getFullYear(), 0, 1);
       end = endDate ? new Date(endDate) : new Date();
     }
 
@@ -96,7 +104,8 @@ export class AnalyticsController {
       originalQuantity: Number(lot.originalQuantity),
       remainingQuantity: Number(lot.remainingQuantity),
       costBasisPerShare: Number(lot.costBasisPerShare),
-      totalCostBasis: Number(lot.originalQuantity) * Number(lot.costBasisPerShare),
+      totalCostBasis:
+        Number(lot.originalQuantity) * Number(lot.costBasisPerShare),
       acquiredAt: lot.acquiredAt,
       status: lot.status,
       closedAt: lot.closedAt,
@@ -118,14 +127,16 @@ export class AnalyticsController {
       symbol: lot.symbol,
       remainingQuantity: Number(lot.remainingQuantity),
       costBasisPerShare: Number(lot.costBasisPerShare),
-      totalCostBasis: Number(lot.remainingQuantity) * Number(lot.costBasisPerShare),
+      totalCostBasis:
+        Number(lot.remainingQuantity) * Number(lot.costBasisPerShare),
       acquiredAt: lot.acquiredAt,
       holdingDays: Math.floor(
         (Date.now() - lot.acquiredAt.getTime()) / (1000 * 60 * 60 * 24),
       ),
-      isLongTerm: Math.floor(
-        (Date.now() - lot.acquiredAt.getTime()) / (1000 * 60 * 60 * 24),
-      ) > 365,
+      isLongTerm:
+        Math.floor(
+          (Date.now() - lot.acquiredAt.getTime()) / (1000 * 60 * 60 * 24),
+        ) > 365,
     }));
   }
 
@@ -174,7 +185,7 @@ export class AnalyticsController {
       symbol.toUpperCase(),
       parseFloat(quantity),
       parseFloat(price),
-      method as any,
+      method as CostBasisMethod | undefined,
     );
   }
 
@@ -246,9 +257,111 @@ export class AnalyticsController {
     @CurrentUser() user: User,
     @Query('year') year?: string,
   ) {
-    const targetYear = year
-      ? parseInt(year, 10)
-      : new Date().getFullYear();
+    const targetYear = year ? parseInt(year, 10) : new Date().getFullYear();
     return this.dividendService.getAnnualDividendsBySymbol(user.id, targetYear);
+  }
+
+  // ============ Option Closure Endpoints ============
+
+  @Get('option-closures')
+  async getOptionClosures(
+    @CurrentUser() user: User,
+    @Query('symbol') symbol?: string,
+    @Query('closureType') closureType?: string,
+    @Query('startDate') startDate?: string,
+    @Query('endDate') endDate?: string,
+    @Query('limit') limit?: string,
+    @Query('offset') offset?: string,
+  ) {
+    const closures = await this.optionTaxService.getOptionClosures(user.id, {
+      underlyingSymbol: symbol?.toUpperCase(),
+      closureType: closureType as OptionClosureType,
+      startDate: startDate ? new Date(startDate) : undefined,
+      endDate: endDate ? new Date(endDate) : undefined,
+      limit: limit ? parseInt(limit, 10) : 50,
+      offset: offset ? parseInt(offset, 10) : 0,
+    });
+
+    return closures.map((closure) => ({
+      id: closure.id,
+      optionSymbol: closure.optionSymbol,
+      underlyingSymbol: closure.underlyingSymbol,
+      optionType: closure.optionType,
+      strikePrice: Number(closure.strikePrice),
+      expirationDate: closure.expirationDate,
+      closureType: closure.closureType,
+      quantityClosed: Number(closure.quantityClosed),
+      openingPremium: Number(closure.openingPremium),
+      closingPremium: closure.closingPremium
+        ? Number(closure.closingPremium)
+        : null,
+      realizedGain: Number(closure.realizedGain),
+      proceeds: Number(closure.proceeds),
+      costBasis: Number(closure.costBasis),
+      gainType: closure.gainType,
+      holdingDays: closure.holdingDays,
+      closedAt: closure.closedAt,
+    }));
+  }
+
+  @Get('option-realized-gains')
+  async getOptionRealizedGains(
+    @CurrentUser() user: User,
+    @Query('year') year?: string,
+    @Query('startDate') startDate?: string,
+    @Query('endDate') endDate?: string,
+  ) {
+    let start: Date;
+    let end: Date;
+
+    if (year) {
+      start = new Date(`${year}-01-01`);
+      end = new Date(`${year}-12-31`);
+    } else {
+      start = startDate
+        ? new Date(startDate)
+        : new Date(new Date().getFullYear(), 0, 1);
+      end = endDate ? new Date(endDate) : new Date();
+    }
+
+    return this.optionTaxService.getOptionRealizedGainsSummary(
+      user.id,
+      start,
+      end,
+    );
+  }
+
+  @Get('combined-realized-gains')
+  async getCombinedRealizedGains(
+    @CurrentUser() user: User,
+    @Query('year') year?: string,
+    @Query('startDate') startDate?: string,
+    @Query('endDate') endDate?: string,
+  ) {
+    let start: Date;
+    let end: Date;
+
+    if (year) {
+      start = new Date(`${year}-01-01`);
+      end = new Date(`${year}-12-31`);
+    } else {
+      start = startDate
+        ? new Date(startDate)
+        : new Date(new Date().getFullYear(), 0, 1);
+      end = endDate ? new Date(endDate) : new Date();
+    }
+
+    const stockGains = await this.taxLotService.getRealizedGainsSummary(
+      user.id,
+      start,
+      end,
+    );
+
+    return this.optionTaxService.getCombinedRealizedGainsSummary(
+      user.id,
+      start,
+      end,
+      stockGains,
+    );
   }
 }

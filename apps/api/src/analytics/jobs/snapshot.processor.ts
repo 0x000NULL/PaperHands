@@ -1,5 +1,5 @@
 import { Injectable, Logger } from '@nestjs/common';
-import { Cron, CronExpression } from '@nestjs/schedule';
+import { Cron } from '@nestjs/schedule';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { User } from '../../users/entities/user.entity';
@@ -52,7 +52,7 @@ export class SnapshotProcessor {
           successCount++;
         } catch (error) {
           this.logger.error(
-            `Failed to create snapshot for user ${user.id}: ${error.message}`,
+            `Failed to create snapshot for user ${user.id}: ${error instanceof Error ? error.message : String(error)}`,
           );
           errorCount++;
         }
@@ -62,7 +62,9 @@ export class SnapshotProcessor {
         `Daily snapshot job completed: ${successCount} success, ${errorCount} errors`,
       );
     } catch (error) {
-      this.logger.error(`Daily snapshot job failed: ${error.message}`);
+      this.logger.error(
+        `Daily snapshot job failed: ${error instanceof Error ? error.message : String(error)}`,
+      );
     }
   }
 

@@ -93,6 +93,9 @@ export function Layout({ children }: LayoutProps) {
             <Link to="/analytics" style={styles.navLink}>
               Analytics
             </Link>
+            <Link to="/greeks" style={styles.navLink}>
+              Greeks
+            </Link>
             <span style={styles.userEmail}>{user?.email}</span>
             <button onClick={handleLogout} style={styles.logoutButton}>
               Logout

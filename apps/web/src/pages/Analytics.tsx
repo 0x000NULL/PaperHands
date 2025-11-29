@@ -4,10 +4,10 @@ import { Layout } from '../components/Layout';
 import { Widget } from '../components/dashboard/Widget';
 import { theme } from '../theme/constants';
 import { api } from '../api/client';
-import type { OpenTaxLot, LotSale, Dividend } from '../api/client';
+import type { OpenTaxLot, LotSale, Dividend, OptionClosure, CombinedRealizedGainsSummary } from '../api/client';
 
 type AnalyticsPeriod = '1W' | '1M' | '3M' | 'YTD' | '1Y' | 'ALL';
-type TabType = 'lots' | 'history' | 'dividends';
+type TabType = 'lots' | 'history' | 'dividends' | 'options';
 
 const styles: Record<string, CSSProperties> = {
   container: {
@@ -187,6 +187,61 @@ const styles: Record<string, CSSProperties> = {
     borderRadius: theme.radius.md,
     color: theme.colors.textSecondary,
   },
+  breakdownContainer: {
+    display: 'flex',
+    flexDirection: 'column',
+    gap: theme.spacing.md,
+  },
+  breakdownRow: {
+    display: 'flex',
+    flexDirection: 'column',
+    gap: theme.spacing.xs,
+  },
+  breakdownHeader: {
+    display: 'flex',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+  },
+  breakdownLabel: {
+    fontSize: theme.typography.sm,
+    color: theme.colors.textSecondary,
+  },
+  breakdownValue: {
+    fontSize: theme.typography.sm,
+    fontFamily: theme.typography.fontMono,
+    fontWeight: theme.typography.semibold,
+  },
+  progressBarContainer: {
+    width: '100%',
+    height: 8,
+    backgroundColor: theme.colors.bgTertiary,
+    borderRadius: theme.radius.sm,
+    overflow: 'hidden',
+  },
+  progressBar: {
+    height: '100%',
+    borderRadius: theme.radius.sm,
+    transition: 'width 0.3s ease',
+  },
+  breakdownTotal: {
+    display: 'flex',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    padding: theme.spacing.md,
+    backgroundColor: theme.colors.bgTertiary,
+    borderRadius: theme.radius.md,
+    marginTop: theme.spacing.sm,
+  },
+  breakdownTotalLabel: {
+    fontSize: theme.typography.base,
+    fontWeight: theme.typography.semibold,
+    color: theme.colors.textPrimary,
+  },
+  breakdownTotalValue: {
+    fontSize: theme.typography.lg,
+    fontFamily: theme.typography.fontMono,
+    fontWeight: theme.typography.bold,
+  },
 };
 
 const formatCurrency = (value: number): string => {
@@ -237,6 +292,12 @@ export function Analytics() {
     staleTime: 30000,
   });
 
+  const { data: combinedGains, isLoading: loadingCombined } = useQuery({
+    queryKey: ['analytics', 'combined-gains'],
+    queryFn: () => api.getCombinedRealizedGains(),
+    staleTime: 30000,
+  });
+
   const { data: taxLots } = useQuery({
     queryKey: ['analytics', 'tax-lots'],
     queryFn: () => api.getOpenTaxLots(),
@@ -256,6 +317,13 @@ export function Analytics() {
     queryFn: () => api.getDividends({ limit: 20 }),
     staleTime: 30000,
     enabled: activeTab === 'dividends',
+  });
+
+  const { data: optionClosures } = useQuery({
+    queryKey: ['analytics', 'option-closures'],
+    queryFn: () => api.getOptionClosures({ limit: 20 }),
+    staleTime: 30000,
+    enabled: activeTab === 'options',
   });
 
   const lastDataPoint = performance?.[performance.length - 1];
@@ -504,6 +572,14 @@ export function Analytics() {
                 <div style={styles.noData}>No gains data</div>
               )}
             </Widget>
+
+            {/* Combined Gains Breakdown */}
+            <Widget title="Realized Gains Breakdown">
+              <CombinedGainsBreakdown
+                data={combinedGains}
+                isLoading={loadingCombined}
+              />
+            </Widget>
           </div>
         </div>
 
@@ -537,6 +613,15 @@ export function Analytics() {
             >
               Dividends
             </button>
+            <button
+              style={{
+                ...styles.tab,
+                ...(activeTab === 'options' ? styles.tabActive : {}),
+              }}
+              onClick={() => setActiveTab('options')}
+            >
+              Options
+            </button>
           </div>
 
           {activeTab === 'lots' && (
@@ -549,6 +634,10 @@ export function Analytics() {
 
           {activeTab === 'dividends' && (
             <DividendsTable dividends={dividends ?? []} />
+          )}
+
+          {activeTab === 'options' && (
+            <OptionClosuresTable closures={optionClosures ?? []} />
           )}
         </Widget>
       </div>
@@ -704,5 +793,197 @@ function DividendsTable({ dividends }: { dividends: Dividend[] }) {
         ))}
       </tbody>
     </table>
+  );
+}
+
+function OptionClosuresTable({ closures }: { closures: OptionClosure[] }) {
+  if (closures.length === 0) {
+    return <div style={styles.noData}>No option closures</div>;
+  }
+
+  const formatClosureType = (type: string): string => {
+    switch (type) {
+      case 'sold_to_close':
+        return 'Sold';
+      case 'bought_to_close':
+        return 'Bought';
+      case 'expired_worthless':
+        return 'Expired';
+      case 'exercised':
+        return 'Exercised';
+      case 'assigned':
+        return 'Assigned';
+      default:
+        return type;
+    }
+  };
+
+  const getClosureTypeColor = (type: string): string => {
+    switch (type) {
+      case 'sold_to_close':
+        return theme.colors.accent;
+      case 'bought_to_close':
+        return theme.colors.warning;
+      case 'expired_worthless':
+        return theme.colors.negative;
+      case 'exercised':
+        return theme.colors.positive;
+      case 'assigned':
+        return theme.colors.warning;
+      default:
+        return theme.colors.textSecondary;
+    }
+  };
+
+  return (
+    <table style={styles.table}>
+      <thead>
+        <tr>
+          <th style={styles.th}>Date</th>
+          <th style={styles.th}>Symbol</th>
+          <th style={styles.th}>Type</th>
+          <th style={styles.th}>Contracts</th>
+          <th style={styles.th}>Closure</th>
+          <th style={styles.th}>P&L</th>
+          <th style={styles.th}>Term</th>
+        </tr>
+      </thead>
+      <tbody>
+        {closures.map((closure) => (
+          <tr key={closure.id}>
+            <td style={styles.td}>
+              {new Date(closure.closedAt).toLocaleDateString()}
+            </td>
+            <td style={{ ...styles.td, fontWeight: theme.typography.semibold }}>
+              {closure.underlyingSymbol}
+              <span
+                style={{
+                  marginLeft: '4px',
+                  fontSize: theme.typography.xs,
+                  color: theme.colors.textSecondary,
+                }}
+              >
+                {closure.optionType.toUpperCase()} ${closure.strikePrice}
+              </span>
+            </td>
+            <td
+              style={{
+                ...styles.td,
+                color:
+                  closure.optionType === 'call'
+                    ? theme.colors.positive
+                    : theme.colors.negative,
+              }}
+            >
+              {closure.optionType.toUpperCase()}
+            </td>
+            <td style={styles.td}>{closure.quantityClosed}</td>
+            <td
+              style={{
+                ...styles.td,
+                color: getClosureTypeColor(closure.closureType),
+              }}
+            >
+              {formatClosureType(closure.closureType)}
+            </td>
+            <td
+              style={{
+                ...styles.td,
+                color: getValueColor(closure.realizedGain),
+              }}
+            >
+              {formatCurrency(closure.realizedGain)}
+            </td>
+            <td
+              style={{
+                ...styles.td,
+                color:
+                  closure.gainType === 'long_term'
+                    ? theme.colors.positive
+                    : theme.colors.warning,
+              }}
+            >
+              {closure.gainType === 'long_term' ? 'Long' : 'Short'}
+            </td>
+          </tr>
+        ))}
+      </tbody>
+    </table>
+  );
+}
+
+function CombinedGainsBreakdown({
+  data,
+  isLoading,
+}: {
+  data?: CombinedRealizedGainsSummary;
+  isLoading: boolean;
+}) {
+  if (isLoading) {
+    return <div style={styles.loading}>Loading...</div>;
+  }
+
+  if (!data) {
+    return <div style={styles.noData}>No gains data available</div>;
+  }
+
+  const stockGains = data.stocks.totalRealized;
+  const optionGains = data.options.totalRealized;
+  const totalGains = data.combined.totalRealized;
+  const totalAbsolute = Math.abs(stockGains) + Math.abs(optionGains);
+
+  const getBarWidth = (value: number): string => {
+    if (totalAbsolute === 0) return '0%';
+    return `${(Math.abs(value) / totalAbsolute) * 100}%`;
+  };
+
+  const getBarColor = (value: number, baseColor: string): string => {
+    return value >= 0 ? baseColor : theme.colors.negative;
+  };
+
+  const categories = [
+    { label: 'Stock Trades', value: stockGains, color: theme.colors.accent },
+    { label: 'Options', value: optionGains, color: theme.colors.warning },
+  ];
+
+  return (
+    <div style={styles.breakdownContainer}>
+      {categories.map((cat) => (
+        <div key={cat.label} style={styles.breakdownRow}>
+          <div style={styles.breakdownHeader}>
+            <span style={styles.breakdownLabel}>{cat.label}</span>
+            <span
+              style={{
+                ...styles.breakdownValue,
+                color: getValueColor(cat.value),
+              }}
+            >
+              {formatCurrency(cat.value)}
+            </span>
+          </div>
+          <div style={styles.progressBarContainer}>
+            <div
+              style={{
+                ...styles.progressBar,
+                width: getBarWidth(cat.value),
+                backgroundColor: getBarColor(cat.value, cat.color),
+              }}
+            />
+          </div>
+        </div>
+      ))}
+
+      <div style={styles.breakdownTotal}>
+        <span style={styles.breakdownTotalLabel}>Total Realized</span>
+        <span
+          style={{
+            ...styles.breakdownTotalValue,
+            color: getValueColor(totalGains),
+          }}
+        >
+          {formatCurrency(totalGains)}
+        </span>
+      </div>
+    </div>
   );
 }
