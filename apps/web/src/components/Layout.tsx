@@ -1,7 +1,6 @@
 import { Link, useNavigate } from 'react-router-dom';
 import type { CSSProperties } from 'react';
 import { useAuthStore } from '../store/authStore';
-import { useOnboardingStore } from '../store/onboardingStore';
 import { theme } from '../theme/constants';
 import { MarketStatusBadge } from './common/MarketStatusBadge';
 import { ConnectionStatusBadge } from './common/ConnectionStatus';
@@ -58,13 +57,16 @@ const styles: Record<string, CSSProperties> = {
     fontSize: theme.typography.sm,
     transition: theme.transitions.fast,
   },
-  replayButton: {
-    backgroundColor: 'transparent',
-    color: theme.colors.textTertiary,
-    border: 'none',
-    padding: `${theme.spacing.xs} ${theme.spacing.sm}`,
-    cursor: 'pointer',
-    fontSize: theme.typography.xs,
+  settingsLink: {
+    display: 'flex',
+    alignItems: 'center',
+    justifyContent: 'center',
+    color: theme.colors.textSecondary,
+    textDecoration: 'none',
+    padding: theme.spacing.sm,
+    borderRadius: theme.radius.md,
+    transition: theme.transitions.fast,
+    fontSize: theme.typography.lg,
   },
   main: {
     padding: theme.spacing.xl,
@@ -75,16 +77,11 @@ const styles: Record<string, CSSProperties> = {
 
 export function Layout({ children }: LayoutProps) {
   const { user, logout, isAuthenticated } = useAuthStore();
-  const { startTour } = useOnboardingStore();
   const navigate = useNavigate();
 
   const handleLogout = () => {
     logout();
     navigate('/login');
-  };
-
-  const handleReplayTour = () => {
-    startTour();
   };
 
   return (
@@ -111,9 +108,9 @@ export function Layout({ children }: LayoutProps) {
               Greeks
             </Link>
             <span style={styles.userEmail}>{user?.email}</span>
-            <button onClick={handleReplayTour} style={styles.replayButton}>
-              Replay Tour
-            </button>
+            <Link to="/settings" style={styles.settingsLink} title="Settings">
+              &#9881;
+            </Link>
             <button onClick={handleLogout} style={styles.logoutButton}>
               Logout
             </button>

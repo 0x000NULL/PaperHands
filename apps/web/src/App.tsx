@@ -4,6 +4,7 @@ import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { useAuthStore } from './store/authStore';
 import { useOnboardingStore } from './store/onboardingStore';
 import { ErrorBoundary } from './components/ErrorBoundary';
+import { ThemeProvider } from './components/ThemeProvider';
 import { OnboardingWizard } from './components/onboarding';
 import { Login } from './pages/Login';
 import { Register } from './pages/Register';
@@ -11,6 +12,7 @@ import { Dashboard } from './pages/Dashboard';
 import { Watchlists } from './pages/Watchlists';
 import { Analytics } from './pages/Analytics';
 import { Greeks } from './pages/Greeks';
+import { Settings } from './pages/Settings';
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -60,8 +62,9 @@ function App() {
   return (
     <ErrorBoundary>
       <QueryClientProvider client={queryClient}>
-        <BrowserRouter>
-          <Routes>
+        <ThemeProvider>
+          <BrowserRouter>
+            <Routes>
             <Route
               path="/login"
               element={
@@ -110,12 +113,21 @@ function App() {
                 </ProtectedRoute>
               }
             />
+            <Route
+              path="/settings"
+              element={
+                <ProtectedRoute>
+                  <Settings />
+                </ProtectedRoute>
+              }
+            />
             {/* Redirect old routes to dashboard */}
             <Route path="/trade" element={<Navigate to="/" replace />} />
             <Route path="/history" element={<Navigate to="/" replace />} />
             <Route path="*" element={<Navigate to="/" replace />} />
-          </Routes>
-        </BrowserRouter>
+            </Routes>
+          </BrowserRouter>
+        </ThemeProvider>
       </QueryClientProvider>
     </ErrorBoundary>
   );

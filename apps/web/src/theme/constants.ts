@@ -1,33 +1,33 @@
 export const theme = {
   colors: {
-    // Backgrounds
-    bgPrimary: '#0a0a0f',      // Main page background (near black)
-    bgSecondary: '#12121a',    // Widget/card background
-    bgTertiary: '#1a1a2e',     // Header/elevated elements
-    bgHover: '#252538',        // Hover states
-    bgInput: '#0d0d14',        // Input field backgrounds
+    // Backgrounds - using CSS variables for theme switching
+    bgPrimary: 'var(--color-bgPrimary)',
+    bgSecondary: 'var(--color-bgSecondary)',
+    bgTertiary: 'var(--color-bgTertiary)',
+    bgHover: 'var(--color-bgHover)',
+    bgInput: 'var(--color-bgInput)',
 
     // Accent colors
-    accent: '#00ff88',         // Neon green (primary accent - gains, buy)
-    accentDim: '#00cc6a',      // Dimmed accent for hover
-    accentGlow: 'rgba(0, 255, 136, 0.1)', // Glow effect
+    accent: 'var(--color-accent)',
+    accentDim: 'var(--color-accentDim)',
+    accentGlow: 'var(--color-accentGlow)',
 
     // Semantic colors
-    positive: '#00ff88',       // Gains (neon green)
-    negative: '#ff4757',       // Losses/Sell (red)
-    warning: '#ffa502',        // Warnings (orange)
-    info: '#3498db',           // Info (blue)
-    success: '#00ff88',        // Alias for positive
-    error: '#ff4757',          // Alias for negative
+    positive: 'var(--color-positive)',
+    negative: 'var(--color-negative)',
+    warning: 'var(--color-warning)',
+    info: 'var(--color-info)',
+    success: 'var(--color-success)',
+    error: 'var(--color-error)',
 
     // Text colors
-    textPrimary: '#ffffff',    // Primary text (white)
-    textSecondary: '#a0a0b0',  // Secondary text (muted)
-    textTertiary: '#606070',   // Tertiary text (very muted)
+    textPrimary: 'var(--color-textPrimary)',
+    textSecondary: 'var(--color-textSecondary)',
+    textTertiary: 'var(--color-textTertiary)',
 
     // Borders
-    border: '#2a2a3e',         // Default border
-    borderFocus: '#00ff88',    // Focus state border
+    border: 'var(--color-border)',
+    borderFocus: 'var(--color-borderFocus)',
   },
 
   typography: {

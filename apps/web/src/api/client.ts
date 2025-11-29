@@ -295,6 +295,27 @@ export const api = {
 
   resetOnboarding: () =>
     request<OnboardingStatus>('/onboarding/reset', { method: 'POST' }),
+
+  // Settings
+  getSettings: () => request<SettingsResponse>('/settings'),
+
+  updateTradingPreferences: (data: UpdateTradingPreferencesRequest) =>
+    request<SettingsResponse>('/settings/preferences', {
+      method: 'PUT',
+      body: JSON.stringify(data),
+    }),
+
+  updateTheme: (data: UpdateThemeRequest) =>
+    request<SettingsResponse>('/settings/theme', {
+      method: 'PUT',
+      body: JSON.stringify(data),
+    }),
+
+  changePassword: (data: ChangePasswordRequest) =>
+    request<{ message: string }>('/settings/password', {
+      method: 'POST',
+      body: JSON.stringify(data),
+    }),
 };
 
 // Analytics types
@@ -458,4 +479,36 @@ export interface CombinedRealizedGainsSummary {
   stocks: RealizedGainsSummary;
   options: OptionRealizedGainsSummary;
   combined: OptionRealizedGainsSummary;
+}
+
+// Settings types
+export interface SettingsResponse {
+  account: {
+    email: string;
+    createdAt: string;
+  };
+  trading: {
+    defaultOrderType: string;
+    defaultTimeInForce: string;
+    defaultCostBasisMethod: string;
+  };
+  display: {
+    theme: 'light' | 'dark';
+    tourCompleted: boolean;
+  };
+}
+
+export interface UpdateTradingPreferencesRequest {
+  defaultOrderType?: string;
+  defaultTimeInForce?: string;
+  defaultCostBasisMethod?: string;
+}
+
+export interface UpdateThemeRequest {
+  theme: 'light' | 'dark';
+}
+
+export interface ChangePasswordRequest {
+  currentPassword: string;
+  newPassword: string;
 }

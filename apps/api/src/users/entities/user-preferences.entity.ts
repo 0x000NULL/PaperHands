@@ -44,6 +44,12 @@ export class UserPreferences {
   @Column({ default: false })
   tourCompleted: boolean;
 
+  @Column({
+    type: 'varchar',
+    default: 'dark',
+  })
+  theme: 'light' | 'dark';
+
   @CreateDateColumn()
   createdAt: Date;
 
