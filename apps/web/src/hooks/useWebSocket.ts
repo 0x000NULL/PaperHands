@@ -12,6 +12,18 @@ import {
 const rawApiUrl = import.meta.env.VITE_API_URL ?? 'http://localhost:3000';
 const socketUrl = rawApiUrl.replace(/\/+$/, '');
 
+// Extract the path prefix from the API URL (e.g., '/api' from 'https://example.com/api')
+const getSocketPath = () => {
+  try {
+    const url = new URL(rawApiUrl);
+    const pathPrefix = url.pathname.replace(/\/+$/, '');
+    // Socket.io path must include the prefix if API is behind a path
+    return pathPrefix ? `${pathPrefix}/socket.io` : '/socket.io';
+  } catch {
+    return '/socket.io';
+  }
+};
+
 interface StreamEventPayload<T> {
   symbol: string;
   data: T;
@@ -43,6 +55,7 @@ export function useWebSocket() {
 
     const socket = io(`${socketUrl}/streaming`, {
       auth: { token },
+      path: getSocketPath(),
       transports: ['websocket'],
       reconnection: true,
       reconnectionAttempts: 5,
