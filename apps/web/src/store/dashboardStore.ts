@@ -1,5 +1,5 @@
 import { create } from 'zustand';
-import type { OrderType, OrderSide } from '../types';
+import type { OrderType, OrderSide, TimeInForce } from '../types';
 
 interface DashboardState {
   // Symbol linking
@@ -11,6 +11,10 @@ interface DashboardState {
   setTradeSide: (side: OrderSide) => void;
   orderType: OrderType;
   setOrderType: (type: OrderType) => void;
+  timeInForce: TimeInForce;
+  setTimeInForce: (tif: TimeInForce) => void;
+  extendedHours: boolean;
+  setExtendedHours: (enabled: boolean) => void;
   quantity: string;
   setQuantity: (qty: string) => void;
   limitPrice: string;
@@ -29,6 +33,8 @@ interface DashboardState {
 const initialFormState = {
   tradeSide: 'buy' as OrderSide,
   orderType: 'market' as OrderType,
+  timeInForce: 'day' as TimeInForce,
+  extendedHours: false,
   quantity: '',
   limitPrice: '',
   stopPrice: '',
@@ -44,6 +50,8 @@ export const useDashboardStore = create<DashboardState>()((set) => ({
   ...initialFormState,
   setTradeSide: (side) => set({ tradeSide: side }),
   setOrderType: (type) => set({ orderType: type }),
+  setTimeInForce: (tif) => set({ timeInForce: tif }),
+  setExtendedHours: (enabled) => set({ extendedHours: enabled }),
   setQuantity: (qty) => set({ quantity: qty }),
   setLimitPrice: (price) => set({ limitPrice: price }),
   setStopPrice: (price) => set({ stopPrice: price }),
@@ -58,6 +66,8 @@ export const useDashboardStore = create<DashboardState>()((set) => ({
       tradeSide: 'sell',
       quantity: quantity.toString(),
       orderType: 'market',
+      timeInForce: 'day',
+      extendedHours: false,
       limitPrice: '',
       stopPrice: '',
       trailAmount: '',
@@ -69,6 +79,8 @@ export const useDashboardStore = create<DashboardState>()((set) => ({
       tradeSide: 'buy',
       quantity: '',
       orderType: 'market',
+      timeInForce: 'day',
+      extendedHours: false,
       limitPrice: '',
       stopPrice: '',
       trailAmount: '',

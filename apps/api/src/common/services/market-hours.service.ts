@@ -353,13 +353,24 @@ export class MarketHoursService {
    * @param timeInForce The time in force setting
    * @returns The expiration date or null for GTC orders (no expiration)
    */
-  calculateExpirationTime(timeInForce: 'day' | 'gtc'): Date | null {
-    if (timeInForce === 'gtc') {
-      // GTC orders don't expire (or could set to 90 days if needed)
-      return null;
-    }
+  calculateExpirationTime(
+    timeInForce: 'day' | 'gtc' | 'ioc' | 'fok',
+  ): Date | null {
+    switch (timeInForce) {
+      case 'gtc':
+        // GTC orders don't expire (or could set to 90 days if needed)
+        return null;
 
-    // DAY orders expire at next market close (handles after-hours orders)
-    return this.getNextMarketClose();
+      case 'ioc':
+      case 'fok':
+        // IOC and FOK are immediate orders - they expire instantly if not filled
+        // Return current time as expiration (they're processed immediately)
+        return new Date();
+
+      case 'day':
+      default:
+        // DAY orders expire at next market close (handles after-hours orders)
+        return this.getNextMarketClose();
+    }
   }
 }

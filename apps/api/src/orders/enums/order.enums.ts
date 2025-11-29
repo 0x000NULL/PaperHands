@@ -24,6 +24,8 @@ export enum OrderType {
 export enum TimeInForce {
   DAY = 'day',
   GTC = 'gtc',
+  IOC = 'ioc',
+  FOK = 'fok',
 }
 
 export enum OrderStatus {

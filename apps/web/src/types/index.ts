@@ -103,6 +103,7 @@ export interface CreateOrderRequest {
   quantity: number;
   orderType?: OrderType;
   timeInForce?: TimeInForce;
+  extendedHours?: boolean;
   limitPrice?: number;
   stopPrice?: number;
   trailAmount?: number;

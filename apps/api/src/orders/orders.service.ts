@@ -113,6 +113,63 @@ export class OrdersService {
       );
     }
 
+    // Validate extended hours session
+    if (extendedHours) {
+      const session = this.marketHoursService.getCurrentSession();
+      if (session !== 'pre_market' && session !== 'after_hours') {
+        throw new BadRequestException(
+          'Extended hours orders can only be placed during pre-market (4:00-9:30 AM ET) or after-hours (4:00-8:00 PM ET) sessions',
+        );
+      }
+    }
+
+    // Get current session for IOC/FOK validation
+    const currentSession = this.marketHoursService.getCurrentSession();
+    const isMarketOpen =
+      currentSession === 'regular' ||
+      (extendedHours &&
+        (currentSession === 'pre_market' || currentSession === 'after_hours'));
+
+    // Handle IOC (Immediate-Or-Cancel) orders
+    if (timeInForce === TimeInForce.IOC) {
+      if (!isMarketOpen) {
+        throw new BadRequestException(
+          'IOC orders require an open trading session. Enable extended hours trading or wait for market open.',
+        );
+      }
+      return this.executeIOCOrder(
+        userId,
+        upperSymbol,
+        side,
+        quantity,
+        orderType,
+        limitPrice,
+        quote,
+        extendedHours,
+        idempotencyKey,
+      );
+    }
+
+    // Handle FOK (Fill-Or-Kill) orders
+    if (timeInForce === TimeInForce.FOK) {
+      if (!isMarketOpen) {
+        throw new BadRequestException(
+          'FOK orders require an open trading session. Enable extended hours trading or wait for market open.',
+        );
+      }
+      return this.executeFOKOrder(
+        userId,
+        upperSymbol,
+        side,
+        quantity,
+        orderType,
+        limitPrice,
+        quote,
+        extendedHours,
+        idempotencyKey,
+      );
+    }
+
     // For market orders, check if market is open
     if (orderType === OrderType.MARKET) {
       const session = this.marketHoursService.getCurrentSession();
@@ -683,6 +740,458 @@ export class OrdersService {
       );
 
       return updatedOrder!;
+    } catch (error) {
+      await queryRunner.rollbackTransaction();
+      throw error;
+    } finally {
+      await queryRunner.release();
+    }
+  }
+
+  /**
+   * Simulate available liquidity for IOC/FOK orders
+   * Based on order size relative to daily volume
+   */
+  private simulateAvailableLiquidity(
+    orderQty: number,
+    dailyVolume: number,
+  ): number {
+    const effectiveVolume = dailyVolume || 1000000;
+    const volumeRatio = orderQty / effectiveVolume;
+
+    // Small orders (<0.1% of volume): 100% fill
+    if (volumeRatio < 0.001) return orderQty;
+
+    // Medium orders (0.1-1% of volume): 80-100% fill
+    if (volumeRatio < 0.01) {
+      const fillPercent = 0.8 + Math.random() * 0.2;
+      return Math.floor(orderQty * fillPercent);
+    }
+
+    // Large orders (>1% of volume): 50-80% fill
+    const fillPercent = 0.5 + Math.random() * 0.3;
+    return Math.floor(orderQty * fillPercent);
+  }
+
+  /**
+   * Check if full quantity can be filled for FOK orders
+   * Based on order size relative to daily volume
+   */
+  private canFillFullQuantity(orderQty: number, dailyVolume: number): boolean {
+    const effectiveVolume = dailyVolume || 1000000;
+    const volumeRatio = orderQty / effectiveVolume;
+
+    // Small orders (<0.1% of volume): always fill
+    if (volumeRatio < 0.001) return true;
+
+    // Small-medium orders (<0.5% of volume): 90% chance
+    if (volumeRatio < 0.005) return Math.random() > 0.1;
+
+    // Medium orders (<1% of volume): 70% chance
+    if (volumeRatio < 0.01) return Math.random() > 0.3;
+
+    // Large orders (>1% of volume): 50% chance
+    return Math.random() > 0.5;
+  }
+
+  /**
+   * Get extended hours adjusted execution price
+   * Simulates wider spreads during extended hours (2x multiplier)
+   */
+  private getExtendedHoursAdjustedPrice(
+    basePrice: number,
+    side: OrderSide,
+  ): number {
+    const spreadMultiplier = 2.0;
+    const baseSpread = basePrice * 0.002; // 0.2% base spread
+    const adjustment = baseSpread * spreadMultiplier;
+    return side === OrderSide.BUY
+      ? basePrice + adjustment
+      : basePrice - adjustment;
+  }
+
+  /**
+   * Execute an IOC (Immediate-Or-Cancel) order
+   * Fills whatever quantity is available immediately, cancels the rest
+   */
+  private async executeIOCOrder(
+    userId: string,
+    symbol: string,
+    side: OrderSide,
+    quantity: number,
+    orderType: OrderType,
+    limitPrice: number | undefined,
+    quote: { ask: number; bid: number; volume?: number },
+    extendedHours: boolean,
+    idempotencyKey?: string,
+  ) {
+    let executionPrice = side === OrderSide.BUY ? quote.ask : quote.bid;
+
+    // Apply extended hours spread adjustment
+    if (extendedHours) {
+      executionPrice = this.getExtendedHoursAdjustedPrice(executionPrice, side);
+    }
+
+    // For limit IOC, check if price conditions are met
+    if (orderType === OrderType.LIMIT && limitPrice) {
+      const canFill =
+        side === OrderSide.BUY
+          ? executionPrice <= limitPrice
+          : executionPrice >= limitPrice;
+
+      if (!canFill) {
+        // Create cancelled IOC order - price not achievable
+        const order = this.orderRepository.create({
+          userId,
+          symbol,
+          side,
+          orderType,
+          timeInForce: TimeInForce.IOC,
+          extendedHours,
+          quantity,
+          filledQuantity: 0,
+          limitPrice,
+          status: OrderStatus.CANCELLED,
+          rejectionReason: `IOC cancelled: Limit price $${limitPrice.toFixed(2)} not achievable. Current ${side === OrderSide.BUY ? 'ask' : 'bid'}: $${executionPrice.toFixed(2)}`,
+          idempotencyKey: idempotencyKey || null,
+          cancelledAt: new Date(),
+        });
+
+        await this.orderRepository.save(order);
+        await this.createAuditRecord(
+          order,
+          AuditAction.CANCELLED,
+          'IOC: Limit price not achievable',
+          executionPrice,
+        );
+
+        return this.formatOrderResponse(order);
+      }
+
+      // Use limit price if it's more favorable
+      executionPrice =
+        side === OrderSide.BUY
+          ? Math.min(executionPrice, limitPrice)
+          : Math.max(executionPrice, limitPrice);
+    }
+
+    // Simulate available liquidity
+    const fillableQuantity = this.simulateAvailableLiquidity(
+      quantity,
+      quote.volume || 0,
+    );
+
+    if (fillableQuantity === 0) {
+      // No liquidity - cancel entire order
+      const order = this.orderRepository.create({
+        userId,
+        symbol,
+        side,
+        orderType,
+        timeInForce: TimeInForce.IOC,
+        extendedHours,
+        quantity,
+        filledQuantity: 0,
+        limitPrice: limitPrice || null,
+        status: OrderStatus.CANCELLED,
+        rejectionReason: 'IOC cancelled: No immediate liquidity available',
+        idempotencyKey: idempotencyKey || null,
+        cancelledAt: new Date(),
+      });
+
+      await this.orderRepository.save(order);
+      await this.createAuditRecord(
+        order,
+        AuditAction.CANCELLED,
+        'IOC: No liquidity',
+        executionPrice,
+      );
+
+      return this.formatOrderResponse(order);
+    }
+
+    // Execute the fillable quantity
+    const totalCost = executionPrice * fillableQuantity;
+    const queryRunner = this.dataSource.createQueryRunner();
+    await queryRunner.connect();
+    await queryRunner.startTransaction('SERIALIZABLE');
+
+    try {
+      const user = await queryRunner.manager.findOne(User, {
+        where: { id: userId },
+        lock: { mode: 'pessimistic_write' },
+      });
+
+      if (!user) {
+        throw new NotFoundException('User not found');
+      }
+
+      // Validate funds/shares
+      if (side === OrderSide.BUY) {
+        if (Number(user.cashBalance) < totalCost) {
+          await queryRunner.rollbackTransaction();
+          throw new BadRequestException(
+            `Insufficient funds. Required: $${totalCost.toFixed(2)}, Available: $${Number(user.cashBalance).toFixed(2)}`,
+          );
+        }
+        await queryRunner.manager.update(User, userId, {
+          cashBalance: Number(user.cashBalance) - totalCost,
+        });
+      } else {
+        const position = await queryRunner.manager.findOne(Position, {
+          where: { userId, symbol },
+          lock: { mode: 'pessimistic_write' },
+        });
+
+        if (!position || Number(position.quantity) < fillableQuantity) {
+          await queryRunner.rollbackTransaction();
+          const availableQty = position ? Number(position.quantity) : 0;
+          throw new BadRequestException(
+            `Insufficient shares. Required: ${fillableQuantity}, Available: ${availableQty}`,
+          );
+        }
+        await queryRunner.manager.update(User, userId, {
+          cashBalance: Number(user.cashBalance) + totalCost,
+        });
+      }
+
+      const isPartialFill = fillableQuantity < quantity;
+      const cancelledQuantity = quantity - fillableQuantity;
+
+      const order = queryRunner.manager.create(Order, {
+        userId,
+        symbol,
+        side,
+        orderType,
+        timeInForce: TimeInForce.IOC,
+        extendedHours,
+        quantity,
+        filledQuantity: fillableQuantity,
+        filledPrice: executionPrice,
+        avgFillPrice: executionPrice,
+        limitPrice: limitPrice || null,
+        status: isPartialFill
+          ? OrderStatus.PARTIALLY_FILLED
+          : OrderStatus.FILLED,
+        rejectionReason: isPartialFill
+          ? `IOC partial fill: ${fillableQuantity} of ${quantity} shares filled, ${cancelledQuantity} cancelled due to liquidity`
+          : null,
+        idempotencyKey: idempotencyKey || null,
+        filledAt: new Date(),
+        cancelledAt: isPartialFill ? new Date() : null,
+      });
+
+      await queryRunner.manager.save(order);
+
+      await this.updatePositionInTransaction(
+        queryRunner.manager,
+        userId,
+        symbol,
+        fillableQuantity,
+        executionPrice,
+        side === OrderSide.BUY,
+        order.id,
+      );
+
+      await queryRunner.commitTransaction();
+
+      await this.createAuditRecord(
+        order,
+        isPartialFill ? AuditAction.PARTIALLY_FILLED : AuditAction.FILLED,
+        isPartialFill
+          ? `IOC: ${fillableQuantity}/${quantity} filled, ${cancelledQuantity} cancelled`
+          : 'IOC: Fully filled',
+        executionPrice,
+      );
+
+      return this.formatOrderResponse(order);
+    } catch (error) {
+      await queryRunner.rollbackTransaction();
+      throw error;
+    } finally {
+      await queryRunner.release();
+    }
+  }
+
+  /**
+   * Execute a FOK (Fill-Or-Kill) order
+   * Either fills 100% immediately or rejects entirely
+   */
+  private async executeFOKOrder(
+    userId: string,
+    symbol: string,
+    side: OrderSide,
+    quantity: number,
+    orderType: OrderType,
+    limitPrice: number | undefined,
+    quote: { ask: number; bid: number; volume?: number },
+    extendedHours: boolean,
+    idempotencyKey?: string,
+  ) {
+    let executionPrice = side === OrderSide.BUY ? quote.ask : quote.bid;
+
+    // Apply extended hours spread adjustment
+    if (extendedHours) {
+      executionPrice = this.getExtendedHoursAdjustedPrice(executionPrice, side);
+    }
+
+    // For limit FOK, check if price conditions are met
+    if (orderType === OrderType.LIMIT && limitPrice) {
+      const canFill =
+        side === OrderSide.BUY
+          ? executionPrice <= limitPrice
+          : executionPrice >= limitPrice;
+
+      if (!canFill) {
+        // Reject FOK order - price not achievable
+        const order = this.orderRepository.create({
+          userId,
+          symbol,
+          side,
+          orderType,
+          timeInForce: TimeInForce.FOK,
+          extendedHours,
+          quantity,
+          filledQuantity: 0,
+          limitPrice,
+          status: OrderStatus.REJECTED,
+          rejectionReason: `FOK rejected: Cannot fill at limit price $${limitPrice.toFixed(2)}. Current ${side === OrderSide.BUY ? 'ask' : 'bid'}: $${executionPrice.toFixed(2)}`,
+          idempotencyKey: idempotencyKey || null,
+        });
+
+        await this.orderRepository.save(order);
+        await this.createAuditRecord(
+          order,
+          AuditAction.CANCELLED,
+          'FOK: Limit price not achievable',
+          executionPrice,
+        );
+
+        return this.formatOrderResponse(order);
+      }
+
+      // Use limit price if it's more favorable
+      executionPrice =
+        side === OrderSide.BUY
+          ? Math.min(executionPrice, limitPrice)
+          : Math.max(executionPrice, limitPrice);
+    }
+
+    // Check if full quantity can be filled (liquidity simulation)
+    const canFillFully = this.canFillFullQuantity(quantity, quote.volume || 0);
+
+    if (!canFillFully) {
+      // Reject FOK order - insufficient liquidity
+      const order = this.orderRepository.create({
+        userId,
+        symbol,
+        side,
+        orderType,
+        timeInForce: TimeInForce.FOK,
+        extendedHours,
+        quantity,
+        filledQuantity: 0,
+        limitPrice: limitPrice || null,
+        status: OrderStatus.REJECTED,
+        rejectionReason: `FOK rejected: Cannot fill ${quantity} shares immediately. Consider using IOC for partial fills or reducing order size.`,
+        idempotencyKey: idempotencyKey || null,
+      });
+
+      await this.orderRepository.save(order);
+      await this.createAuditRecord(
+        order,
+        AuditAction.CANCELLED,
+        'FOK: Insufficient liquidity for full fill',
+        executionPrice,
+      );
+
+      return this.formatOrderResponse(order);
+    }
+
+    // Execute full order
+    const totalCost = executionPrice * quantity;
+    const queryRunner = this.dataSource.createQueryRunner();
+    await queryRunner.connect();
+    await queryRunner.startTransaction('SERIALIZABLE');
+
+    try {
+      const user = await queryRunner.manager.findOne(User, {
+        where: { id: userId },
+        lock: { mode: 'pessimistic_write' },
+      });
+
+      if (!user) {
+        throw new NotFoundException('User not found');
+      }
+
+      // Validate funds/shares
+      if (side === OrderSide.BUY) {
+        if (Number(user.cashBalance) < totalCost) {
+          await queryRunner.rollbackTransaction();
+          throw new BadRequestException(
+            `Insufficient funds. Required: $${totalCost.toFixed(2)}, Available: $${Number(user.cashBalance).toFixed(2)}`,
+          );
+        }
+        await queryRunner.manager.update(User, userId, {
+          cashBalance: Number(user.cashBalance) - totalCost,
+        });
+      } else {
+        const position = await queryRunner.manager.findOne(Position, {
+          where: { userId, symbol },
+          lock: { mode: 'pessimistic_write' },
+        });
+
+        if (!position || Number(position.quantity) < quantity) {
+          await queryRunner.rollbackTransaction();
+          const availableQty = position ? Number(position.quantity) : 0;
+          throw new BadRequestException(
+            `Insufficient shares. Required: ${quantity}, Available: ${availableQty}`,
+          );
+        }
+        await queryRunner.manager.update(User, userId, {
+          cashBalance: Number(user.cashBalance) + totalCost,
+        });
+      }
+
+      const order = queryRunner.manager.create(Order, {
+        userId,
+        symbol,
+        side,
+        orderType,
+        timeInForce: TimeInForce.FOK,
+        extendedHours,
+        quantity,
+        filledQuantity: quantity,
+        filledPrice: executionPrice,
+        avgFillPrice: executionPrice,
+        limitPrice: limitPrice || null,
+        status: OrderStatus.FILLED,
+        idempotencyKey: idempotencyKey || null,
+        filledAt: new Date(),
+      });
+
+      await queryRunner.manager.save(order);
+
+      await this.updatePositionInTransaction(
+        queryRunner.manager,
+        userId,
+        symbol,
+        quantity,
+        executionPrice,
+        side === OrderSide.BUY,
+        order.id,
+      );
+
+      await queryRunner.commitTransaction();
+
+      await this.createAuditRecord(
+        order,
+        AuditAction.FILLED,
+        'FOK: Fully filled',
+        executionPrice,
+      );
+
+      return this.formatOrderResponse(order);
     } catch (error) {
       await queryRunner.rollbackTransaction();
       throw error;

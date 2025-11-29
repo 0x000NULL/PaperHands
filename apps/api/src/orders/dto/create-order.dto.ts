@@ -51,6 +51,89 @@ function RequiredForOrderTypes(
   };
 }
 
+// Validator: IOC/FOK cannot be used with stop-based orders
+function ValidateIocFokNotWithStopOrders(
+  validationOptions?: ValidationOptions,
+) {
+  return function (object: object, propertyName: string) {
+    registerDecorator({
+      name: 'validateIocFokNotWithStopOrders',
+      target: object.constructor,
+      propertyName: propertyName,
+      options: validationOptions,
+      validator: {
+        validate(_value: unknown, args: ValidationArguments) {
+          const dto = args.object as CreateOrderDto;
+          const stopOrderTypes = [
+            OrderType.STOP,
+            OrderType.STOP_LIMIT,
+            OrderType.TRAILING_STOP,
+          ];
+          if (
+            dto.timeInForce &&
+            [TimeInForce.IOC, TimeInForce.FOK].includes(dto.timeInForce) &&
+            stopOrderTypes.includes(dto.orderType)
+          ) {
+            return false;
+          }
+          return true;
+        },
+        defaultMessage() {
+          return 'IOC and FOK orders are not supported for stop order types. Stop orders wait for a trigger condition before executing.';
+        },
+      },
+    });
+  };
+}
+
+// Validator: Extended hours orders must use limit orders
+function ValidateExtendedHoursLimitOnly(validationOptions?: ValidationOptions) {
+  return function (object: object, propertyName: string) {
+    registerDecorator({
+      name: 'validateExtendedHoursLimitOnly',
+      target: object.constructor,
+      propertyName: propertyName,
+      options: validationOptions,
+      validator: {
+        validate(_value: unknown, args: ValidationArguments) {
+          const dto = args.object as CreateOrderDto;
+          if (dto.extendedHours && dto.orderType === OrderType.MARKET) {
+            return false;
+          }
+          return true;
+        },
+        defaultMessage() {
+          return 'Market orders are not available during extended hours. Use a limit order instead for safer execution with wider spreads.';
+        },
+      },
+    });
+  };
+}
+
+// Validator: Options cannot trade in extended hours
+function ValidateOptionsNoExtendedHours(validationOptions?: ValidationOptions) {
+  return function (object: object, propertyName: string) {
+    registerDecorator({
+      name: 'validateOptionsNoExtendedHours',
+      target: object.constructor,
+      propertyName: propertyName,
+      options: validationOptions,
+      validator: {
+        validate(_value: unknown, args: ValidationArguments) {
+          const dto = args.object as CreateOrderDto;
+          if (dto.extendedHours && dto.orderCategory === OrderCategory.OPTION) {
+            return false;
+          }
+          return true;
+        },
+        defaultMessage() {
+          return 'Options cannot be traded during extended hours sessions.';
+        },
+      },
+    });
+  };
+}
+
 export class CreateOrderDto {
   @IsString()
   @Matches(/^[A-Z]{1,5}$/, { message: 'Symbol must be 1-5 uppercase letters' })
@@ -74,11 +157,16 @@ export class CreateOrderDto {
   orderType: OrderType;
 
   @IsOptional()
-  @IsEnum(TimeInForce, { message: 'Time in force must be "day" or "gtc"' })
+  @IsEnum(TimeInForce, {
+    message: 'Time in force must be "day", "gtc", "ioc", or "fok"',
+  })
+  @ValidateIocFokNotWithStopOrders()
   timeInForce?: TimeInForce = TimeInForce.DAY;
 
   @IsOptional()
   @IsBoolean({ message: 'extendedHours must be a boolean' })
+  @ValidateExtendedHoursLimitOnly()
+  @ValidateOptionsNoExtendedHours()
   extendedHours?: boolean = false;
 
   // Required for limit and stop_limit orders

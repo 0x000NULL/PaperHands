@@ -1,10 +1,10 @@
 import { useState } from 'react';
 import type { CSSProperties } from 'react';
 import { theme } from '../../theme/constants';
-import { useQuote, usePlaceOrder } from '../../hooks';
+import { useQuote, usePlaceOrder, useMarketStatus } from '../../hooks';
 import { useDashboardStore } from '../../store/dashboardStore';
 import { Widget } from './Widget';
-import type { OrderType } from '../../types';
+import type { OrderType, TimeInForce } from '../../types';
 
 const styles: Record<string, CSSProperties> = {
   form: {
@@ -109,6 +109,33 @@ const styles: Record<string, CSSProperties> = {
     gridTemplateColumns: '1fr 1fr',
     gap: theme.spacing.md,
   },
+  checkboxRow: {
+    display: 'flex',
+    alignItems: 'center',
+    gap: theme.spacing.sm,
+  },
+  checkbox: {
+    width: '18px',
+    height: '18px',
+    cursor: 'pointer',
+  },
+  checkboxLabel: {
+    color: theme.colors.textPrimary,
+    fontSize: theme.typography.sm,
+    cursor: 'pointer',
+  },
+  warning: {
+    padding: theme.spacing.sm,
+    backgroundColor: 'rgba(255, 200, 0, 0.1)',
+    color: '#FFD700',
+    borderRadius: theme.radius.sm,
+    fontSize: theme.typography.xs,
+  },
+  tifRow: {
+    display: 'grid',
+    gridTemplateColumns: '1fr 1fr',
+    gap: theme.spacing.md,
+  },
 };
 
 const formatCurrency = (value: number) =>
@@ -125,6 +152,20 @@ const orderTypeLabels: Record<OrderType, string> = {
   trailing_stop: 'Trailing Stop',
 };
 
+const timeInForceLabels: Record<TimeInForce, string> = {
+  day: 'Day',
+  gtc: 'GTC',
+  ioc: 'IOC',
+  fok: 'FOK',
+};
+
+const timeInForceDescriptions: Record<TimeInForce, string> = {
+  day: 'Expires at market close',
+  gtc: 'Good-til-cancelled',
+  ioc: 'Immediate or cancel',
+  fok: 'Fill or kill',
+};
+
 export function TradeForm() {
   const {
     selectedSymbol,
@@ -132,6 +173,10 @@ export function TradeForm() {
     setTradeSide,
     orderType,
     setOrderType,
+    timeInForce,
+    setTimeInForce,
+    extendedHours,
+    setExtendedHours,
     quantity,
     setQuantity,
     limitPrice,
@@ -145,7 +190,19 @@ export function TradeForm() {
 
   const [success, setSuccess] = useState('');
   const { data: quote } = useQuote(selectedSymbol ?? '', !!selectedSymbol);
+  const { data: marketStatus } = useMarketStatus();
   const placeOrderMutation = usePlaceOrder();
+
+  // Determine if we're in extended hours session
+  const isExtendedSession =
+    marketStatus?.session === 'pre_market' ||
+    marketStatus?.session === 'after_hours';
+
+  // Check if order type is a stop-based order (IOC/FOK not allowed)
+  const isStopOrder =
+    orderType === 'stop' ||
+    orderType === 'stop_limit' ||
+    orderType === 'trailing_stop';
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
@@ -161,6 +218,8 @@ export function TradeForm() {
       side: tradeSide,
       quantity: qty,
       orderType,
+      timeInForce,
+      extendedHours,
     };
 
     // Add price fields based on order type
@@ -277,21 +336,85 @@ export function TradeForm() {
           </button>
         </div>
 
-        {/* Order Type */}
-        <div style={styles.fieldGroup}>
-          <label style={styles.label}>Order Type</label>
-          <select
-            value={orderType}
-            onChange={(e) => setOrderType(e.target.value as OrderType)}
-            style={styles.select}
-          >
-            {Object.entries(orderTypeLabels).map(([value, label]) => (
-              <option key={value} value={value}>
-                {label}
-              </option>
-            ))}
-          </select>
+        {/* Order Type & Time in Force Row */}
+        <div style={styles.tifRow}>
+          <div style={styles.fieldGroup}>
+            <label style={styles.label}>Order Type</label>
+            <select
+              value={orderType}
+              onChange={(e) => {
+                const newOrderType = e.target.value as OrderType;
+                setOrderType(newOrderType);
+                // If switching to a stop order, reset IOC/FOK to DAY
+                if (
+                  ['stop', 'stop_limit', 'trailing_stop'].includes(newOrderType) &&
+                  (timeInForce === 'ioc' || timeInForce === 'fok')
+                ) {
+                  setTimeInForce('day');
+                }
+              }}
+              style={styles.select}
+            >
+              {Object.entries(orderTypeLabels).map(([value, label]) => (
+                <option key={value} value={value}>
+                  {label}
+                </option>
+              ))}
+            </select>
+          </div>
+          <div style={styles.fieldGroup}>
+            <label style={styles.label}>Time in Force</label>
+            <select
+              value={timeInForce}
+              onChange={(e) => setTimeInForce(e.target.value as TimeInForce)}
+              style={styles.select}
+              title={timeInForceDescriptions[timeInForce]}
+            >
+              {Object.entries(timeInForceLabels).map(([value, label]) => {
+                // Disable IOC/FOK for stop-based orders
+                const disabled =
+                  (value === 'ioc' || value === 'fok') && isStopOrder;
+                return (
+                  <option key={value} value={value} disabled={disabled}>
+                    {label}
+                    {disabled ? ' (not for stops)' : ''}
+                  </option>
+                );
+              })}
+            </select>
+          </div>
         </div>
+
+        {/* Extended Hours Toggle (only for equity, during extended sessions) */}
+        {isExtendedSession && (
+          <div style={styles.fieldGroup}>
+            <div
+              style={styles.checkboxRow}
+              onClick={() => {
+                const newValue = !extendedHours;
+                setExtendedHours(newValue);
+                // Auto-switch to limit order when enabling extended hours
+                if (newValue && orderType === 'market') {
+                  setOrderType('limit');
+                }
+              }}
+            >
+              <input
+                type="checkbox"
+                checked={extendedHours}
+                onChange={() => {}} // Handled by div onClick
+                style={styles.checkbox}
+              />
+              <label style={styles.checkboxLabel}>Extended Hours Trading</label>
+            </div>
+            {extendedHours && (
+              <div style={styles.warning}>
+                Extended hours have wider spreads and lower liquidity. Limit
+                orders only.
+              </div>
+            )}
+          </div>
+        )}
 
         {/* Quantity */}
         <div style={styles.fieldGroup}>
