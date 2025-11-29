@@ -16,6 +16,7 @@ import {
 } from '@dnd-kit/sortable';
 import { theme } from '../../theme/constants';
 import { WatchlistRow } from './WatchlistRow';
+import { ColumnSettingsDropdown } from './ColumnSettingsDropdown';
 import { useWatchlistQuotes, useReorderItems } from '../../hooks/useWatchlists';
 import { useWatchlistStore } from '../../store/watchlistStore';
 import type { WatchlistItem, Quote } from '../../types';
@@ -133,7 +134,9 @@ export function WatchlistTable({
                 {col.label}
               </th>
             ))}
-            <th style={{ ...styles.headerCell, width: '40px' }}></th>
+            <th style={{ ...styles.headerCell, width: '40px' }}>
+                <ColumnSettingsDropdown />
+              </th>
           </tr>
         </thead>
         <tbody>

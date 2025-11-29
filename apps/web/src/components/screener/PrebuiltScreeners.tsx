@@ -6,8 +6,10 @@ const presets = [
   { id: 'gainers', label: 'Top Gainers', icon: '↑' },
   { id: 'losers', label: 'Top Losers', icon: '↓' },
   { id: 'active', label: 'Most Active', icon: '📊' },
-  { id: 'nearHigh', label: 'Near Highs', icon: '🔝' },
-  { id: 'nearLow', label: 'Near Lows', icon: '🔻' },
+  { id: 'nearHigh', label: 'Near Day High', icon: '🔝' },
+  { id: 'nearLow', label: 'Near Day Low', icon: '🔻' },
+  { id: 'near52High', label: 'Near 52W High', icon: '⬆' },
+  { id: 'near52Low', label: 'Near 52W Low', icon: '⬇' },
 ];
 
 const styles: Record<string, CSSProperties> = {

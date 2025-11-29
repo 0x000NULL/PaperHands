@@ -135,6 +135,43 @@ export function ScreenerFilters() {
           />
           <span style={styles.checkboxLabel}>Near Day Low</span>
         </label>
+      </div>
+
+      <div style={styles.row}>
+        <label style={styles.checkbox}>
+          <input
+            type="checkbox"
+            checked={filters.near52WeekHigh}
+            onChange={(e) => setFilter('near52WeekHigh', e.target.checked)}
+            style={styles.checkboxInput}
+            disabled={!!activePreset}
+          />
+          <span style={styles.checkboxLabel}>Near 52W High</span>
+        </label>
+        <label style={styles.checkbox}>
+          <input
+            type="checkbox"
+            checked={filters.near52WeekLow}
+            onChange={(e) => setFilter('near52WeekLow', e.target.checked)}
+            style={styles.checkboxInput}
+            disabled={!!activePreset}
+          />
+          <span style={styles.checkboxLabel}>Near 52W Low</span>
+        </label>
+        <span style={{ color: theme.colors.textTertiary, fontSize: theme.typography.xs }}>
+          within
+        </span>
+        <input
+          type="number"
+          placeholder="%"
+          value={filters.near52WeekThreshold}
+          onChange={(e) => setFilter('near52WeekThreshold', e.target.value)}
+          style={{ ...styles.input, maxWidth: '50px' }}
+          disabled={!!activePreset}
+        />
+        <span style={{ color: theme.colors.textTertiary, fontSize: theme.typography.xs }}>
+          %
+        </span>
         <button style={styles.clearButton} onClick={resetFilters}>
           Clear
         </button>

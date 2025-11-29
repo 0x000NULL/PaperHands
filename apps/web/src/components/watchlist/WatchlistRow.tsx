@@ -161,6 +161,41 @@ export function WatchlistRow({
         return formatNumber(quote.high);
       case 'low':
         return formatNumber(quote.low);
+      // 52-week data columns
+      case 'week_52_high':
+        return formatNumber(quote.week_52_high);
+      case 'week_52_low':
+        return formatNumber(quote.week_52_low);
+      case 'pct_from_52_high':
+        return (
+          <span
+            style={
+              quote.pct_from_52_high !== null && quote.pct_from_52_high > 0
+                ? styles.positive
+                : quote.pct_from_52_high !== null && quote.pct_from_52_high < 0
+                  ? styles.negative
+                  : {}
+            }
+          >
+            {formatPercent(quote.pct_from_52_high)}
+          </span>
+        );
+      case 'pct_from_52_low':
+        return (
+          <span
+            style={
+              quote.pct_from_52_low !== null && quote.pct_from_52_low > 0
+                ? styles.positive
+                : quote.pct_from_52_low !== null && quote.pct_from_52_low < 0
+                  ? styles.negative
+                  : {}
+            }
+          >
+            {formatPercent(quote.pct_from_52_low)}
+          </span>
+        );
+      case 'average_volume':
+        return formatVolume(quote.average_volume);
       default:
         return '-';
     }

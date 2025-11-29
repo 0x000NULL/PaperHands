@@ -18,6 +18,13 @@ export interface Quote {
   high: number;
   low: number;
   close: number | null;
+  // 52-week data (not available from Finnhub basic quote)
+  week_52_high: number | null;
+  week_52_low: number | null;
+  average_volume: number | null;
+  // Computed percentages (distance from 52-week extremes)
+  pct_from_52_high: number | null;
+  pct_from_52_low: number | null;
 }
 
 // Finnhub API response types
@@ -215,6 +222,12 @@ export class FinnhubService {
       high: data.h,
       low: data.l,
       close: data.pc,
+      // 52-week data not available from Finnhub basic quote
+      week_52_high: null,
+      week_52_low: null,
+      average_volume: null,
+      pct_from_52_high: null,
+      pct_from_52_low: null,
     };
 
     // Cache for 5 seconds

@@ -90,6 +90,23 @@ function applyFilters(quotes: Quote[], filters: Filters): Quote[] {
       return false;
     }
 
+    // 52-week high/low filters
+    const threshold = parseFloat(filters.near52WeekThreshold) || 5;
+
+    // Near 52-week high (within threshold%)
+    if (filters.near52WeekHigh) {
+      if (quote.week_52_high === null) return false;
+      const limit = quote.week_52_high * (1 - threshold / 100);
+      if (quote.last < limit) return false;
+    }
+
+    // Near 52-week low (within threshold%)
+    if (filters.near52WeekLow) {
+      if (quote.week_52_low === null) return false;
+      const limit = quote.week_52_low * (1 + threshold / 100);
+      if (quote.last > limit) return false;
+    }
+
     return true;
   });
 }
@@ -112,6 +129,14 @@ function applyPreset(quotes: Quote[], preset: string): Quote[] {
       return quotes.filter((q) => q.last >= q.high * 0.98);
     case 'nearLow':
       return quotes.filter((q) => q.last <= q.low * 1.02);
+    case 'near52High':
+      return quotes.filter(
+        (q) => q.week_52_high !== null && q.last >= q.week_52_high * 0.95
+      );
+    case 'near52Low':
+      return quotes.filter(
+        (q) => q.week_52_low !== null && q.last <= q.week_52_low * 1.05
+      );
     default:
       return quotes;
   }

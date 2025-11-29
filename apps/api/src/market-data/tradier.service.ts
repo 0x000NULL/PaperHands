@@ -24,12 +24,38 @@ export interface Quote {
   high: number;
   low: number;
   close: number | null;
+  // 52-week data
+  week_52_high: number | null;
+  week_52_low: number | null;
+  average_volume: number | null;
+  // Computed percentages (distance from 52-week extremes)
+  pct_from_52_high: number | null;
+  pct_from_52_low: number | null;
+}
+
+// Raw Tradier API response type
+interface TradierRawQuote {
+  symbol: string;
+  description: string;
+  last: number;
+  bid: number;
+  ask: number;
+  volume: number;
+  change: number;
+  change_percentage: number;
+  open: number;
+  high: number;
+  low: number;
+  close: number | null;
+  week_52_high?: number;
+  week_52_low?: number;
+  average_volume?: number;
 }
 
 // Tradier API response types
 interface TradierQuotesResponse {
   quotes: {
-    quote: Quote | Quote[];
+    quote: TradierRawQuote | TradierRawQuote[];
   } | null;
 }
 
@@ -129,6 +155,42 @@ export class TradierService {
     this.apiToken = this.configService.get<string>('TRADIER_API_TOKEN', '');
   }
 
+  /**
+   * Maps raw Tradier quote response to our Quote interface with computed fields
+   */
+  private mapRawQuoteToQuote(raw: TradierRawQuote): Quote {
+    const week52High = raw.week_52_high ?? null;
+    const week52Low = raw.week_52_low ?? null;
+    const last = raw.last;
+
+    return {
+      symbol: raw.symbol,
+      description: raw.description,
+      last: raw.last,
+      bid: raw.bid,
+      ask: raw.ask,
+      volume: raw.volume,
+      change: raw.change,
+      change_percentage: raw.change_percentage,
+      open: raw.open,
+      high: raw.high,
+      low: raw.low,
+      close: raw.close,
+      week_52_high: week52High,
+      week_52_low: week52Low,
+      average_volume: raw.average_volume ?? null,
+      // Compute percentage distance from 52-week extremes
+      pct_from_52_high:
+        week52High !== null && week52High > 0
+          ? ((last - week52High) / week52High) * 100
+          : null,
+      pct_from_52_low:
+        week52Low !== null && week52Low > 0
+          ? ((last - week52Low) / week52Low) * 100
+          : null,
+    };
+  }
+
   private async fetchWithTimeout(
     url: string,
     options: RequestInit,
@@ -214,9 +276,12 @@ export class TradierService {
     }
 
     // Tradier returns single object for single symbol request
-    const quote = Array.isArray(data.quotes.quote)
+    const rawQuote = Array.isArray(data.quotes.quote)
       ? data.quotes.quote[0]
       : data.quotes.quote;
+
+    // Map raw quote to our Quote interface with computed fields
+    const quote = this.mapRawQuoteToQuote(rawQuote);
 
     // Cache for 5 seconds
     await this.cacheManager.set(cacheKey, quote, 5000);
@@ -249,11 +314,12 @@ export class TradierService {
     }
 
     // Tradier returns single object if one symbol, array if multiple
-    const quotes: Quote[] = Array.isArray(data.quotes.quote)
+    const rawQuotes = Array.isArray(data.quotes.quote)
       ? data.quotes.quote
       : [data.quotes.quote];
 
-    return quotes;
+    // Map all raw quotes to our Quote interface with computed fields
+    return rawQuotes.map((raw) => this.mapRawQuoteToQuote(raw));
   }
 
   async getCandles(symbol: string, period: Period): Promise<CandleResponseDto> {
