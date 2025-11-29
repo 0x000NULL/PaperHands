@@ -10,3 +10,4 @@ export {
   streamingQuoteKeys,
 } from './useStreamingQuote';
 export { useRealtimePnL } from './useRealtimePnL';
+export { useRealtimeCandles } from './useRealtimeCandles';

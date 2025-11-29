@@ -1,7 +1,7 @@
 import { useState, type CSSProperties } from 'react';
 import { theme } from '../../theme/constants';
 import { useDashboardStore } from '../../store/dashboardStore';
-import { useHistoricalData } from '../../hooks';
+import { useRealtimeCandles } from '../../hooks';
 import { Widget } from './Widget';
 import { ChartContainer, type ChartType } from './ChartContainer';
 import { TimeframeSelector } from './TimeframeSelector';
@@ -52,7 +52,7 @@ export function ChartPanel() {
 
   const selectedSymbol = useDashboardStore((state) => state.selectedSymbol);
 
-  const { data, isLoading, error } = useHistoricalData(
+  const { data, isLoading, error, isStreaming } = useRealtimeCandles(
     selectedSymbol ?? '',
     timeframe,
     !!selectedSymbol,
@@ -65,9 +65,14 @@ export function ChartPanel() {
     </div>
   );
 
+  // Build title with streaming indicator
+  const chartTitle = selectedSymbol
+    ? `${selectedSymbol} Chart${isStreaming ? ' \u25cf' : ''}`
+    : 'Chart';
+
   return (
     <Widget
-      title={selectedSymbol ? `${selectedSymbol} Chart` : 'Chart'}
+      title={chartTitle}
       headerAction={headerAction}
       noPadding
     >
