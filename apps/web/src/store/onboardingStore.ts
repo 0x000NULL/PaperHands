@@ -18,6 +18,12 @@ export const TOUR_STOPS: { id: TourStopId; title: string; description: string }[
       'Track your total value, daily P&L, cash balance, and open positions in real-time.',
   },
   {
+    id: 'positions-table',
+    title: 'Track Your Holdings',
+    description:
+      'See all your stock and option positions with real-time P&L. Click any row to view details or quickly sell.',
+  },
+  {
     id: 'quote-panel',
     title: 'Search Any Stock',
     description:
@@ -28,12 +34,6 @@ export const TOUR_STOPS: { id: TourStopId; title: string; description: string }[
     title: 'Place Your First Trade',
     description:
       "Select BUY or SELL, choose your order type, enter quantity, and execute. It's paper money, so experiment freely!",
-  },
-  {
-    id: 'positions-table',
-    title: 'Track Your Holdings',
-    description:
-      'See all your stock and option positions with real-time P&L. Click any row to view details or quickly sell.',
   },
   {
     id: 'options-chain',
