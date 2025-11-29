@@ -2,7 +2,6 @@ import { Link, useNavigate } from 'react-router-dom';
 import type { CSSProperties } from 'react';
 import { useAuthStore } from '../store/authStore';
 import { useOnboardingStore } from '../store/onboardingStore';
-import { api } from '../api/client';
 import { theme } from '../theme/constants';
 import { MarketStatusBadge } from './common/MarketStatusBadge';
 import { ConnectionStatusBadge } from './common/ConnectionStatus';
@@ -75,8 +74,8 @@ const styles: Record<string, CSSProperties> = {
 };
 
 export function Layout({ children }: LayoutProps) {
-  const { user, logout, isAuthenticated, updateUser } = useAuthStore();
-  const { reset: resetOnboarding } = useOnboardingStore();
+  const { user, logout, isAuthenticated } = useAuthStore();
+  const { startTour } = useOnboardingStore();
   const navigate = useNavigate();
 
   const handleLogout = () => {
@@ -84,14 +83,8 @@ export function Layout({ children }: LayoutProps) {
     navigate('/login');
   };
 
-  const handleReplayTour = async () => {
-    try {
-      await api.resetOnboarding();
-      updateUser({ onboardingCompleted: false, onboardingStep: 0 });
-      resetOnboarding();
-    } catch (error) {
-      console.error('Failed to reset onboarding:', error);
-    }
+  const handleReplayTour = () => {
+    startTour();
   };
 
   return (
