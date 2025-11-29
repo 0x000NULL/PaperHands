@@ -58,6 +58,8 @@ export class AuthService {
         id: user.id,
         email: user.email,
         cashBalance: user.cashBalance,
+        onboardingCompleted: user.onboardingCompleted,
+        onboardingStep: user.onboardingStep,
       },
     };
   }
@@ -90,6 +92,8 @@ export class AuthService {
         id: user.id,
         email: user.email,
         cashBalance: user.cashBalance,
+        onboardingCompleted: user.onboardingCompleted,
+        onboardingStep: user.onboardingStep,
       },
     };
   }

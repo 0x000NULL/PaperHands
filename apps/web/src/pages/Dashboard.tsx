@@ -11,6 +11,7 @@ import {
   OptionsChainPanel,
   ExpirationCalendar,
 } from '../components/dashboard';
+import { SpotlightTour } from '../components/onboarding';
 
 const styles: Record<string, CSSProperties> = {
   container: {
@@ -70,22 +71,24 @@ export function Dashboard() {
     <Layout>
       <div style={responsiveStyles.container}>
         {/* Portfolio Summary Bar */}
-        <PortfolioSummary />
+        <div data-tour-id="tour-portfolio-summary">
+          <PortfolioSummary />
+        </div>
 
         {/* Main 3-Column Grid */}
         <div style={responsiveStyles.mainGrid}>
           {/* Left Column - Positions */}
-          <div style={responsiveStyles.positionsColumn}>
+          <div style={responsiveStyles.positionsColumn} data-tour-id="tour-positions-table">
             <PositionsTable />
           </div>
 
           {/* Middle Column - Quote */}
-          <div style={responsiveStyles.quoteColumn}>
+          <div style={responsiveStyles.quoteColumn} data-tour-id="tour-quote-panel">
             <QuotePanel />
           </div>
 
           {/* Right Column - Trade Form */}
-          <div style={responsiveStyles.tradeColumn}>
+          <div style={responsiveStyles.tradeColumn} data-tour-id="tour-trade-form">
             <TradeForm />
           </div>
         </div>
@@ -96,7 +99,7 @@ export function Dashboard() {
         </div>
 
         {/* Options Chain Section */}
-        <div style={responsiveStyles.optionsSection}>
+        <div style={responsiveStyles.optionsSection} data-tour-id="tour-options-chain">
           <OptionsChainPanel />
         </div>
 
@@ -110,6 +113,9 @@ export function Dashboard() {
           </div>
         </div>
       </div>
+
+      {/* Spotlight Tour Overlay */}
+      <SpotlightTour />
     </Layout>
   );
 }

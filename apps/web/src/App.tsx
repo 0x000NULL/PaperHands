@@ -1,7 +1,10 @@
+import { useEffect } from 'react';
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { useAuthStore } from './store/authStore';
+import { useOnboardingStore } from './store/onboardingStore';
 import { ErrorBoundary } from './components/ErrorBoundary';
+import { OnboardingWizard } from './components/onboarding';
 import { Login } from './pages/Login';
 import { Register } from './pages/Register';
 import { Dashboard } from './pages/Dashboard';
@@ -20,13 +23,26 @@ const queryClient = new QueryClient({
 });
 
 function ProtectedRoute({ children }: { children: React.ReactNode }) {
-  const { isAuthenticated } = useAuthStore();
+  const { isAuthenticated, user } = useAuthStore();
+  const { openWizard, isWizardOpen } = useOnboardingStore();
+
+  useEffect(() => {
+    // Open onboarding wizard for new users who haven't completed it
+    if (user && !user.onboardingCompleted && !isWizardOpen) {
+      openWizard();
+    }
+  }, [user, openWizard, isWizardOpen]);
 
   if (!isAuthenticated()) {
     return <Navigate to="/login" replace />;
   }
 
-  return <>{children}</>;
+  return (
+    <>
+      {children}
+      <OnboardingWizard />
+    </>
+  );
 }
 
 function PublicRoute({ children }: { children: React.ReactNode }) {

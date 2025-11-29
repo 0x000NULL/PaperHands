@@ -19,6 +19,7 @@ import { HealthModule } from './health/health.module';
 import { WatchlistsModule } from './watchlists/watchlists.module';
 import { StreamingModule } from './streaming/streaming.module';
 import { AnalyticsModule } from './analytics/analytics.module';
+import { OnboardingModule } from './onboarding/onboarding.module';
 import { validate } from './config/env.validation';
 
 @Module({
@@ -119,6 +120,7 @@ import { validate } from './config/env.validation';
     WatchlistsModule,
     StreamingModule,
     AnalyticsModule,
+    OnboardingModule,
   ],
   controllers: [AppController],
   providers: [

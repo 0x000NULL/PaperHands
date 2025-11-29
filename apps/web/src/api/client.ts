@@ -20,6 +20,8 @@ import type {
   DeltaExposure,
   SensitivityResult,
   ExpirationCalendarItem,
+  OnboardingStatus,
+  OnboardingStepData,
 } from '../types';
 
 // API base URL from build-time environment variable
@@ -275,6 +277,24 @@ export const api = {
     request<CombinedRealizedGainsSummary>(
       `/analytics/combined-realized-gains${year ? `?year=${year}` : ''}`,
     ),
+
+  // Onboarding
+  getOnboardingStatus: () => request<OnboardingStatus>('/onboarding/status'),
+
+  completeOnboardingStep: (step: number, data?: OnboardingStepData) =>
+    request<OnboardingStatus>(`/onboarding/step/${step}`, {
+      method: 'POST',
+      body: JSON.stringify(data || {}),
+    }),
+
+  completeOnboarding: () =>
+    request<OnboardingStatus>('/onboarding/complete', { method: 'POST' }),
+
+  skipOnboarding: () =>
+    request<OnboardingStatus>('/onboarding/skip', { method: 'POST' }),
+
+  resetOnboarding: () =>
+    request<OnboardingStatus>('/onboarding/reset', { method: 'POST' }),
 };
 
 // Analytics types

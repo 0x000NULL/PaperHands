@@ -3,6 +3,8 @@ export interface User {
   email: string;
   cashBalance: number;
   createdAt?: string;
+  onboardingCompleted: boolean;
+  onboardingStep: number;
 }
 
 export interface AuthResponse {
@@ -23,6 +25,13 @@ export interface Quote {
   high: number;
   low: number;
   close: number | null;
+  // 52-week data
+  week_52_high: number | null;
+  week_52_low: number | null;
+  average_volume: number | null;
+  // Computed percentages (distance from 52-week extremes)
+  pct_from_52_high: number | null;
+  pct_from_52_low: number | null;
 }
 
 export interface Position {
@@ -282,4 +291,28 @@ export interface ExpirationCalendarItem {
   totalContracts: number;
   positionCount: number;
   positions: OptionPosition[];
+}
+
+// Onboarding types
+export type CostBasisMethod = 'fifo' | 'lifo' | 'hifo' | 'specific';
+
+export interface UserPreferences {
+  defaultOrderType: OrderType;
+  defaultTimeInForce: TimeInForce;
+  defaultCostBasisMethod: CostBasisMethod;
+  tourCompleted: boolean;
+}
+
+export interface OnboardingStatus {
+  completed: boolean;
+  currentStep: number;
+  completedAt: string | null;
+  preferences: UserPreferences | null;
+}
+
+export interface OnboardingStepData {
+  cashSetup?: { startingCash: number };
+  watchlistSetup?: { watchlistName: string; symbols: string[] };
+  preferences?: Partial<UserPreferences>;
+  userIntent?: 'stocks' | 'options' | 'testing' | 'exploring';
 }

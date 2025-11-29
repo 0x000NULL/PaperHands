@@ -32,6 +32,15 @@ export class User {
   @UpdateDateColumn()
   updatedAt: Date;
 
+  @Column({ default: false })
+  onboardingCompleted: boolean;
+
+  @Column({ type: 'timestamp', nullable: true })
+  onboardingCompletedAt: Date | null;
+
+  @Column({ type: 'int', default: 0 })
+  onboardingStep: number;
+
   @OneToMany(() => Position, (position) => position.user)
   positions: Position[];
 
