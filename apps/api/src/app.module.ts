@@ -18,6 +18,7 @@ import { MarketDataModule } from './market-data/market-data.module';
 import { HealthModule } from './health/health.module';
 import { WatchlistsModule } from './watchlists/watchlists.module';
 import { StreamingModule } from './streaming/streaming.module';
+import { AnalyticsModule } from './analytics/analytics.module';
 import { validate } from './config/env.validation';
 
 @Module({
@@ -117,6 +118,7 @@ import { validate } from './config/env.validation';
     HealthModule,
     WatchlistsModule,
     StreamingModule,
+    AnalyticsModule,
   ],
   controllers: [AppController],
   providers: [

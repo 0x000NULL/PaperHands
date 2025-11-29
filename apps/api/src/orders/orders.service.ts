@@ -20,6 +20,8 @@ import { User } from '../users/entities/user.entity';
 import { Position } from '../portfolio/entities/position.entity';
 import { FinnhubService } from '../market-data/finnhub.service';
 import { MarketHoursService } from '../common/services/market-hours.service';
+import { TaxLotService } from '../portfolio/services/tax-lot.service';
+import { CostBasisMethod } from '../portfolio/enums/cost-basis.enums';
 import { CreateOrderDto } from './dto/create-order.dto';
 import { UpdateOrderDto } from './dto/update-order.dto';
 import { QueryOrdersDto } from './dto/query-orders.dto';
@@ -39,6 +41,7 @@ export class OrdersService {
     private positionRepository: Repository<Position>,
     private finnhubService: FinnhubService,
     private marketHoursService: MarketHoursService,
+    private taxLotService: TaxLotService,
     private dataSource: DataSource,
   ) {}
 
@@ -290,6 +293,7 @@ export class OrdersService {
         quantity,
         executionPrice,
         side === OrderSide.BUY,
+        order.id,
       );
 
       await queryRunner.commitTransaction();
@@ -483,6 +487,7 @@ export class OrdersService {
         Number(order.quantity),
         executionPrice,
         order.side === OrderSide.BUY,
+        order.id,
       );
 
       await queryRunner.commitTransaction();
@@ -647,6 +652,7 @@ export class OrdersService {
         quantityToFill,
         executionPrice,
         order.side === OrderSide.BUY,
+        order.id,
       );
 
       await queryRunner.commitTransaction();
@@ -1095,6 +1101,9 @@ export class OrdersService {
     quantity: number,
     price: number,
     isBuy: boolean,
+    orderId?: string,
+    costBasisMethod?: CostBasisMethod,
+    specificLotIds?: string[],
   ): Promise<void> {
     const existingPosition = await manager.findOne(Position, {
       where: { userId, symbol },
@@ -1102,6 +1111,19 @@ export class OrdersService {
     });
 
     if (isBuy) {
+      // Create tax lot for the purchase
+      if (orderId) {
+        await this.taxLotService.createTaxLot(
+          manager,
+          userId,
+          symbol,
+          quantity,
+          price,
+          orderId,
+          new Date(),
+        );
+      }
+
       if (existingPosition) {
         const existingQty = Number(existingPosition.quantity);
         const existingCost = Number(existingPosition.avgCostBasis);
@@ -1122,6 +1144,29 @@ export class OrdersService {
         await manager.save(position);
       }
     } else {
+      // Consume tax lots for the sale
+      if (orderId) {
+        try {
+          await this.taxLotService.sellShares(
+            manager,
+            userId,
+            symbol,
+            quantity,
+            price,
+            orderId,
+            new Date(),
+            costBasisMethod,
+            specificLotIds,
+          );
+        } catch (error) {
+          this.logger.warn(
+            `Failed to create lot sales for order ${orderId}: ${error.message}`,
+          );
+          // Continue with position update even if lot sale fails
+          // This can happen for legacy positions without tax lots
+        }
+      }
+
       if (existingPosition) {
         const existingQty = Number(existingPosition.quantity);
         const newQty = existingQty - quantity;

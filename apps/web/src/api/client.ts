@@ -156,4 +156,175 @@ export const api = {
   // Batch quotes for watchlist
   getQuotes: (symbols: string[]) =>
     request<Quote[]>(`/market-data/quotes?symbols=${symbols.join(',')}`),
+
+  // Analytics
+  getPerformanceHistory: (period: string = '1M') =>
+    request<PerformanceDataPoint[]>(`/analytics/performance?period=${period}`),
+
+  getTradeStatistics: () =>
+    request<TradeStatistics>('/analytics/statistics'),
+
+  getAllocation: () =>
+    request<AllocationItem[]>('/analytics/allocation'),
+
+  getGainsSummary: () =>
+    request<GainsSummary>('/analytics/gains'),
+
+  getRealizedGains: (year?: number) =>
+    request<RealizedGainsSummary>(
+      `/analytics/realized-gains${year ? `?year=${year}` : ''}`,
+    ),
+
+  getBenchmarkComparison: (symbol: string = 'SPY', period: string = '1M') =>
+    request<BenchmarkComparison>(
+      `/analytics/benchmark?symbol=${symbol}&period=${period}`,
+    ),
+
+  getTaxLots: (symbol?: string) =>
+    request<TaxLot[]>(`/analytics/tax-lots${symbol ? `?symbol=${symbol}` : ''}`),
+
+  getOpenTaxLots: (symbol?: string) =>
+    request<OpenTaxLot[]>(
+      `/analytics/tax-lots/open${symbol ? `?symbol=${symbol}` : ''}`,
+    ),
+
+  getLotSales: (options?: { symbol?: string; limit?: number }) => {
+    const params = new URLSearchParams();
+    if (options?.symbol) params.set('symbol', options.symbol);
+    if (options?.limit) params.set('limit', options.limit.toString());
+    return request<LotSale[]>(`/analytics/lot-sales?${params.toString()}`);
+  },
+
+  getDividends: (options?: { symbol?: string; limit?: number }) => {
+    const params = new URLSearchParams();
+    if (options?.symbol) params.set('symbol', options.symbol);
+    if (options?.limit) params.set('limit', options.limit.toString());
+    return request<Dividend[]>(`/analytics/dividends?${params.toString()}`);
+  },
+
+  getDividendSummary: () =>
+    request<DividendSummary>('/analytics/dividends/summary'),
+
+  getCostBasisSettings: () =>
+    request<CostBasisSettings>('/analytics/settings/cost-basis'),
 };
+
+// Analytics types
+export interface PerformanceDataPoint {
+  date: string;
+  value: number;
+  change: number;
+  changePercent: number;
+}
+
+export interface TradeStatistics {
+  totalTrades: number;
+  winningTrades: number;
+  losingTrades: number;
+  winRate: number;
+  avgWin: number;
+  avgLoss: number;
+  largestWin: number;
+  largestLoss: number;
+  profitFactor: number;
+  totalRealized: number;
+  maxDrawdown: number;
+  sharpeRatio: number | null;
+}
+
+export interface AllocationItem {
+  symbol: string;
+  quantity: number;
+  marketValue: number;
+  costBasis: number;
+  unrealizedGain: number;
+  unrealizedGainPercent: number;
+  allocation: number;
+  sector?: string;
+}
+
+export interface GainsSummary {
+  realizedGain: number;
+  unrealizedGain: number;
+  totalGain: number;
+  shortTermRealized: number;
+  longTermRealized: number;
+}
+
+export interface RealizedGainsSummary {
+  shortTermGains: number;
+  shortTermLosses: number;
+  longTermGains: number;
+  longTermLosses: number;
+  totalShortTerm: number;
+  totalLongTerm: number;
+  totalRealized: number;
+  transactionCount: number;
+}
+
+export interface BenchmarkComparison {
+  portfolio: PerformanceDataPoint[];
+  benchmark: PerformanceDataPoint[];
+}
+
+export interface TaxLot {
+  id: string;
+  symbol: string;
+  originalQuantity: number;
+  remainingQuantity: number;
+  costBasisPerShare: number;
+  totalCostBasis: number;
+  acquiredAt: string;
+  status: 'open' | 'closed';
+  closedAt: string | null;
+}
+
+export interface OpenTaxLot {
+  id: string;
+  symbol: string;
+  remainingQuantity: number;
+  costBasisPerShare: number;
+  totalCostBasis: number;
+  acquiredAt: string;
+  holdingDays: number;
+  isLongTerm: boolean;
+}
+
+export interface LotSale {
+  id: string;
+  symbol: string;
+  quantitySold: number;
+  costBasisPerShare: number;
+  salePrice: number;
+  realizedGain: number;
+  proceeds: number;
+  costBasis: number;
+  gainType: 'short_term' | 'long_term';
+  holdingDays: number;
+  soldAt: string;
+}
+
+export interface Dividend {
+  id: string;
+  symbol: string;
+  exDate: string;
+  payDate: string;
+  amount: number;
+  quantity: number;
+  totalAmount: number;
+  status: 'pending' | 'paid';
+  reinvested: boolean;
+}
+
+export interface DividendSummary {
+  totalPending: number;
+  totalPaid: number;
+  annualYield: number;
+  upcomingDividends: Dividend[];
+  recentDividends: Dividend[];
+}
+
+export interface CostBasisSettings {
+  defaultMethod: 'fifo' | 'lifo' | 'hifo' | 'specific';
+  symbolOverrides: Record<string, string>;
+}
