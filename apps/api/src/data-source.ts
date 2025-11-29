@@ -1,5 +1,6 @@
 import { DataSource } from 'typeorm';
 import { User } from './users/entities/user.entity';
+import { UserPreferences } from './users/entities/user-preferences.entity';
 import { Position } from './portfolio/entities/position.entity';
 import { Order } from './orders/entities/order.entity';
 
@@ -9,7 +10,7 @@ require('dotenv').config();
 export const AppDataSource = new DataSource({
   type: 'postgres',
   url: process.env.DATABASE_URL,
-  entities: [User, Position, Order],
+  entities: [User, UserPreferences, Position, Order],
   migrations: [__dirname + '/migrations/*{.ts,.js}'],
   synchronize: false,
   ssl:
