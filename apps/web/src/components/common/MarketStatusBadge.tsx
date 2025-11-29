@@ -1,4 +1,4 @@
-import type { CSSProperties } from 'react';
+import { useState, useEffect, type CSSProperties } from 'react';
 import { useMarketStatus } from '../../hooks/useMarketStatus';
 import { theme } from '../../theme/constants';
 import type { TradingSession } from '../../types';
@@ -58,9 +58,18 @@ function formatTimeUntil(dateString: string | null): string {
 }
 
 export function MarketStatusBadge({
-  showNextChange = false,
+  showNextChange = true,
 }: MarketStatusBadgeProps) {
   const { data: status, isLoading } = useMarketStatus();
+  const [, setTick] = useState(0);
+
+  // Update the countdown every 30 seconds
+  useEffect(() => {
+    const interval = setInterval(() => {
+      setTick((t) => t + 1);
+    }, 30000);
+    return () => clearInterval(interval);
+  }, []);
 
   if (isLoading || !status) {
     return (
@@ -73,7 +82,14 @@ export function MarketStatusBadge({
 
   const config = sessionConfig[status.session];
   const nextChangeTime = status.isOpen ? status.nextClose : status.nextOpen;
-  const nextChangeLabel = status.isOpen ? 'Closes' : 'Opens';
+  const nextChangeLabel = status.isOpen ? 'closes' : 'opens';
+  const formattedLocalTime = nextChangeTime
+    ? new Date(nextChangeTime).toLocaleTimeString([], {
+        hour: 'numeric',
+        minute: '2-digit',
+        timeZoneName: 'short',
+      })
+    : null;
 
   return (
     <div
@@ -84,7 +100,7 @@ export function MarketStatusBadge({
       }}
       title={
         nextChangeTime
-          ? `${nextChangeLabel} ${new Date(nextChangeTime).toLocaleTimeString()}`
+          ? `Market ${nextChangeLabel} at ${formattedLocalTime}`
           : undefined
       }
     >
@@ -100,7 +116,7 @@ export function MarketStatusBadge({
       </span>
       {showNextChange && nextChangeTime && (
         <span style={styles.timeUntil}>
-          {nextChangeLabel} in {formatTimeUntil(nextChangeTime)}
+          · {nextChangeLabel} in {formatTimeUntil(nextChangeTime)}
         </span>
       )}
     </div>
