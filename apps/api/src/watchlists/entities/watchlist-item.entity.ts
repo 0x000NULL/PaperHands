@@ -23,7 +23,7 @@ export class WatchlistItem {
   watchlist: Watchlist;
 
   @Index()
-  @Column()
+  @Column({ name: 'watchlist_id' })
   watchlistId: string;
 
   @Column({ length: 10 })
