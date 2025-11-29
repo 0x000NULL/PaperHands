@@ -42,9 +42,19 @@ export interface Portfolio {
 }
 
 export type OrderSide = 'buy' | 'sell';
-export type OrderStatus = 'pending' | 'filled' | 'cancelled' | 'rejected';
+export type OrderStatus = 'pending' | 'queued' | 'filled' | 'cancelled' | 'rejected';
 export type OrderType = 'market' | 'limit' | 'stop' | 'stop_limit' | 'trailing_stop';
 export type TimeInForce = 'day' | 'gtc' | 'ioc' | 'fok';
+
+// Market Status
+export type TradingSession = 'pre_market' | 'regular' | 'after_hours' | 'closed';
+
+export interface MarketStatus {
+  session: TradingSession;
+  isOpen: boolean;
+  nextOpen: string | null;
+  nextClose: string | null;
+}
 
 export interface Order {
   id: string;

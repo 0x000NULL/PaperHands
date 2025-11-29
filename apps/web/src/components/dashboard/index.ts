@@ -6,3 +6,4 @@ export { QuotePanel } from './QuotePanel';
 export { TradeForm } from './TradeForm';
 export { OrderHistory } from './OrderHistory';
 export { ChartPanel } from './ChartPanel';
+export { TimeSales } from './TimeSales';

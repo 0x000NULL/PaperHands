@@ -3,6 +3,7 @@ import { JwtAuthGuard } from '../common/guards/jwt-auth.guard';
 import { FinnhubService } from './finnhub.service';
 import { TradierService } from './tradier.service';
 import { CandleQueryDto } from './dto/candle-query.dto';
+import { MarketHoursService } from '../common/services/market-hours.service';
 
 @Controller('market-data')
 @UseGuards(JwtAuthGuard)
@@ -10,6 +11,7 @@ export class MarketDataController {
   constructor(
     private readonly finnhubService: FinnhubService,
     private readonly tradierService: TradierService,
+    private readonly marketHoursService: MarketHoursService,
   ) {}
 
   @Get('quote/:symbol')
@@ -33,5 +35,10 @@ export class MarketDataController {
     }
     const symbolList = symbols.split(',').map((s) => s.trim().toUpperCase());
     return this.finnhubService.getQuotes(symbolList);
+  }
+
+  @Get('market-status')
+  getMarketStatus() {
+    return this.marketHoursService.getMarketHoursInfo();
   }
 }

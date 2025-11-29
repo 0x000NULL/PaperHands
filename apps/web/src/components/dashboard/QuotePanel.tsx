@@ -1,6 +1,6 @@
 import type { CSSProperties } from 'react';
 import { theme } from '../../theme/constants';
-import { useQuote } from '../../hooks';
+import { useStreamingQuote } from '../../hooks';
 import { useDashboardStore } from '../../store/dashboardStore';
 import { Widget } from './Widget';
 import { SymbolSearch } from './SymbolSearch';
@@ -19,11 +19,34 @@ const styles: Record<string, CSSProperties> = {
   symbolInfo: {
     flex: 1,
   },
+  symbolRow: {
+    display: 'flex',
+    alignItems: 'center',
+    gap: theme.spacing.sm,
+  },
   symbol: {
     fontSize: theme.typography['2xl'],
     fontWeight: theme.typography.bold,
     color: theme.colors.textPrimary,
     margin: 0,
+  },
+  streamingBadge: {
+    display: 'inline-flex',
+    alignItems: 'center',
+    gap: '4px',
+    padding: '2px 8px',
+    fontSize: theme.typography.xs,
+    fontWeight: theme.typography.medium,
+    color: theme.colors.positive,
+    backgroundColor: 'rgba(46, 204, 113, 0.15)',
+    borderRadius: theme.radius.full,
+  },
+  streamingDot: {
+    width: '6px',
+    height: '6px',
+    borderRadius: '50%',
+    backgroundColor: theme.colors.positive,
+    animation: 'pulse 2s infinite',
   },
   description: {
     color: theme.colors.textSecondary,
@@ -99,11 +122,13 @@ const formatVolume = (value: number) => {
 
 export function QuotePanel() {
   const selectedSymbol = useDashboardStore((state) => state.selectedSymbol);
-  const {
-    data: quote,
-    isLoading,
-    error,
-  } = useQuote(selectedSymbol ?? '', !!selectedSymbol);
+  const quote = useStreamingQuote(selectedSymbol ?? '', {
+    enabled: !!selectedSymbol,
+  });
+
+  const hasData = quote.last !== null;
+  const change = quote.change ?? 0;
+  const changePercent = quote.changePercent ?? 0;
 
   return (
     <Widget title="Quote">
@@ -116,36 +141,45 @@ export function QuotePanel() {
           </div>
         )}
 
-        {selectedSymbol && isLoading && (
+        {selectedSymbol && quote.isLoading && !hasData && (
           <div style={styles.loading}>Loading quote for {selectedSymbol}...</div>
         )}
 
-        {selectedSymbol && error && (
+        {selectedSymbol && quote.isError && !hasData && (
           <div style={styles.error}>
-            {error instanceof Error ? error.message : 'Failed to load quote'}
+            {quote.error?.message ?? 'Failed to load quote'}
           </div>
         )}
 
-        {quote && (
+        {hasData && (
           <>
             <div style={styles.quoteHeader}>
               <div style={styles.symbolInfo}>
-                <h2 style={styles.symbol}>{quote.symbol}</h2>
-                <div style={styles.description}>{quote.description}</div>
+                <div style={styles.symbolRow}>
+                  <h2 style={styles.symbol}>{quote.symbol}</h2>
+                  {quote.isStreaming && (
+                    <span style={styles.streamingBadge}>
+                      <span style={styles.streamingDot} />
+                      LIVE
+                    </span>
+                  )}
+                </div>
               </div>
               <div style={styles.priceSection}>
-                <div style={styles.price}>{formatCurrency(quote.last)}</div>
+                <div style={styles.price}>
+                  {formatCurrency(quote.last ?? 0)}
+                </div>
                 <div
                   style={{
                     ...styles.change,
                     color:
-                      quote.change >= 0
+                      change >= 0
                         ? theme.colors.positive
                         : theme.colors.negative,
                   }}
                 >
-                  {quote.change >= 0 ? '+' : ''}
-                  {quote.change.toFixed(2)} ({quote.change_percentage.toFixed(2)}%)
+                  {change >= 0 ? '+' : ''}
+                  {change.toFixed(2)} ({changePercent.toFixed(2)}%)
                 </div>
               </div>
             </div>
@@ -153,41 +187,57 @@ export function QuotePanel() {
             <div style={styles.statsGrid}>
               <div style={styles.stat}>
                 <div style={styles.statLabel}>Bid</div>
-                <div style={styles.statValue}>{formatCurrency(quote.bid)}</div>
+                <div style={styles.statValue}>
+                  {quote.bid !== null ? formatCurrency(quote.bid) : '-'}
+                </div>
               </div>
               <div style={styles.stat}>
                 <div style={styles.statLabel}>Ask</div>
-                <div style={styles.statValue}>{formatCurrency(quote.ask)}</div>
+                <div style={styles.statValue}>
+                  {quote.ask !== null ? formatCurrency(quote.ask) : '-'}
+                </div>
               </div>
               <div style={styles.stat}>
                 <div style={styles.statLabel}>Spread</div>
                 <div style={styles.statValue}>
-                  {formatCurrency(quote.ask - quote.bid)}
+                  {quote.bid !== null && quote.ask !== null
+                    ? formatCurrency(quote.ask - quote.bid)
+                    : '-'}
                 </div>
               </div>
               <div style={styles.stat}>
                 <div style={styles.statLabel}>Volume</div>
-                <div style={styles.statValue}>{formatVolume(quote.volume)}</div>
+                <div style={styles.statValue}>
+                  {quote.volume !== undefined ? formatVolume(quote.volume) : '-'}
+                </div>
               </div>
             </div>
 
             <div style={styles.statsGrid}>
               <div style={styles.stat}>
                 <div style={styles.statLabel}>Open</div>
-                <div style={styles.statValue}>{formatCurrency(quote.open)}</div>
+                <div style={styles.statValue}>
+                  {quote.open !== undefined ? formatCurrency(quote.open) : '-'}
+                </div>
               </div>
               <div style={styles.stat}>
                 <div style={styles.statLabel}>High</div>
-                <div style={styles.statValue}>{formatCurrency(quote.high)}</div>
+                <div style={styles.statValue}>
+                  {quote.high !== undefined ? formatCurrency(quote.high) : '-'}
+                </div>
               </div>
               <div style={styles.stat}>
                 <div style={styles.statLabel}>Low</div>
-                <div style={styles.statValue}>{formatCurrency(quote.low)}</div>
+                <div style={styles.statValue}>
+                  {quote.low !== undefined ? formatCurrency(quote.low) : '-'}
+                </div>
               </div>
               <div style={styles.stat}>
                 <div style={styles.statLabel}>Prev Close</div>
                 <div style={styles.statValue}>
-                  {quote.close ? formatCurrency(quote.close) : '-'}
+                  {quote.previousClose !== undefined
+                    ? formatCurrency(quote.previousClose)
+                    : '-'}
                 </div>
               </div>
             </div>

@@ -10,6 +10,7 @@ import type {
   Timeframe,
   WatchlistSummary,
   WatchlistDetail,
+  MarketStatus,
 } from '../types';
 
 // API base URL from build-time environment variable
@@ -95,6 +96,8 @@ export const api = {
 
   getHistoricalData: (symbol: string, period: Timeframe) =>
     request<CandleResponse>(`/market-data/candles/${symbol}?period=${period}`),
+
+  getMarketStatus: () => request<MarketStatus>('/market-data/market-status'),
 
   // Portfolio
   getPortfolio: () => request<Portfolio>('/portfolio'),

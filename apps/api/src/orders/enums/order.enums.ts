@@ -18,6 +18,7 @@ export enum TimeInForce {
 
 export enum OrderStatus {
   PENDING = 'pending',
+  QUEUED = 'queued', // Market orders waiting for market to open
   OPEN = 'open',
   PARTIALLY_FILLED = 'partially_filled',
   FILLED = 'filled',

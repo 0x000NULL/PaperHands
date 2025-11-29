@@ -5,6 +5,7 @@ import { CacheModule } from '@nestjs/cache-manager';
 import { BullModule } from '@nestjs/bullmq';
 import { ScheduleModule } from '@nestjs/schedule';
 import { ThrottlerModule, ThrottlerGuard } from '@nestjs/throttler';
+import { EventEmitterModule } from '@nestjs/event-emitter';
 import { APP_GUARD } from '@nestjs/core';
 import { redisStore } from 'cache-manager-redis-yet';
 import { AppController } from './app.controller';
@@ -16,6 +17,7 @@ import { OrdersModule } from './orders/orders.module';
 import { MarketDataModule } from './market-data/market-data.module';
 import { HealthModule } from './health/health.module';
 import { WatchlistsModule } from './watchlists/watchlists.module';
+import { StreamingModule } from './streaming/streaming.module';
 import { validate } from './config/env.validation';
 
 @Module({
@@ -103,6 +105,9 @@ import { validate } from './config/env.validation';
     // Scheduling for cron jobs
     ScheduleModule.forRoot(),
 
+    // Event emitter for internal pub/sub
+    EventEmitterModule.forRoot(),
+
     // Feature modules
     AuthModule,
     UsersModule,
@@ -111,6 +116,7 @@ import { validate } from './config/env.validation';
     MarketDataModule,
     HealthModule,
     WatchlistsModule,
+    StreamingModule,
   ],
   controllers: [AppController],
   providers: [

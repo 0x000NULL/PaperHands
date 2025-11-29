@@ -96,16 +96,31 @@ export class OrdersService {
       );
     }
 
-    // For market orders, execute immediately
+    // For market orders, check if market is open
     if (orderType === OrderType.MARKET) {
-      return this.executeMarketOrder(
-        userId,
-        upperSymbol,
-        side,
-        quantity,
-        quote,
-        idempotencyKey,
-      );
+      const session = this.marketHoursService.getCurrentSession();
+
+      if (session === 'regular') {
+        // Market is open - execute immediately
+        return this.executeMarketOrder(
+          userId,
+          upperSymbol,
+          side,
+          quantity,
+          quote,
+          idempotencyKey,
+        );
+      } else {
+        // Market is closed - queue until market opens
+        return this.createQueuedMarketOrder(
+          userId,
+          upperSymbol,
+          side,
+          quantity,
+          quote,
+          idempotencyKey,
+        );
+      }
     }
 
     // For conditional orders, validate price conditions and create pending order
@@ -294,6 +309,212 @@ export class OrdersService {
     } finally {
       await queryRunner.release();
     }
+  }
+
+  /**
+   * Create a queued market order (when market is closed)
+   * The order will be executed at next market open
+   */
+  private async createQueuedMarketOrder(
+    userId: string,
+    symbol: string,
+    side: OrderSide,
+    quantity: number,
+    quote: { ask: number; bid: number; last: number },
+    idempotencyKey?: string,
+  ) {
+    const estimatedPrice = side === OrderSide.BUY ? quote.ask : quote.bid;
+    const estimatedCost = estimatedPrice * quantity;
+
+    // Validate funds/shares before queuing
+    if (side === OrderSide.BUY) {
+      const availableCash = await this.getAvailableCash(userId);
+      if (availableCash < estimatedCost) {
+        throw new BadRequestException(
+          `Insufficient funds. Required: $${estimatedCost.toFixed(2)}, Available: $${availableCash.toFixed(2)}`,
+        );
+      }
+    } else {
+      const availableShares = await this.getAvailableShares(userId, symbol);
+      if (availableShares < quantity) {
+        throw new BadRequestException(
+          `Insufficient shares. Required: ${quantity}, Available: ${availableShares}`,
+        );
+      }
+    }
+
+    // Get next market open time for the order notes
+    const marketInfo = this.marketHoursService.getMarketHoursInfo();
+
+    const order = this.orderRepository.create({
+      userId,
+      symbol,
+      side,
+      orderType: OrderType.MARKET,
+      timeInForce: TimeInForce.DAY,
+      quantity,
+      filledQuantity: 0,
+      status: OrderStatus.QUEUED,
+      idempotencyKey: idempotencyKey || null,
+      // Store the estimated price for reference (not binding)
+      limitPrice: estimatedPrice,
+    });
+
+    await this.orderRepository.save(order);
+
+    // Create audit record
+    await this.createAuditRecord(
+      order,
+      AuditAction.CREATED,
+      `Queued until market opens${marketInfo.nextOpen ? ` at ${marketInfo.nextOpen.toISOString()}` : ''}`,
+      quote.last,
+    );
+
+    return this.formatOrderResponse(order);
+  }
+
+  /**
+   * Execute a queued market order (called by queued order processor at market open)
+   */
+  async executeQueuedMarketOrder(orderId: string): Promise<Order> {
+    const order = await this.orderRepository.findOne({
+      where: { id: orderId },
+    });
+
+    if (!order) {
+      throw new NotFoundException(`Order ${orderId} not found`);
+    }
+
+    if (order.status !== OrderStatus.QUEUED) {
+      this.logger.warn(
+        `Order ${orderId} is not queued (status: ${order.status})`,
+      );
+      return order;
+    }
+
+    // Fetch current quote for execution
+    const quote = await this.finnhubService.getQuote(order.symbol);
+    if (!quote || !quote.ask || !quote.bid) {
+      // Market might still be closed or symbol invalid - keep queued
+      this.logger.warn(
+        `Cannot execute queued order ${orderId}: no valid quote for ${order.symbol}`,
+      );
+      return order;
+    }
+
+    const executionPrice = order.side === OrderSide.BUY ? quote.ask : quote.bid;
+    const totalCost = executionPrice * Number(order.quantity);
+
+    const queryRunner = this.dataSource.createQueryRunner();
+    await queryRunner.connect();
+    await queryRunner.startTransaction('SERIALIZABLE');
+
+    try {
+      const user = await queryRunner.manager.findOne(User, {
+        where: { id: order.userId },
+        lock: { mode: 'pessimistic_write' },
+      });
+
+      if (!user) {
+        throw new NotFoundException('User not found');
+      }
+
+      if (order.side === OrderSide.BUY) {
+        if (Number(user.cashBalance) < totalCost) {
+          // Insufficient funds - cancel order
+          await queryRunner.manager.update(Order, orderId, {
+            status: OrderStatus.CANCELLED,
+            rejectionReason: 'Insufficient funds at market open',
+            cancelledAt: new Date(),
+          });
+          await queryRunner.commitTransaction();
+          await this.createAuditRecord(
+            { ...order, status: OrderStatus.CANCELLED } as Order,
+            AuditAction.CANCELLED,
+            'Insufficient funds at market open',
+            executionPrice,
+          );
+          return { ...order, status: OrderStatus.CANCELLED } as Order;
+        }
+        await queryRunner.manager.update(User, user.id, {
+          cashBalance: Number(user.cashBalance) - totalCost,
+        });
+      } else {
+        const position = await queryRunner.manager.findOne(Position, {
+          where: { userId: order.userId, symbol: order.symbol },
+          lock: { mode: 'pessimistic_write' },
+        });
+
+        if (!position || Number(position.quantity) < Number(order.quantity)) {
+          await queryRunner.manager.update(Order, orderId, {
+            status: OrderStatus.CANCELLED,
+            rejectionReason: 'Insufficient shares at market open',
+            cancelledAt: new Date(),
+          });
+          await queryRunner.commitTransaction();
+          await this.createAuditRecord(
+            { ...order, status: OrderStatus.CANCELLED } as Order,
+            AuditAction.CANCELLED,
+            'Insufficient shares at market open',
+            executionPrice,
+          );
+          return { ...order, status: OrderStatus.CANCELLED } as Order;
+        }
+        await queryRunner.manager.update(User, user.id, {
+          cashBalance: Number(user.cashBalance) + totalCost,
+        });
+      }
+
+      // Update order to filled
+      await queryRunner.manager.update(Order, orderId, {
+        filledQuantity: order.quantity,
+        filledPrice: executionPrice,
+        avgFillPrice: executionPrice,
+        status: OrderStatus.FILLED,
+        filledAt: new Date(),
+        limitPrice: null, // Clear the estimated price
+      });
+
+      // Update position
+      await this.updatePositionInTransaction(
+        queryRunner.manager,
+        order.userId,
+        order.symbol,
+        Number(order.quantity),
+        executionPrice,
+        order.side === OrderSide.BUY,
+      );
+
+      await queryRunner.commitTransaction();
+
+      const updatedOrder = await this.orderRepository.findOne({
+        where: { id: orderId },
+      });
+
+      await this.createAuditRecord(
+        updatedOrder!,
+        AuditAction.FILLED,
+        'Executed at market open',
+        executionPrice,
+      );
+
+      return updatedOrder!;
+    } catch (error) {
+      await queryRunner.rollbackTransaction();
+      throw error;
+    } finally {
+      await queryRunner.release();
+    }
+  }
+
+  /**
+   * Get all queued orders (for the queued order processor)
+   */
+  async getQueuedOrders(): Promise<Order[]> {
+    return this.orderRepository.find({
+      where: { status: OrderStatus.QUEUED },
+      order: { createdAt: 'ASC' },
+    });
   }
 
   /**

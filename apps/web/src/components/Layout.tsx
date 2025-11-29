@@ -2,6 +2,8 @@ import { Link, useNavigate } from 'react-router-dom';
 import type { CSSProperties } from 'react';
 import { useAuthStore } from '../store/authStore';
 import { theme } from '../theme/constants';
+import { MarketStatusBadge } from './common/MarketStatusBadge';
+import { ConnectionStatusBadge } from './common/ConnectionStatus';
 
 interface LayoutProps {
   children: React.ReactNode;
@@ -80,6 +82,8 @@ export function Layout({ children }: LayoutProps) {
 
         {isAuthenticated() && (
           <div style={styles.navLinks}>
+            <ConnectionStatusBadge />
+            <MarketStatusBadge />
             <Link to="/" style={styles.navLink}>
               Dashboard
             </Link>

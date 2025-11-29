@@ -10,6 +10,7 @@ import { MarketDataModule } from '../market-data/market-data.module';
 import { MarketHoursService } from '../common/services/market-hours.service';
 import { PriceMonitorService } from './processors/price-monitor.service';
 import { OrderExpirationService } from './processors/order-expiration.service';
+import { QueuedOrderProcessor } from './processors/queued-order.processor';
 
 @Module({
   imports: [
@@ -22,6 +23,7 @@ import { OrderExpirationService } from './processors/order-expiration.service';
     MarketHoursService,
     PriceMonitorService,
     OrderExpirationService,
+    QueuedOrderProcessor,
   ],
   exports: [OrdersService, MarketHoursService],
 })
