@@ -49,7 +49,7 @@ export class WashSale {
   @JoinColumn({ name: 'triggeringSaleId' })
   triggeringSale: LotSale | null;
 
-  @Column({ nullable: true })
+  @Column({ type: 'uuid', nullable: true })
   triggeringSaleId: string | null;
 
   // Option closure that triggered (if applicable)
@@ -57,7 +57,7 @@ export class WashSale {
   @JoinColumn({ name: 'triggeringOptionClosureId' })
   triggeringOptionClosure: OptionClosure | null;
 
-  @Column({ nullable: true })
+  @Column({ type: 'uuid', nullable: true })
   triggeringOptionClosureId: string | null;
 
   // The replacement lot that received the disallowed loss
@@ -65,11 +65,11 @@ export class WashSale {
   @JoinColumn({ name: 'replacementTaxLotId' })
   replacementTaxLot: TaxLot | null;
 
-  @Column({ nullable: true })
+  @Column({ type: 'uuid', nullable: true })
   replacementTaxLotId: string | null;
 
   // Option details if replacement is an option
-  @Column({ nullable: true })
+  @Column({ type: 'varchar', length: 30, nullable: true })
   replacementOptionSymbol: string | null;
 
   // Disallowed loss amount
