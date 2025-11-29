@@ -26,7 +26,7 @@ const styles: Record<string, CSSProperties> = {
     color: theme.colors.textSecondary,
     fontWeight: theme.typography.medium,
     fontSize: theme.typography.xs,
-    textAlign: 'right' as const,
+    textAlign: 'center' as const,
     whiteSpace: 'nowrap',
   },
   headerCellLeft: {
@@ -50,7 +50,7 @@ const styles: Record<string, CSSProperties> = {
   },
   cell: {
     padding: `${theme.spacing.sm} ${theme.spacing.xs}`,
-    textAlign: 'right' as const,
+    textAlign: 'center' as const,
     color: theme.colors.textPrimary,
     fontFamily: theme.typography.fontMono,
     fontSize: theme.typography.sm,

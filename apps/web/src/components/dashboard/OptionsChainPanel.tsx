@@ -94,8 +94,6 @@ interface ExpirationSelection {
 
 export function OptionsChainPanel() {
   const selectedSymbol = useDashboardStore((s) => s.selectedSymbol);
-  const prefillBuy = useDashboardStore((s) => s.prefillBuy);
-  const prefillSell = useDashboardStore((s) => s.prefillSell);
 
   // Track user-selected expiration with the symbol it belongs to
   const [expirationSelection, setExpirationSelection] = useState<ExpirationSelection | null>(null);
@@ -150,17 +148,6 @@ export function OptionsChainPanel() {
   const handleCloseModal = () => {
     setIsModalOpen(false);
     setSelectedContract(null);
-  };
-
-  const handleTrade = (contract: OptionContract, side: 'buy' | 'sell') => {
-    // For now, we'll use the underlying symbol since options trading isn't fully supported
-    // In the future, this would prefill with the option contract symbol
-    if (side === 'buy') {
-      prefillBuy(contract.symbol);
-    } else {
-      prefillSell(contract.symbol, 1);
-    }
-    handleCloseModal();
   };
 
   // Render expiration tabs or skeleton
@@ -298,7 +285,6 @@ export function OptionsChainPanel() {
         isOpen={isModalOpen}
         onClose={handleCloseModal}
         contract={selectedContract}
-        onTrade={handleTrade}
       />
     </>
   );
