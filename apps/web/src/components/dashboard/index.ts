@@ -7,3 +7,7 @@ export { TradeForm } from './TradeForm';
 export { OrderHistory } from './OrderHistory';
 export { ChartPanel } from './ChartPanel';
 export { TimeSales } from './TimeSales';
+export { OptionsChainPanel } from './OptionsChainPanel';
+export { ExpirationTabs } from './ExpirationTabs';
+export { OptionsChainTable } from './OptionsChainTable';
+export { OptionDetailModal } from './OptionDetailModal';

@@ -11,6 +11,7 @@ import type {
   WatchlistSummary,
   WatchlistDetail,
   MarketStatus,
+  OptionsChainResponse,
 } from '../types';
 
 // API base URL from build-time environment variable
@@ -156,6 +157,15 @@ export const api = {
   // Batch quotes for watchlist
   getQuotes: (symbols: string[]) =>
     request<Quote[]>(`/market-data/quotes?symbols=${symbols.join(',')}`),
+
+  // Options
+  getOptionsExpirations: (symbol: string) =>
+    request<string[]>(`/market-data/options/expirations/${symbol}`),
+
+  getOptionsChain: (symbol: string, expiration: string) =>
+    request<OptionsChainResponse>(
+      `/market-data/options/chain/${symbol}?expiration=${expiration}`,
+    ),
 
   // Analytics
   getPerformanceHistory: (period: string = '1M') =>

@@ -11,3 +11,8 @@ export {
 } from './useStreamingQuote';
 export { useRealtimePnL } from './useRealtimePnL';
 export { useRealtimeCandles } from './useRealtimeCandles';
+export {
+  useOptionsExpirations,
+  useOptionsChain,
+  optionsKeys,
+} from './useOptionsChain';

@@ -3,6 +3,7 @@ import { JwtAuthGuard } from '../common/guards/jwt-auth.guard';
 import { FinnhubService } from './finnhub.service';
 import { TradierService } from './tradier.service';
 import { CandleQueryDto } from './dto/candle-query.dto';
+import { OptionsQueryDto } from './dto/options.dto';
 import { MarketHoursService } from '../common/services/market-hours.service';
 
 @Controller('market-data')
@@ -40,5 +41,22 @@ export class MarketDataController {
   @Get('market-status')
   getMarketStatus() {
     return this.marketHoursService.getMarketHoursInfo();
+  }
+
+  @Get('options/expirations/:symbol')
+  async getOptionsExpirations(@Param('symbol') symbol: string) {
+    return this.tradierService.getOptionsExpirations(symbol);
+  }
+
+  @Get('options/chain/:symbol')
+  async getOptionsChain(
+    @Param('symbol') symbol: string,
+    @Query() query: OptionsQueryDto,
+  ) {
+    return this.tradierService.getOptionsChain(
+      symbol,
+      query.expiration,
+      query.strikeRange,
+    );
   }
 }

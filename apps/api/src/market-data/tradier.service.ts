@@ -4,6 +4,12 @@ import { CACHE_MANAGER } from '@nestjs/cache-manager';
 import type { Cache } from 'cache-manager';
 import { CandleResponseDto, CandleDto } from './dto/candle-response.dto';
 import { Period } from './dto/candle-query.dto';
+import {
+  TradierExpirationsResponse,
+  TradierOptionsChainResponse,
+  OptionsChainResponse,
+  OptionContract,
+} from './dto/options.dto';
 
 export interface Quote {
   symbol: string;
@@ -403,5 +409,185 @@ export class TradierService {
       close: item.close,
       volume: item.volume,
     }));
+  }
+
+  async getOptionsExpirations(symbol: string): Promise<string[]> {
+    const upperSymbol = symbol.toUpperCase();
+    const cacheKey = `options:expirations:${upperSymbol}`;
+
+    // Check cache first (1 hour TTL - expirations change weekly)
+    const cached = await this.cacheManager.get<string[]>(cacheKey);
+    if (cached) {
+      return cached;
+    }
+
+    const response = await this.fetchWithRetry(
+      `${this.baseUrl}/markets/options/expirations?symbol=${upperSymbol}`,
+      {
+        headers: {
+          Authorization: `Bearer ${this.apiToken}`,
+          Accept: 'application/json',
+        },
+      },
+    );
+
+    if (!response.ok) {
+      // Map external API errors to avoid triggering frontend logout on 401
+      const status =
+        response.status === 401 || response.status === 403
+          ? 503
+          : response.status;
+      throw new HttpException(
+        `Options not available for ${upperSymbol}`,
+        status,
+      );
+    }
+
+    const data = (await response.json()) as TradierExpirationsResponse;
+
+    if (!data.expirations || !data.expirations.date) {
+      return [];
+    }
+
+    const expirations = Array.isArray(data.expirations.date)
+      ? data.expirations.date
+      : [data.expirations.date];
+
+    // Cache for 1 hour
+    await this.cacheManager.set(cacheKey, expirations, 3_600_000);
+
+    return expirations;
+  }
+
+  async getOptionsChain(
+    symbol: string,
+    expiration: string,
+    strikeRange = 15,
+  ): Promise<OptionsChainResponse> {
+    const upperSymbol = symbol.toUpperCase();
+    const cacheKey = `options:chain:${upperSymbol}:${expiration}`;
+
+    // Check cache first (30 seconds TTL)
+    const cached = await this.cacheManager.get<OptionsChainResponse>(cacheKey);
+    if (cached) {
+      return cached;
+    }
+
+    // First get the underlying price for ATM filtering
+    const quote = await this.getQuote(upperSymbol);
+    const underlyingPrice = quote.last;
+
+    // Fetch options chain with Greeks
+    const response = await this.fetchWithRetry(
+      `${this.baseUrl}/markets/options/chains?symbol=${upperSymbol}&expiration=${expiration}&greeks=true`,
+      {
+        headers: {
+          Authorization: `Bearer ${this.apiToken}`,
+          Accept: 'application/json',
+        },
+      },
+    );
+
+    if (!response.ok) {
+      // Map external API errors to avoid triggering frontend logout on 401
+      const status =
+        response.status === 401 || response.status === 403
+          ? 503
+          : response.status;
+      throw new HttpException(
+        `Options chain not available for ${upperSymbol}`,
+        status,
+      );
+    }
+
+    const data = (await response.json()) as TradierOptionsChainResponse;
+
+    if (!data.options || !data.options.option) {
+      return {
+        symbol: upperSymbol,
+        expiration,
+        underlyingPrice,
+        calls: [],
+        puts: [],
+      };
+    }
+
+    const options = Array.isArray(data.options.option)
+      ? data.options.option
+      : [data.options.option];
+
+    // Get all unique strikes and find ATM
+    const allStrikes = [...new Set(options.map((o) => o.strike))].sort(
+      (a, b) => a - b,
+    );
+
+    // Find the ATM strike (closest to underlying price)
+    const atmStrike = allStrikes.reduce((prev, curr) =>
+      Math.abs(curr - underlyingPrice) < Math.abs(prev - underlyingPrice)
+        ? curr
+        : prev,
+    );
+
+    const atmIndex = allStrikes.indexOf(atmStrike);
+    const minIndex = Math.max(0, atmIndex - strikeRange);
+    const maxIndex = Math.min(allStrikes.length - 1, atmIndex + strikeRange);
+    const filteredStrikes = new Set(allStrikes.slice(minIndex, maxIndex + 1));
+
+    // Transform and filter options
+    const calls: OptionContract[] = [];
+    const puts: OptionContract[] = [];
+
+    for (const opt of options) {
+      if (!filteredStrikes.has(opt.strike)) continue;
+
+      const contract: OptionContract = {
+        symbol: opt.symbol,
+        strike: opt.strike,
+        optionType: opt.option_type,
+        expiration: opt.expiration_date,
+        bid: opt.bid,
+        ask: opt.ask,
+        last: opt.last,
+        volume: opt.volume,
+        openInterest: opt.open_interest,
+        inTheMoney:
+          opt.option_type === 'call'
+            ? underlyingPrice > opt.strike
+            : underlyingPrice < opt.strike,
+        greeks: opt.greeks
+          ? {
+              delta: opt.greeks.delta,
+              gamma: opt.greeks.gamma,
+              theta: opt.greeks.theta,
+              vega: opt.greeks.vega,
+              rho: opt.greeks.rho,
+              iv: opt.greeks.mid_iv,
+            }
+          : undefined,
+      };
+
+      if (opt.option_type === 'call') {
+        calls.push(contract);
+      } else {
+        puts.push(contract);
+      }
+    }
+
+    // Sort by strike
+    calls.sort((a, b) => a.strike - b.strike);
+    puts.sort((a, b) => a.strike - b.strike);
+
+    const result: OptionsChainResponse = {
+      symbol: upperSymbol,
+      expiration,
+      underlyingPrice,
+      calls,
+      puts,
+    };
+
+    // Cache for 30 seconds
+    await this.cacheManager.set(cacheKey, result, 30_000);
+
+    return result;
   }
 }

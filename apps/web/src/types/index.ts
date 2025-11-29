@@ -124,3 +124,35 @@ export interface WatchlistDetail {
   createdAt: string;
   updatedAt: string;
 }
+
+// Options types
+export interface OptionGreeks {
+  delta: number;
+  gamma: number;
+  theta: number;
+  vega: number;
+  rho: number;
+  iv: number; // implied volatility
+}
+
+export interface OptionContract {
+  symbol: string; // OCC symbol (e.g., "AAPL240119C00190000")
+  strike: number;
+  optionType: 'call' | 'put';
+  expiration: string;
+  bid: number;
+  ask: number;
+  last: number | null;
+  volume: number;
+  openInterest: number;
+  greeks?: OptionGreeks;
+  inTheMoney: boolean;
+}
+
+export interface OptionsChainResponse {
+  symbol: string;
+  expiration: string;
+  underlyingPrice: number;
+  calls: OptionContract[];
+  puts: OptionContract[];
+}
