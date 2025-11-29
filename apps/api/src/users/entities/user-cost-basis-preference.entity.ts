@@ -16,7 +16,7 @@ export class UserCostBasisPreference {
   id: string;
 
   @OneToOne(() => User, { onDelete: 'CASCADE' })
-  @JoinColumn({ name: 'user_id' })
+  @JoinColumn({ name: 'userId' })
   user: User;
 
   @Column({ unique: true })

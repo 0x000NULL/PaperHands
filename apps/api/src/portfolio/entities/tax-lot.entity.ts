@@ -21,7 +21,7 @@ export class TaxLot {
   id: string;
 
   @ManyToOne(() => User, { onDelete: 'CASCADE' })
-  @JoinColumn({ name: 'user_id' })
+  @JoinColumn({ name: 'userId' })
   user: User;
 
   @Index()
@@ -42,7 +42,7 @@ export class TaxLot {
   costBasisPerShare: number;
 
   @ManyToOne(() => Order, { nullable: true, onDelete: 'SET NULL' })
-  @JoinColumn({ name: 'source_order_id' })
+  @JoinColumn({ name: 'sourceOrderId' })
   sourceOrder: Order;
 
   @Column({ nullable: true })

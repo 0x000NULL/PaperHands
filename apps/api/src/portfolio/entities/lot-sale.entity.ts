@@ -21,7 +21,7 @@ export class LotSale {
   id: string;
 
   @ManyToOne(() => TaxLot, { onDelete: 'CASCADE' })
-  @JoinColumn({ name: 'tax_lot_id' })
+  @JoinColumn({ name: 'taxLotId' })
   taxLot: TaxLot;
 
   @Index()
@@ -29,7 +29,7 @@ export class LotSale {
   taxLotId: string;
 
   @ManyToOne(() => Order, { onDelete: 'SET NULL', nullable: true })
-  @JoinColumn({ name: 'sell_order_id' })
+  @JoinColumn({ name: 'sellOrderId' })
   sellOrder: Order;
 
   @Column({ nullable: true })
