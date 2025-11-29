@@ -24,14 +24,15 @@ const queryClient = new QueryClient({
 
 function ProtectedRoute({ children }: { children: React.ReactNode }) {
   const { isAuthenticated, user } = useAuthStore();
-  const { openWizard, isWizardOpen } = useOnboardingStore();
+  const { openWizard, isWizardOpen, isTourActive } = useOnboardingStore();
 
   useEffect(() => {
     // Open onboarding wizard for new users who haven't completed it
-    if (user && !user.onboardingCompleted && !isWizardOpen) {
+    // Don't re-open if tour is active (user clicked "Take the Tour")
+    if (user && !user.onboardingCompleted && !isWizardOpen && !isTourActive) {
       openWizard();
     }
-  }, [user, openWizard, isWizardOpen]);
+  }, [user, openWizard, isWizardOpen, isTourActive]);
 
   if (!isAuthenticated()) {
     return <Navigate to="/login" replace />;

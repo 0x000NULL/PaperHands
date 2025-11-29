@@ -122,14 +122,17 @@ export function OnboardingWizard() {
   );
 
   const handleTakeTour = useCallback(async () => {
+    // Update local state first to prevent wizard from re-opening
+    updateUser({ onboardingCompleted: true });
+    closeWizard();
+    startTour();
+
+    // Then persist to backend (non-blocking)
     try {
       await api.completeOnboarding();
-      updateUser({ onboardingCompleted: true });
     } catch (error) {
       console.error('Failed to complete onboarding:', error);
     }
-    closeWizard();
-    startTour();
   }, [closeWizard, startTour, updateUser]);
 
   const handleSkipStep = useCallback(() => {
@@ -137,13 +140,16 @@ export function OnboardingWizard() {
   }, [nextStep]);
 
   const handleFinish = useCallback(async () => {
+    // Update local state first to prevent wizard from re-opening
+    updateUser({ onboardingCompleted: true });
+    closeWizard();
+
+    // Then persist to backend (non-blocking)
     try {
       await api.completeOnboarding();
-      updateUser({ onboardingCompleted: true });
     } catch (error) {
       console.error('Failed to complete onboarding:', error);
     }
-    closeWizard();
   }, [closeWizard, updateUser]);
 
   if (!isWizardOpen) {
