@@ -30,16 +30,16 @@ export class AllExceptionsFilter implements ExceptionFilter {
     }
 
     // Log error with appropriate detail level
-    if (this.isProduction) {
-      // In production, log sanitized error without stack trace
-      this.logger.error(`${status} - ${message}`);
-    } else {
-      // In development, log full error with stack trace
-      if (exception instanceof Error) {
-        this.logger.error(`${status} - ${message}`, exception.stack);
+    if (exception instanceof Error) {
+      // Always log the error message; only hide stack trace in production
+      const errorMsg = exception.message || message;
+      if (this.isProduction) {
+        this.logger.error(`${status} - ${errorMsg}`);
       } else {
-        this.logger.error(`${status} - ${message}`, String(exception));
+        this.logger.error(`${status} - ${errorMsg}`, exception.stack);
       }
+    } else {
+      this.logger.error(`${status} - ${message}`, String(exception));
     }
 
     response.status(status).json({
