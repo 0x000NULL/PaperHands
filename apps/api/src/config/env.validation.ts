@@ -28,7 +28,7 @@ class EnvironmentVariables {
 
   @IsString()
   @IsOptional()
-  TRADIER_BASE_URL: string = 'https://sandbox.tradier.com/v1';
+  TRADIER_BASE_URL: string = 'https://api.tradier.com/v1';
 
   @IsString()
   FINNHUB_API_KEY: string;

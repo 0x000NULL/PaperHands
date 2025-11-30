@@ -1,6 +1,6 @@
 import { type CSSProperties } from 'react';
 import { theme } from '../../theme/constants';
-import { useSystemHealth, useSystemStats, useScheduledJobs } from '../../hooks/useAdmin';
+import { useSystemHealth, useSystemStats, useScheduledJobs, useApiUsage } from '../../hooks/useAdmin';
 
 const styles: Record<string, CSSProperties> = {
   container: {
@@ -124,12 +124,40 @@ const styles: Record<string, CSSProperties> = {
     color: theme.colors.textSecondary,
     marginTop: theme.spacing.sm,
   },
+  apiTypeBadge: {
+    display: 'inline-block',
+    padding: `4px ${theme.spacing.sm}`,
+    borderRadius: theme.radius.sm,
+    fontSize: theme.typography.xs,
+    fontWeight: theme.typography.semibold,
+    textTransform: 'uppercase',
+  },
+  productionBadge: {
+    backgroundColor: 'rgba(34, 197, 94, 0.2)',
+    color: theme.colors.positive,
+  },
+  sandboxBadge: {
+    backgroundColor: 'rgba(234, 179, 8, 0.2)',
+    color: theme.colors.warning,
+  },
+  endpointList: {
+    marginTop: theme.spacing.sm,
+    fontSize: theme.typography.xs,
+    color: theme.colors.textSecondary,
+  },
+  endpointRow: {
+    display: 'flex',
+    justifyContent: 'space-between',
+    padding: `${theme.spacing.xs} 0`,
+    borderBottom: `1px solid ${theme.colors.border}`,
+  },
 };
 
 export function SystemHealth() {
   const { data: health, isLoading: healthLoading } = useSystemHealth();
   const { data: stats, isLoading: statsLoading } = useSystemStats();
   const { data: jobs, isLoading: jobsLoading } = useScheduledJobs();
+  const { data: apiUsage, isLoading: apiUsageLoading } = useApiUsage();
 
   const formatNumber = (value: number) =>
     new Intl.NumberFormat('en-US').format(value);
@@ -252,6 +280,70 @@ export function SystemHealth() {
           <div style={styles.timestamp}>
             Last checked: {formatDate(health.timestamp)}
           </div>
+        )}
+      </div>
+
+      {/* API Usage */}
+      <div style={styles.section}>
+        <h3 style={styles.sectionTitle}>Tradier API Usage</h3>
+        {apiUsageLoading ? (
+          <div style={styles.loading}>Loading API usage...</div>
+        ) : apiUsage ? (
+          <>
+            <div style={styles.healthGrid}>
+              <div style={styles.healthCard}>
+                <div style={styles.healthInfo}>
+                  <div style={styles.healthName}>API Type</div>
+                  <div style={{ marginTop: theme.spacing.xs }}>
+                    <span
+                      style={{
+                        ...styles.apiTypeBadge,
+                        ...(apiUsage.apiType === 'production'
+                          ? styles.productionBadge
+                          : styles.sandboxBadge),
+                      }}
+                    >
+                      {apiUsage.apiType}
+                    </span>
+                  </div>
+                </div>
+              </div>
+              <div style={styles.healthCard}>
+                <div style={styles.healthInfo}>
+                  <div style={styles.healthName}>Calls Today</div>
+                  <div style={styles.statValue}>{formatNumber(apiUsage.callsToday)}</div>
+                </div>
+              </div>
+            </div>
+            <div style={{ ...styles.statsGrid, marginTop: theme.spacing.md }}>
+              <div style={styles.statCard}>
+                <div style={styles.statValue}>{formatNumber(apiUsage.totalCalls)}</div>
+                <div style={styles.statLabel}>Total Calls (Session)</div>
+              </div>
+              <div style={styles.statCard}>
+                <div style={styles.statValue}>{apiUsage.lastResetDate}</div>
+                <div style={styles.statLabel}>Last Reset Date</div>
+              </div>
+            </div>
+            {Object.keys(apiUsage.callsByEndpoint).length > 0 && (
+              <div style={styles.endpointList}>
+                <div style={{ fontWeight: theme.typography.medium, marginBottom: theme.spacing.xs }}>
+                  Calls by Endpoint:
+                </div>
+                {Object.entries(apiUsage.callsByEndpoint)
+                  .sort(([, a], [, b]) => b - a)
+                  .slice(0, 5)
+                  .map(([endpoint, count]) => (
+                    <div key={endpoint} style={styles.endpointRow}>
+                      <span>{endpoint}</span>
+                      <span>{formatNumber(count)}</span>
+                    </div>
+                  ))}
+              </div>
+            )}
+          </>
+        ) : (
+          <div style={styles.loading}>No API usage data available</div>
         )}
       </div>
 

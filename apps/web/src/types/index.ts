@@ -407,6 +407,14 @@ export interface JobStatus {
   isRunning: boolean;
 }
 
+export interface ApiUsageStats {
+  totalCalls: number;
+  callsToday: number;
+  callsByEndpoint: Record<string, number>;
+  lastResetDate: string;
+  apiType: 'production' | 'sandbox';
+}
+
 export interface AdminAuditLog {
   id: string;
   adminId: string;

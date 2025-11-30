@@ -2,6 +2,7 @@ import { Module } from '@nestjs/common';
 import { TypeOrmModule } from '@nestjs/typeorm';
 import { TerminusModule } from '@nestjs/terminus';
 import { ScheduleModule } from '@nestjs/schedule';
+import { MarketDataModule } from '../market-data/market-data.module';
 
 // Entities
 import { User } from '../users/entities/user.entity';
@@ -34,6 +35,7 @@ import { AdminSystemController } from './controllers/admin-system.controller';
     ]),
     TerminusModule,
     ScheduleModule.forRoot(),
+    MarketDataModule,
   ],
   controllers: [
     AdminUsersController,

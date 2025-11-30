@@ -31,6 +31,11 @@ export class AdminSystemController {
     return this.adminSystemService.getScheduledJobs();
   }
 
+  @Get('api-usage')
+  getApiUsage() {
+    return this.adminSystemService.getApiUsageStats();
+  }
+
   @Get('audit-logs')
   @Roles(UserRole.SUPER_ADMIN)
   async getAuditLogs(@Query() query: QueryAuditLogsDto) {

@@ -28,6 +28,7 @@ export const adminKeys = {
   health: () => [...adminKeys.system(), 'health'] as const,
   stats: () => [...adminKeys.system(), 'stats'] as const,
   jobs: () => [...adminKeys.system(), 'jobs'] as const,
+  apiUsage: () => [...adminKeys.system(), 'api-usage'] as const,
   auditLogs: (params?: {
     adminId?: string;
     targetUserId?: string;
@@ -189,6 +190,15 @@ export function useScheduledJobs() {
     queryKey: adminKeys.jobs(),
     queryFn: () => api.admin.getJobs(),
     staleTime: 30000,
+  });
+}
+
+export function useApiUsage() {
+  return useQuery({
+    queryKey: adminKeys.apiUsage(),
+    queryFn: () => api.admin.getApiUsage(),
+    staleTime: 10000,
+    refetchInterval: 30000,
   });
 }
 

@@ -8,6 +8,7 @@ import { HealthCheckService, TypeOrmHealthIndicator } from '@nestjs/terminus';
 import { User } from '../../users/entities/user.entity';
 import { Order } from '../../orders/entities/order.entity';
 import { Position } from '../../portfolio/entities/position.entity';
+import { TradierService, ApiUsageStats } from '../../market-data/tradier.service';
 
 export interface SystemHealth {
   database: {
@@ -53,7 +54,12 @@ export class AdminSystemService {
     private orderRepository: Repository<Order>,
     @InjectRepository(Position)
     private positionRepository: Repository<Position>,
+    private tradierService: TradierService,
   ) {}
+
+  getApiUsageStats(): ApiUsageStats {
+    return this.tradierService.getApiUsageStats();
+  }
 
   async getExtendedHealth(): Promise<SystemHealth> {
     let dbStatus: 'up' | 'down' = 'up';
