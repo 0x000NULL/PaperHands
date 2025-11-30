@@ -7,10 +7,12 @@ import { AuthService } from './auth.service';
 import { AuthController } from './auth.controller';
 import { JwtStrategy } from './jwt.strategy';
 import { User } from '../users/entities/user.entity';
+import { RefreshToken } from './entities/refresh-token.entity';
+import { TokenBlacklistService } from './services/token-blacklist.service';
 
 @Module({
   imports: [
-    TypeOrmModule.forFeature([User]),
+    TypeOrmModule.forFeature([User, RefreshToken]),
     PassportModule.register({ defaultStrategy: 'jwt' }),
     JwtModule.registerAsync({
       imports: [ConfigModule],
@@ -19,27 +21,18 @@ import { User } from '../users/entities/user.entity';
         if (!secret) {
           throw new Error('JWT_SECRET is not defined');
         }
-        // Use config value or default to 7 days
-        // Supports both string ('7d', '1h') and number (seconds) formats
-        const expiresInConfig = configService.get<string>(
-          'JWT_EXPIRES_IN',
-          '7d',
-        );
-        const expiresIn: string | number = /^\d+$/.test(expiresInConfig)
-          ? parseInt(expiresInConfig, 10)
-          : expiresInConfig;
         return {
           secret,
-          // The JWT library accepts both string ('7d') and number (seconds)
-          // Type assertion needed due to strict StringValue type in @nestjs/jwt
-          signOptions: { expiresIn: expiresIn as unknown as number },
+          signOptions: {
+            algorithm: 'HS256',
+          },
         };
       },
       inject: [ConfigService],
     }),
   ],
   controllers: [AuthController],
-  providers: [AuthService, JwtStrategy],
-  exports: [JwtStrategy, PassportModule],
+  providers: [AuthService, JwtStrategy, TokenBlacklistService],
+  exports: [JwtStrategy, PassportModule, TokenBlacklistService],
 })
 export class AuthModule {}

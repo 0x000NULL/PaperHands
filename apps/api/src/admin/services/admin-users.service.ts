@@ -45,12 +45,19 @@ export class AdminUsersService {
     return request.ip ?? '0.0.0.0';
   }
 
+  /**
+   * Escape special LIKE pattern characters to prevent pattern injection
+   */
+  private escapeLikePattern(str: string): string {
+    return str.replace(/[%_\\]/g, '\\$&');
+  }
+
   async findAllUsers(query: QueryUsersDto): Promise<PaginatedResponse<User>> {
     const queryBuilder = this.userRepository.createQueryBuilder('user');
 
     if (query.search) {
-      queryBuilder.andWhere('user.email ILIKE :search', {
-        search: `%${query.search}%`,
+      queryBuilder.andWhere("user.email ILIKE :search ESCAPE '\\'", {
+        search: `%${this.escapeLikePattern(query.search)}%`,
       });
     }
 
@@ -66,10 +73,18 @@ export class AdminUsersService {
 
     const total = await queryBuilder.getCount();
 
-    const sortBy = query.sortBy ?? 'createdAt';
-    const sortOrder = query.sortOrder ?? 'DESC';
+    // Whitelist valid sort columns to prevent SQL injection
+    const ALLOWED_SORT_COLUMNS: Record<string, string> = {
+      email: 'user.email',
+      createdAt: 'user.createdAt',
+      cashBalance: 'user.cashBalance',
+      role: 'user.role',
+    };
+    const sortColumn =
+      ALLOWED_SORT_COLUMNS[query.sortBy ?? 'createdAt'] ?? 'user.createdAt';
+    const sortOrder = query.sortOrder === 'ASC' ? 'ASC' : 'DESC';
     queryBuilder
-      .orderBy(`user.${sortBy}`, sortOrder)
+      .orderBy(sortColumn, sortOrder)
       .skip(query.offset ?? 0)
       .take(query.limit ?? 20);
 

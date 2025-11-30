@@ -277,6 +277,15 @@ export class WatchlistsService {
       throw new ForbiddenException('Access denied');
     }
 
+    // Validate that all itemIds belong to this watchlist (IDOR protection)
+    const validItemIds = new Set(watchlist.items?.map((item) => item.id) ?? []);
+    const invalidIds = itemIds.filter((id) => !validItemIds.has(id));
+    if (invalidIds.length > 0) {
+      throw new ForbiddenException(
+        'Cannot reorder items from other watchlists',
+      );
+    }
+
     // Update sort order for each item
     const updates = itemIds.map((itemId, index) =>
       this.watchlistItemRepository.update(itemId, { sortOrder: index }),

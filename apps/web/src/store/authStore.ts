@@ -1,31 +1,42 @@
 import { create } from 'zustand';
-import { persist } from 'zustand/middleware';
 import type { User } from '../types';
 
 interface AuthState {
-  token: string | null;
+  accessToken: string | null;
+  refreshToken: string | null;
   user: User | null;
-  setAuth: (token: string, user: User) => void;
+  setAuth: (accessToken: string, refreshToken: string, user: User) => void;
+  setTokens: (accessToken: string, refreshToken: string) => void;
   updateUser: (user: Partial<User>) => void;
   logout: () => void;
   isAuthenticated: () => boolean;
+  getAccessToken: () => string | null;
+  getRefreshToken: () => string | null;
 }
 
-export const useAuthStore = create<AuthState>()(
-  persist(
-    (set, get) => ({
-      token: null,
-      user: null,
-      setAuth: (token, user) => set({ token, user }),
-      updateUser: (userData) =>
-        set((state) => ({
-          user: state.user ? { ...state.user, ...userData } : null,
-        })),
-      logout: () => set({ token: null, user: null }),
-      isAuthenticated: () => !!get().token,
-    }),
-    {
-      name: 'paperhands-auth',
-    },
-  ),
-);
+// Memory-only store - no persistence for security
+// Tokens are not stored in localStorage to prevent XSS attacks
+export const useAuthStore = create<AuthState>()((set, get) => ({
+  accessToken: null,
+  refreshToken: null,
+  user: null,
+  setAuth: (accessToken, refreshToken, user) =>
+    set({ accessToken, refreshToken, user }),
+  setTokens: (accessToken, refreshToken) =>
+    set({ accessToken, refreshToken }),
+  updateUser: (userData) =>
+    set((state) => ({
+      user: state.user ? { ...state.user, ...userData } : null,
+    })),
+  logout: () => set({ accessToken: null, refreshToken: null, user: null }),
+  isAuthenticated: () => !!get().accessToken,
+  getAccessToken: () => get().accessToken,
+  getRefreshToken: () => get().refreshToken,
+}));
+
+// Legacy compatibility - expose token as alias for accessToken
+Object.defineProperty(useAuthStore.getState(), 'token', {
+  get() {
+    return useAuthStore.getState().accessToken;
+  },
+});

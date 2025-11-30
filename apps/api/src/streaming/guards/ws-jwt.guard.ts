@@ -11,7 +11,8 @@ import { Socket } from 'socket.io';
 
 interface JwtPayload {
   sub: string;
-  email: string;
+  jti?: string;
+  type: string;
   iat: number;
   exp: number;
 }
@@ -40,6 +41,7 @@ export class WsJwtGuard implements CanActivate {
 
       const payload = await this.jwtService.verifyAsync<JwtPayload>(token, {
         secret: this.jwtSecret,
+        algorithms: ['HS256'],
       });
 
       // Attach user info to socket for later use
@@ -55,17 +57,13 @@ export class WsJwtGuard implements CanActivate {
   }
 
   private extractToken(client: Socket): string | null {
-    // Try to get token from handshake auth
+    // Try to get token from handshake auth (preferred method)
     const auth = client.handshake.auth as { token?: unknown } | undefined;
     if (auth?.token && typeof auth.token === 'string') {
       return auth.token;
     }
 
-    // Try to get token from query parameter
-    const queryToken = client.handshake.query?.token;
-    if (typeof queryToken === 'string') {
-      return queryToken;
-    }
+    // REMOVED: Query parameter token support (security risk - tokens logged in access logs)
 
     // Try to get token from Authorization header
     const authHeader = client.handshake.headers?.authorization;

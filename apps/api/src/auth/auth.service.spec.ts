@@ -6,6 +6,9 @@ import { CACHE_MANAGER } from '@nestjs/cache-manager';
 import * as bcrypt from 'bcrypt';
 import { AuthService } from './auth.service';
 import { User } from '../users/entities/user.entity';
+import { UserRole } from '../users/enums/user-role.enum';
+import { RefreshToken } from './entities/refresh-token.entity';
+import { TokenBlacklistService } from './services/token-blacklist.service';
 
 jest.mock('bcrypt');
 
@@ -16,14 +19,28 @@ describe('AuthService', () => {
     create: jest.Mock;
     save: jest.Mock;
   };
-  let mockJwtService: { sign: jest.Mock };
+  let mockRefreshTokenRepository: {
+    findOne: jest.Mock;
+    create: jest.Mock;
+    save: jest.Mock;
+    update: jest.Mock;
+  };
+  let mockJwtService: { sign: jest.Mock; verify: jest.Mock };
   let mockCacheManager: { del: jest.Mock };
+  let mockTokenBlacklistService: {
+    blacklist: jest.Mock;
+    revokeAllUserTokens: jest.Mock;
+  };
 
   const mockUser: Partial<User> = {
     id: 'user-123',
     email: 'test@example.com',
     passwordHash: 'hashed-password',
     cashBalance: 100000,
+    onboardingCompleted: false,
+    onboardingStep: 0,
+    role: UserRole.USER,
+    disabled: false,
   };
 
   beforeEach(async () => {
@@ -33,12 +50,25 @@ describe('AuthService', () => {
       save: jest.fn(),
     };
 
+    mockRefreshTokenRepository = {
+      findOne: jest.fn(),
+      create: jest.fn(),
+      save: jest.fn(),
+      update: jest.fn(),
+    };
+
     mockJwtService = {
       sign: jest.fn().mockReturnValue('mock-jwt-token'),
+      verify: jest.fn(),
     };
 
     mockCacheManager = {
       del: jest.fn(),
+    };
+
+    mockTokenBlacklistService = {
+      blacklist: jest.fn(),
+      revokeAllUserTokens: jest.fn(),
     };
 
     const module: TestingModule = await Test.createTestingModule({
@@ -49,12 +79,20 @@ describe('AuthService', () => {
           useValue: mockUserRepository,
         },
         {
+          provide: getRepositoryToken(RefreshToken),
+          useValue: mockRefreshTokenRepository,
+        },
+        {
           provide: JwtService,
           useValue: mockJwtService,
         },
         {
           provide: CACHE_MANAGER,
           useValue: mockCacheManager,
+        },
+        {
+          provide: TokenBlacklistService,
+          useValue: mockTokenBlacklistService,
         },
       ],
     }).compile();
@@ -76,6 +114,8 @@ describe('AuthService', () => {
       mockUserRepository.findOne.mockResolvedValue(null);
       mockUserRepository.create.mockReturnValue(mockUser);
       mockUserRepository.save.mockResolvedValue(mockUser);
+      mockRefreshTokenRepository.create.mockReturnValue({});
+      mockRefreshTokenRepository.save.mockResolvedValue({});
       (bcrypt.hash as jest.Mock).mockResolvedValue('hashed-password');
 
       const result = await service.register(registerDto);
@@ -83,20 +123,22 @@ describe('AuthService', () => {
       expect(mockUserRepository.findOne).toHaveBeenCalledWith({
         where: { email: registerDto.email },
       });
-      expect(bcrypt.hash).toHaveBeenCalledWith(registerDto.password, 10);
+      expect(bcrypt.hash).toHaveBeenCalledWith(registerDto.password, 12);
       expect(mockUserRepository.create).toHaveBeenCalledWith({
         email: registerDto.email,
         passwordHash: 'hashed-password',
       });
       expect(mockUserRepository.save).toHaveBeenCalled();
       expect(mockJwtService.sign).toHaveBeenCalled();
-      expect(result).toEqual({
-        token: 'mock-jwt-token',
-        user: {
-          id: mockUser.id,
-          email: mockUser.email,
-          cashBalance: mockUser.cashBalance,
-        },
+      expect(result).toHaveProperty('accessToken');
+      expect(result).toHaveProperty('refreshToken');
+      expect(result.user).toEqual({
+        id: mockUser.id,
+        email: mockUser.email,
+        cashBalance: mockUser.cashBalance,
+        onboardingCompleted: mockUser.onboardingCompleted,
+        onboardingStep: mockUser.onboardingStep,
+        role: mockUser.role,
       });
     });
 
@@ -118,6 +160,8 @@ describe('AuthService', () => {
 
     it('should login successfully with valid credentials', async () => {
       mockUserRepository.findOne.mockResolvedValue(mockUser);
+      mockRefreshTokenRepository.create.mockReturnValue({});
+      mockRefreshTokenRepository.save.mockResolvedValue({});
       (bcrypt.compare as jest.Mock).mockResolvedValue(true);
 
       const result = await service.login(loginDto);
@@ -130,13 +174,15 @@ describe('AuthService', () => {
         mockUser.passwordHash,
       );
       expect(mockJwtService.sign).toHaveBeenCalled();
-      expect(result).toEqual({
-        token: 'mock-jwt-token',
-        user: {
-          id: mockUser.id,
-          email: mockUser.email,
-          cashBalance: mockUser.cashBalance,
-        },
+      expect(result).toHaveProperty('accessToken');
+      expect(result).toHaveProperty('refreshToken');
+      expect(result.user).toEqual({
+        id: mockUser.id,
+        email: mockUser.email,
+        cashBalance: mockUser.cashBalance,
+        onboardingCompleted: mockUser.onboardingCompleted,
+        onboardingStep: mockUser.onboardingStep,
+        role: mockUser.role,
       });
     });
 
@@ -159,9 +205,13 @@ describe('AuthService', () => {
   });
 
   describe('logout', () => {
-    it('should clear user from cache', async () => {
-      await service.logout('user-123');
+    it('should blacklist token and clear user from cache', async () => {
+      await service.logout('user-123', 'jti-123', 1234567890);
 
+      expect(mockTokenBlacklistService.blacklist).toHaveBeenCalled();
+      expect(
+        mockTokenBlacklistService.revokeAllUserTokens,
+      ).toHaveBeenCalledWith('user-123');
       expect(mockCacheManager.del).toHaveBeenCalledWith('user:user-123');
     });
   });

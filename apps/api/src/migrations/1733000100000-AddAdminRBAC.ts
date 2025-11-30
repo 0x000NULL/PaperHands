@@ -91,8 +91,12 @@ export class AddAdminRBAC1733000100000 implements MigrationInterface {
     await queryRunner.query(`DROP TABLE IF EXISTS "admin_audits"`);
 
     // Remove columns from users table
-    await queryRunner.query(`ALTER TABLE "users" DROP COLUMN IF EXISTS "disabledAt"`);
-    await queryRunner.query(`ALTER TABLE "users" DROP COLUMN IF EXISTS "disabled"`);
+    await queryRunner.query(
+      `ALTER TABLE "users" DROP COLUMN IF EXISTS "disabledAt"`,
+    );
+    await queryRunner.query(
+      `ALTER TABLE "users" DROP COLUMN IF EXISTS "disabled"`,
+    );
     await queryRunner.query(`ALTER TABLE "users" DROP COLUMN IF EXISTS "role"`);
 
     // Drop enum type

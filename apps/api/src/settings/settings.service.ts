@@ -105,15 +105,17 @@ export class SettingsService {
       throw new UnauthorizedException('Current password is incorrect');
     }
 
-    // Hash and save new password
-    const saltRounds = 10;
+    // Hash and save new password (12 rounds per OWASP recommendation)
+    const saltRounds = 12;
     user.passwordHash = await bcrypt.hash(dto.newPassword, saltRounds);
     await this.userRepository.save(user);
 
     return { message: 'Password changed successfully' };
   }
 
-  private async ensurePreferencesExist(userId: string): Promise<UserPreferences> {
+  private async ensurePreferencesExist(
+    userId: string,
+  ): Promise<UserPreferences> {
     let preferences = await this.preferencesRepository.findOne({
       where: { userId },
     });

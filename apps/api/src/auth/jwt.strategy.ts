@@ -7,11 +7,8 @@ import { Repository } from 'typeorm';
 import { CACHE_MANAGER } from '@nestjs/cache-manager';
 import type { Cache } from 'cache-manager';
 import { User } from '../users/entities/user.entity';
-
-export interface JwtPayload {
-  sub: string;
-  email: string;
-}
+import { TokenBlacklistService } from './services/token-blacklist.service';
+import { AccessTokenPayload } from './auth.service';
 
 @Injectable()
 export class JwtStrategy extends PassportStrategy(Strategy) {
@@ -21,6 +18,7 @@ export class JwtStrategy extends PassportStrategy(Strategy) {
     private userRepository: Repository<User>,
     @Inject(CACHE_MANAGER)
     private cacheManager: Cache,
+    private tokenBlacklistService: TokenBlacklistService,
   ) {
     const secret = configService.get<string>('JWT_SECRET');
     if (!secret) {
@@ -30,10 +28,31 @@ export class JwtStrategy extends PassportStrategy(Strategy) {
       jwtFromRequest: ExtractJwt.fromAuthHeaderAsBearerToken(),
       ignoreExpiration: false,
       secretOrKey: secret,
+      algorithms: ['HS256'],
     });
   }
 
-  async validate(payload: JwtPayload): Promise<User> {
+  async validate(payload: AccessTokenPayload): Promise<User> {
+    // Validate token type
+    if (payload.type !== 'access') {
+      throw new UnauthorizedException('Invalid token type');
+    }
+
+    // Check if token is blacklisted
+    if (
+      payload.jti &&
+      (await this.tokenBlacklistService.isBlacklisted(payload.jti))
+    ) {
+      throw new UnauthorizedException('Token has been revoked');
+    }
+
+    // Check if all user tokens were revoked
+    const revocationTime =
+      await this.tokenBlacklistService.getUserRevocationTime(payload.sub);
+    if (revocationTime && payload.iat && payload.iat * 1000 < revocationTime) {
+      throw new UnauthorizedException('All sessions have been revoked');
+    }
+
     const cacheKey = `user:${payload.sub}`;
 
     // Check cache first to avoid N+1 DB queries
@@ -53,6 +72,11 @@ export class JwtStrategy extends PassportStrategy(Strategy) {
 
     if (!user) {
       throw new UnauthorizedException();
+    }
+
+    // Check if user account is disabled
+    if (user.disabled) {
+      throw new UnauthorizedException('Account is disabled');
     }
 
     return user;

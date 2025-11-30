@@ -41,7 +41,7 @@ interface StreamEventPayload<T> {
 export function useWebSocket() {
   const socketRef = useRef<Socket | null>(null);
   const reconnectTimeoutRef = useRef<number | null>(null);
-  const { token, isAuthenticated } = useAuthStore();
+  const { accessToken: token, isAuthenticated } = useAuthStore();
   const {
     connectionStatus,
     setConnectionStatus,
@@ -199,11 +199,19 @@ export function useWebSocket() {
     };
   }, [isAuthenticated, connect, disconnect]);
 
-  // Reconnect when token changes
+  // Reconnect when token changes (important for token refresh)
   useEffect(() => {
-    if (token && !socketRef.current?.connected) {
-      connect();
-    } else if (!token && socketRef.current) {
+    if (token) {
+      // If we have a token and socket exists with old token, reconnect
+      if (socketRef.current?.connected) {
+        // Disconnect and reconnect to use new token
+        socketRef.current.disconnect();
+        socketRef.current = null;
+        connect();
+      } else if (!socketRef.current) {
+        connect();
+      }
+    } else if (socketRef.current) {
       disconnect();
     }
   }, [token, connect, disconnect]);

@@ -101,7 +101,7 @@ export function Login() {
 
     try {
       const response = await api.login(email, password);
-      setAuth(response.token, response.user);
+      setAuth(response.accessToken, response.refreshToken, response.user);
       navigate('/');
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Login failed');

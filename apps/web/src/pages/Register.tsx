@@ -104,8 +104,13 @@ export function Register() {
       return;
     }
 
-    if (password.length < 8) {
-      setError('Password must be at least 8 characters');
+    if (password.length < 10) {
+      setError('Password must be at least 10 characters');
+      return;
+    }
+
+    if (!/^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[!@#$%^&*()_+\-=[\]{};':"\\|,.<>/?])/.test(password)) {
+      setError('Password must contain uppercase, lowercase, number, and special character');
       return;
     }
 
@@ -113,7 +118,7 @@ export function Register() {
 
     try {
       const response = await api.register(email, password);
-      setAuth(response.token, response.user);
+      setAuth(response.accessToken, response.refreshToken, response.user);
       navigate('/');
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Registration failed');

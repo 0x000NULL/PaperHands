@@ -53,11 +53,61 @@ class ApiError extends Error {
 
 const REQUEST_TIMEOUT = 15000; // 15 seconds
 
+// Track if we're currently refreshing to avoid multiple simultaneous refresh calls
+let isRefreshing = false;
+let refreshPromise: Promise<boolean> | null = null;
+
+interface TokenRefreshResponse {
+  accessToken: string;
+  refreshToken: string;
+}
+
+async function refreshAccessToken(): Promise<boolean> {
+  const refreshToken = useAuthStore.getState().getRefreshToken();
+  if (!refreshToken) {
+    return false;
+  }
+
+  try {
+    const response = await fetch(`${API_BASE}/auth/refresh`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ refreshToken }),
+    });
+
+    if (!response.ok) {
+      return false;
+    }
+
+    const data = (await response.json()) as TokenRefreshResponse;
+    useAuthStore.getState().setTokens(data.accessToken, data.refreshToken);
+    return true;
+  } catch {
+    return false;
+  }
+}
+
+async function handleTokenRefresh(): Promise<boolean> {
+  // If already refreshing, wait for that to complete
+  if (isRefreshing && refreshPromise) {
+    return refreshPromise;
+  }
+
+  isRefreshing = true;
+  refreshPromise = refreshAccessToken().finally(() => {
+    isRefreshing = false;
+    refreshPromise = null;
+  });
+
+  return refreshPromise;
+}
+
 async function request<T>(
   endpoint: string,
   options: RequestInit = {},
+  isRetry = false,
 ): Promise<T> {
-  const token = useAuthStore.getState().token;
+  const token = useAuthStore.getState().getAccessToken();
   const controller = new AbortController();
   const timeoutId = setTimeout(() => controller.abort(), REQUEST_TIMEOUT);
 
@@ -65,6 +115,7 @@ async function request<T>(
     const response = await fetch(`${API_BASE}${endpoint}`, {
       ...options,
       signal: controller.signal,
+      credentials: 'include', // Include cookies for CORS
       headers: {
         'Content-Type': 'application/json',
         ...(token && { Authorization: `Bearer ${token}` }),
@@ -73,7 +124,14 @@ async function request<T>(
     });
 
     if (!response.ok) {
-      if (response.status === 401) {
+      // Try to refresh token on 401, but only once
+      if (response.status === 401 && !isRetry) {
+        const refreshed = await handleTokenRefresh();
+        if (refreshed) {
+          // Retry the original request with new token
+          return request<T>(endpoint, options, true);
+        }
+        // Refresh failed, logout
         useAuthStore.getState().logout();
       }
 
