@@ -25,13 +25,13 @@ export class RefreshToken {
   @Column({ length: 36 })
   family: string;
 
-  @Column({ name: 'expires_at' })
+  @Column({ name: 'expires_at', type: 'timestamp' })
   expiresAt: Date;
 
   @Column({ default: false })
   revoked: boolean;
 
-  @Column({ name: 'revoked_at', nullable: true })
+  @Column({ name: 'revoked_at', type: 'timestamp', nullable: true })
   revokedAt: Date | null;
 
   @Column({ name: 'revoked_reason', length: 255, nullable: true })
