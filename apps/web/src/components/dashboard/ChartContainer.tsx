@@ -142,9 +142,22 @@ export function ChartContainer({
 
   // Update series when chart type or data changes
   useEffect(() => {
+    console.log('[ChartContainer] Effect triggered', {
+      hasChart: !!chartRef.current,
+      candlesLength: candles.length,
+      chartType,
+    });
+
     if (!chartRef.current || candles.length === 0) return;
 
     const chart = chartRef.current;
+
+    // Debug: log sample candle data
+    console.log('[ChartContainer] Sample candles:', {
+      first: candles[0],
+      last: candles[candles.length - 1],
+      total: candles.length,
+    });
 
     // Remove existing price series
     if (seriesRef.current) {
@@ -171,6 +184,12 @@ export function ChartContainer({
 
     // Create new price series based on type (renders on top of volume)
     if (chartType === 'candlestick') {
+      const candleData = transformToCandlestickData(candles);
+      console.log('[ChartContainer] Candlestick data:', {
+        first: candleData[0],
+        last: candleData[candleData.length - 1],
+        total: candleData.length,
+      });
       const series = chart.addSeries(CandlestickSeries, {
         ...candlestickColors,
         priceScaleId: 'right',
@@ -178,9 +197,15 @@ export function ChartContainer({
       series.priceScale().applyOptions({
         scaleMargins: { top: 0.1, bottom: 0.3 },
       });
-      series.setData(transformToCandlestickData(candles));
+      series.setData(candleData);
       seriesRef.current = series;
     } else {
+      const lineData = transformToLineData(candles);
+      console.log('[ChartContainer] Line data:', {
+        first: lineData[0],
+        last: lineData[lineData.length - 1],
+        total: lineData.length,
+      });
       const series = chart.addSeries(LineSeries, {
         ...lineColors,
         priceScaleId: 'right',
@@ -188,7 +213,7 @@ export function ChartContainer({
       series.priceScale().applyOptions({
         scaleMargins: { top: 0.1, bottom: 0.3 },
       });
-      series.setData(transformToLineData(candles));
+      series.setData(lineData);
       seriesRef.current = series;
     }
 
