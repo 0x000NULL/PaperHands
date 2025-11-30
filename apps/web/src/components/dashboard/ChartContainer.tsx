@@ -158,32 +158,39 @@ export function ChartContainer({
       volumeSeriesRef.current = null;
     }
 
-    // Configure the main price scale to use top 75% of chart
-    chart.priceScale('right').applyOptions({
-      scaleMargins: { top: 0.05, bottom: 0.25 },
-    });
-
-    // Create new series based on type
-    if (chartType === 'candlestick') {
-      const series = chart.addSeries(CandlestickSeries, candlestickColors);
-      series.setData(transformToCandlestickData(candles));
-      seriesRef.current = series;
-    } else {
-      const series = chart.addSeries(LineSeries, lineColors);
-      series.setData(transformToLineData(candles));
-      seriesRef.current = series;
-    }
-
-    // Create volume series on separate scale
+    // Create volume series FIRST on separate scale (so it renders behind price)
     const volumeSeries = chart.addSeries(HistogramSeries, {
       priceFormat: { type: 'volume' },
       priceScaleId: 'volume',
     });
-    chart.priceScale('volume').applyOptions({
+    volumeSeries.priceScale().applyOptions({
       scaleMargins: { top: 0.8, bottom: 0 },
     });
     volumeSeries.setData(transformToVolumeData(candles));
     volumeSeriesRef.current = volumeSeries;
+
+    // Create new price series based on type (renders on top of volume)
+    if (chartType === 'candlestick') {
+      const series = chart.addSeries(CandlestickSeries, {
+        ...candlestickColors,
+        priceScaleId: 'right',
+      });
+      series.priceScale().applyOptions({
+        scaleMargins: { top: 0.1, bottom: 0.3 },
+      });
+      series.setData(transformToCandlestickData(candles));
+      seriesRef.current = series;
+    } else {
+      const series = chart.addSeries(LineSeries, {
+        ...lineColors,
+        priceScaleId: 'right',
+      });
+      series.priceScale().applyOptions({
+        scaleMargins: { top: 0.1, bottom: 0.3 },
+      });
+      series.setData(transformToLineData(candles));
+      seriesRef.current = series;
+    }
 
     // Fit content
     chart.timeScale().fitContent();
