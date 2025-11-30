@@ -44,8 +44,14 @@ export class AddOnboardingSupport1732924800000 implements MigrationInterface {
     await queryRunner.query(`DROP TABLE IF EXISTS "user_preferences"`);
 
     // Remove onboarding columns from users table
-    await queryRunner.query(`ALTER TABLE "users" DROP COLUMN IF EXISTS "onboardingStep"`);
-    await queryRunner.query(`ALTER TABLE "users" DROP COLUMN IF EXISTS "onboardingCompletedAt"`);
-    await queryRunner.query(`ALTER TABLE "users" DROP COLUMN IF EXISTS "onboardingCompleted"`);
+    await queryRunner.query(
+      `ALTER TABLE "users" DROP COLUMN IF EXISTS "onboardingStep"`,
+    );
+    await queryRunner.query(
+      `ALTER TABLE "users" DROP COLUMN IF EXISTS "onboardingCompletedAt"`,
+    );
+    await queryRunner.query(
+      `ALTER TABLE "users" DROP COLUMN IF EXISTS "onboardingCompleted"`,
+    );
   }
 }

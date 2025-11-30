@@ -28,61 +28,61 @@ export class AddAdminRBAC1733000100000 implements MigrationInterface {
     // Add disabledAt column to users table
     await queryRunner.query(`
       ALTER TABLE "users"
-      ADD COLUMN IF NOT EXISTS "disabled_at" TIMESTAMP
+      ADD COLUMN IF NOT EXISTS "disabledAt" TIMESTAMP
     `);
 
     // Create admin_audits table
     await queryRunner.query(`
       CREATE TABLE IF NOT EXISTS "admin_audits" (
         "id" uuid NOT NULL DEFAULT uuid_generate_v4(),
-        "admin_id" uuid NOT NULL,
+        "adminId" uuid NOT NULL,
         "action" character varying NOT NULL,
-        "target_user_id" uuid,
-        "previous_state" jsonb,
-        "new_state" jsonb,
+        "targetUserId" uuid,
+        "previousState" jsonb,
+        "newState" jsonb,
         "reason" character varying,
-        "ip_address" character varying,
-        "user_agent" character varying,
-        "created_at" TIMESTAMP NOT NULL DEFAULT now(),
+        "ipAddress" character varying,
+        "userAgent" character varying,
+        "createdAt" TIMESTAMP NOT NULL DEFAULT now(),
         CONSTRAINT "PK_admin_audits" PRIMARY KEY ("id")
       )
     `);
 
-    // Add foreign key for admin_id
+    // Add foreign key for adminId
     await queryRunner.query(`
       DO $$ BEGIN
         ALTER TABLE "admin_audits"
         ADD CONSTRAINT "FK_admin_audits_admin"
-        FOREIGN KEY ("admin_id") REFERENCES "users"("id") ON DELETE CASCADE;
+        FOREIGN KEY ("adminId") REFERENCES "users"("id") ON DELETE CASCADE;
       EXCEPTION
         WHEN duplicate_object THEN null;
       END $$;
     `);
 
-    // Add foreign key for target_user_id
+    // Add foreign key for targetUserId
     await queryRunner.query(`
       DO $$ BEGIN
         ALTER TABLE "admin_audits"
         ADD CONSTRAINT "FK_admin_audits_target_user"
-        FOREIGN KEY ("target_user_id") REFERENCES "users"("id") ON DELETE SET NULL;
+        FOREIGN KEY ("targetUserId") REFERENCES "users"("id") ON DELETE SET NULL;
       EXCEPTION
         WHEN duplicate_object THEN null;
       END $$;
     `);
 
-    // Create index on admin_id for faster lookups
+    // Create index on adminId for faster lookups
     await queryRunner.query(`
-      CREATE INDEX IF NOT EXISTS "IDX_admin_audits_admin_id" ON "admin_audits" ("admin_id")
+      CREATE INDEX IF NOT EXISTS "IDX_admin_audits_adminId" ON "admin_audits" ("adminId")
     `);
 
-    // Create index on target_user_id
+    // Create index on targetUserId
     await queryRunner.query(`
-      CREATE INDEX IF NOT EXISTS "IDX_admin_audits_target_user_id" ON "admin_audits" ("target_user_id")
+      CREATE INDEX IF NOT EXISTS "IDX_admin_audits_targetUserId" ON "admin_audits" ("targetUserId")
     `);
 
-    // Create index on created_at for time-based queries
+    // Create index on createdAt for time-based queries
     await queryRunner.query(`
-      CREATE INDEX IF NOT EXISTS "IDX_admin_audits_created_at" ON "admin_audits" ("created_at")
+      CREATE INDEX IF NOT EXISTS "IDX_admin_audits_createdAt" ON "admin_audits" ("createdAt")
     `);
   }
 
@@ -91,7 +91,7 @@ export class AddAdminRBAC1733000100000 implements MigrationInterface {
     await queryRunner.query(`DROP TABLE IF EXISTS "admin_audits"`);
 
     // Remove columns from users table
-    await queryRunner.query(`ALTER TABLE "users" DROP COLUMN IF EXISTS "disabled_at"`);
+    await queryRunner.query(`ALTER TABLE "users" DROP COLUMN IF EXISTS "disabledAt"`);
     await queryRunner.query(`ALTER TABLE "users" DROP COLUMN IF EXISTS "disabled"`);
     await queryRunner.query(`ALTER TABLE "users" DROP COLUMN IF EXISTS "role"`);
 
