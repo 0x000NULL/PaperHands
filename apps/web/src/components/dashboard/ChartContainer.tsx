@@ -152,6 +152,17 @@ export function ChartContainer({
       seriesRef.current = null;
     }
 
+    // Remove existing volume series to recreate with proper order
+    if (volumeSeriesRef.current) {
+      chart.removeSeries(volumeSeriesRef.current);
+      volumeSeriesRef.current = null;
+    }
+
+    // Configure the main price scale to use top 75% of chart
+    chart.priceScale('right').applyOptions({
+      scaleMargins: { top: 0.05, bottom: 0.25 },
+    });
+
     // Create new series based on type
     if (chartType === 'candlestick') {
       const series = chart.addSeries(CandlestickSeries, candlestickColors);
@@ -163,20 +174,16 @@ export function ChartContainer({
       seriesRef.current = series;
     }
 
-    // Update volume series
-    if (!volumeSeriesRef.current) {
-      const volumeSeries = chart.addSeries(HistogramSeries, {
-        priceFormat: { type: 'volume' },
-        priceScaleId: 'volume',
-      });
-      chart.priceScale('volume').applyOptions({
-        scaleMargins: { top: 0.8, bottom: 0 },
-      });
-      volumeSeriesRef.current = volumeSeries;
-    }
-    if (volumeSeriesRef.current) {
-      volumeSeriesRef.current.setData(transformToVolumeData(candles));
-    }
+    // Create volume series on separate scale
+    const volumeSeries = chart.addSeries(HistogramSeries, {
+      priceFormat: { type: 'volume' },
+      priceScaleId: 'volume',
+    });
+    chart.priceScale('volume').applyOptions({
+      scaleMargins: { top: 0.8, bottom: 0 },
+    });
+    volumeSeries.setData(transformToVolumeData(candles));
+    volumeSeriesRef.current = volumeSeries;
 
     // Fit content
     chart.timeScale().fitContent();
