@@ -15,7 +15,6 @@ import {
   type UTCTimestamp,
   type SeriesType,
 } from 'lightweight-charts';
-import { theme } from '../../theme/constants';
 import type { Candle } from '../../types';
 
 export type ChartType = 'candlestick' | 'line';
@@ -26,49 +25,61 @@ interface ChartContainerProps {
   height?: number;
 }
 
+// Chart colors - must use actual hex values, not CSS variables
+// (lightweight-charts can't interpret CSS variables)
+const CHART_COLORS = {
+  positive: '#00FF88',      // green for up
+  negative: '#FF4757',      // red for down
+  accent: '#00D4FF',        // blue accent
+  bgSecondary: '#1a1a2e',   // dark background
+  textSecondary: '#888888', // muted text
+  border: '#2d2d44',        // border color
+  textTertiary: '#666666',  // crosshair
+};
+
 const chartThemeConfig = {
   layout: {
-    background: { type: ColorType.Solid, color: theme.colors.bgSecondary },
-    textColor: theme.colors.textSecondary,
+    background: { type: ColorType.Solid, color: CHART_COLORS.bgSecondary },
+    textColor: CHART_COLORS.textSecondary,
   },
   grid: {
-    vertLines: { color: theme.colors.border },
-    horzLines: { color: theme.colors.border },
+    vertLines: { color: CHART_COLORS.border },
+    horzLines: { color: CHART_COLORS.border },
   },
   crosshair: {
     mode: CrosshairMode.Normal,
     vertLine: {
-      color: theme.colors.textTertiary,
+      color: CHART_COLORS.textTertiary,
       width: 1 as const,
       style: LineStyle.Dashed,
     },
     horzLine: {
-      color: theme.colors.textTertiary,
+      color: CHART_COLORS.textTertiary,
       width: 1 as const,
       style: LineStyle.Dashed,
     },
   },
   rightPriceScale: {
-    borderColor: theme.colors.border,
+    borderColor: CHART_COLORS.border,
   },
   timeScale: {
-    borderColor: theme.colors.border,
+    borderColor: CHART_COLORS.border,
     timeVisible: true,
     secondsVisible: false,
   },
 };
 
 const candlestickColors = {
-  upColor: theme.colors.positive,
-  downColor: theme.colors.negative,
-  borderUpColor: theme.colors.positive,
-  borderDownColor: theme.colors.negative,
-  wickUpColor: theme.colors.positive,
-  wickDownColor: theme.colors.negative,
+  upColor: CHART_COLORS.positive,
+  downColor: CHART_COLORS.negative,
+  borderUpColor: CHART_COLORS.positive,
+  borderDownColor: CHART_COLORS.negative,
+  wickUpColor: CHART_COLORS.positive,
+  wickDownColor: CHART_COLORS.negative,
 };
 
 const lineColors = {
-  color: theme.colors.accent,
+  color: CHART_COLORS.accent,
   lineWidth: 2 as const,
 };
 
@@ -204,7 +215,7 @@ export function ChartContainer({
       style={{
         width: '100%',
         height,
-        backgroundColor: theme.colors.bgSecondary,
+        backgroundColor: CHART_COLORS.bgSecondary,
       }}
     />
   );
