@@ -10,6 +10,7 @@ export interface SettingsResponse {
     defaultOrderType: OrderType;
     defaultTimeInForce: TimeInForce;
     defaultCostBasisMethod: CostBasisMethod;
+    defaultBenchmarkSymbol: string;
   };
   display: {
     theme: 'light' | 'dark';

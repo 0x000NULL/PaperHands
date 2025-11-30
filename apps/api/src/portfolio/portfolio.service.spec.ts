@@ -23,7 +23,10 @@ describe('PortfolioService', () => {
     findOne: jest.Mock;
   };
   let mockUserRepository: { findOne: jest.Mock };
-  let mockFinnhubService: { getQuotes: jest.Mock };
+  let mockFinnhubService: {
+    getQuotes: jest.Mock;
+    getStockMetricsBatch: jest.Mock;
+  };
   let mockTradierService: { getOptionQuotes: jest.Mock };
 
   const mockUser: Partial<User> = {
@@ -85,6 +88,7 @@ describe('PortfolioService', () => {
 
     mockFinnhubService = {
       getQuotes: jest.fn(),
+      getStockMetricsBatch: jest.fn().mockResolvedValue(new Map()),
     };
 
     mockTradierService = {

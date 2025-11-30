@@ -5,9 +5,12 @@ import {
   UseGuards,
   DefaultValuePipe,
 } from '@nestjs/common';
+import { InjectRepository } from '@nestjs/typeorm';
+import { Repository } from 'typeorm';
 import { JwtAuthGuard } from '../common/guards/jwt-auth.guard';
 import { CurrentUser } from '../common/decorators/current-user.decorator';
 import { User } from '../users/entities/user.entity';
+import { UserPreferences } from '../users/entities/user-preferences.entity';
 import { AnalyticsService } from './analytics.service';
 import type { AnalyticsPeriod } from './analytics.service';
 import { TaxLotService } from '../portfolio/services/tax-lot.service';
@@ -27,6 +30,8 @@ export class AnalyticsController {
     private readonly taxLotService: TaxLotService,
     private readonly optionTaxService: OptionTaxService,
     private readonly dividendService: DividendService,
+    @InjectRepository(UserPreferences)
+    private readonly userPreferencesRepository: Repository<UserPreferences>,
   ) {}
 
   @Get('performance')
@@ -78,14 +83,28 @@ export class AnalyticsController {
   @Get('benchmark')
   async getBenchmarkComparison(
     @CurrentUser() user: User,
-    @Query('symbol', new DefaultValuePipe('SPY')) symbol: string,
-    @Query('period', new DefaultValuePipe('1M')) period: AnalyticsPeriod,
+    @Query('symbol') symbol?: string,
+    @Query('period', new DefaultValuePipe('1M')) period?: AnalyticsPeriod,
   ) {
+    // If no symbol provided, use user's default benchmark preference
+    let benchmarkSymbol = symbol?.toUpperCase();
+    if (!benchmarkSymbol) {
+      const prefs = await this.userPreferencesRepository.findOne({
+        where: { userId: user.id },
+      });
+      benchmarkSymbol = prefs?.defaultBenchmarkSymbol || 'SPY';
+    }
+
     return this.analyticsService.getBenchmarkComparison(
       user.id,
-      symbol.toUpperCase(),
-      period,
+      benchmarkSymbol,
+      period || '1M',
     );
+  }
+
+  @Get('sector-allocation')
+  async getSectorAllocation(@CurrentUser() user: User) {
+    return this.analyticsService.getSectorAllocation(user.id);
   }
 
   @Get('tax-lots')

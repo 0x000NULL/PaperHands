@@ -42,6 +42,7 @@ export class SettingsService {
         defaultOrderType: preferences.defaultOrderType,
         defaultTimeInForce: preferences.defaultTimeInForce,
         defaultCostBasisMethod: preferences.defaultCostBasisMethod,
+        defaultBenchmarkSymbol: preferences.defaultBenchmarkSymbol,
       },
       display: {
         theme: preferences.theme,
@@ -64,6 +65,9 @@ export class SettingsService {
     }
     if (dto.defaultCostBasisMethod !== undefined) {
       preferences.defaultCostBasisMethod = dto.defaultCostBasisMethod;
+    }
+    if (dto.defaultBenchmarkSymbol !== undefined) {
+      preferences.defaultBenchmarkSymbol = dto.defaultBenchmarkSymbol;
     }
 
     await this.preferencesRepository.save(preferences);

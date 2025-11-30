@@ -46,6 +46,14 @@ export interface AllocationItem {
   sector?: string;
 }
 
+export interface SectorAllocation {
+  sector: string;
+  marketValue: number;
+  allocation: number; // percentage of portfolio
+  positionCount: number;
+  symbols: string[];
+}
+
 export interface GainsSummary {
   realizedGain: number;
   unrealizedGain: number;
@@ -174,7 +182,7 @@ export class AnalyticsService {
   }
 
   /**
-   * Get allocation breakdown
+   * Get allocation breakdown with sector data
    */
   async getAllocationBreakdown(userId: string): Promise<AllocationItem[]> {
     const positions = await this.positionRepository.find({
@@ -185,11 +193,12 @@ export class AnalyticsService {
       return [];
     }
 
-    // Get current prices
+    // Get current prices and company profiles (for sector data)
     const symbols = positions.map((p) => p.symbol);
-    const quotes = await Promise.all(
-      symbols.map((s) => this.finnhubService.getQuote(s)),
-    );
+    const [quotes, profiles] = await Promise.all([
+      Promise.all(symbols.map((s) => this.finnhubService.getQuote(s))),
+      this.finnhubService.getCompanyProfiles(symbols),
+    ]);
 
     const allocations: AllocationItem[] = [];
     let totalMarketValue = 0;
@@ -197,6 +206,7 @@ export class AnalyticsService {
     for (let i = 0; i < positions.length; i++) {
       const position = positions[i];
       const quote = quotes[i];
+      const profile = profiles.get(position.symbol);
       const currentPrice = quote?.last || Number(position.avgCostBasis);
       const quantity = Number(position.quantity);
       const costBasis = quantity * Number(position.avgCostBasis);
@@ -214,7 +224,7 @@ export class AnalyticsService {
         unrealizedGainPercent:
           costBasis > 0 ? (unrealizedGain / costBasis) * 100 : 0,
         allocation: 0, // Will calculate after
-        sector: undefined, // Could fetch from external API
+        sector: profile?.sector || 'Unknown',
       });
     }
 
@@ -226,6 +236,58 @@ export class AnalyticsService {
 
     // Sort by allocation descending
     return allocations.sort((a, b) => b.allocation - a.allocation);
+  }
+
+  /**
+   * Get allocation breakdown by sector
+   */
+  async getSectorAllocation(userId: string): Promise<SectorAllocation[]> {
+    const allocations = await this.getAllocationBreakdown(userId);
+
+    if (allocations.length === 0) {
+      return [];
+    }
+
+    // Group by sector
+    const sectorMap = new Map<
+      string,
+      { marketValue: number; symbols: string[] }
+    >();
+    let totalMarketValue = 0;
+
+    for (const item of allocations) {
+      const sector = item.sector || 'Unknown';
+      totalMarketValue += item.marketValue;
+
+      const existing = sectorMap.get(sector);
+      if (existing) {
+        existing.marketValue += item.marketValue;
+        existing.symbols.push(item.symbol);
+      } else {
+        sectorMap.set(sector, {
+          marketValue: item.marketValue,
+          symbols: [item.symbol],
+        });
+      }
+    }
+
+    // Convert to array with allocation percentages
+    const sectorAllocations: SectorAllocation[] = [];
+    for (const [sector, data] of sectorMap) {
+      sectorAllocations.push({
+        sector,
+        marketValue: data.marketValue,
+        allocation:
+          totalMarketValue > 0
+            ? (data.marketValue / totalMarketValue) * 100
+            : 0,
+        positionCount: data.symbols.length,
+        symbols: data.symbols,
+      });
+    }
+
+    // Sort by allocation descending
+    return sectorAllocations.sort((a, b) => b.allocation - a.allocation);
   }
 
   /**

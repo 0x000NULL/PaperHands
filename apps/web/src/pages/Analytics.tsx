@@ -4,7 +4,13 @@ import { Layout } from '../components/Layout';
 import { Widget } from '../components/dashboard/Widget';
 import { theme } from '../theme/constants';
 import { api } from '../api/client';
-import type { OpenTaxLot, LotSale, Dividend, OptionClosure, CombinedRealizedGainsSummary } from '../api/client';
+import type { OpenTaxLot, LotSale, Dividend, OptionClosure, CombinedRealizedGainsSummary, BenchmarkSymbol } from '../api/client';
+import {
+  BenchmarkSelector,
+  AllocationPieChart,
+  AllocationViewTabs,
+  type AllocationViewType,
+} from '../components/analytics';
 
 type AnalyticsPeriod = '1W' | '1M' | '3M' | 'YTD' | '1Y' | 'ALL';
 type TabType = 'lots' | 'history' | 'dividends' | 'options';
@@ -267,6 +273,18 @@ const getValueColor = (value: number): string => {
 export function Analytics() {
   const [period, setPeriod] = useState<AnalyticsPeriod>('1M');
   const [activeTab, setActiveTab] = useState<TabType>('lots');
+  const [allocationView, setAllocationView] = useState<AllocationViewType>('position');
+  const [benchmarkSymbol, setBenchmarkSymbol] = useState<BenchmarkSymbol>('SPY');
+
+  // Fetch settings to get default benchmark
+  const { data: settings } = useQuery({
+    queryKey: ['settings'],
+    queryFn: () => api.getSettings(),
+    staleTime: 300000,
+  });
+
+  // Update benchmark from settings when loaded
+  const effectiveBenchmark = benchmarkSymbol || (settings?.trading?.defaultBenchmarkSymbol as BenchmarkSymbol) || 'SPY';
 
   const { data: performance, isLoading: loadingPerformance } = useQuery({
     queryKey: ['analytics', 'performance', period],
@@ -284,6 +302,13 @@ export function Analytics() {
     queryKey: ['analytics', 'allocation'],
     queryFn: () => api.getAllocation(),
     staleTime: 30000,
+  });
+
+  const { data: sectorAllocation, isLoading: loadingSector } = useQuery({
+    queryKey: ['analytics', 'sector-allocation'],
+    queryFn: () => api.getSectorAllocation(),
+    staleTime: 30000,
+    enabled: allocationView === 'sector',
   });
 
   const { data: gains, isLoading: loadingGains } = useQuery({
@@ -388,19 +413,26 @@ export function Analytics() {
             <Widget
               title="Performance"
               headerAction={
-                <div style={styles.periodSelector}>
-                  {periods.map((p) => (
-                    <button
-                      key={p}
-                      style={{
-                        ...styles.periodButton,
-                        ...(period === p ? styles.periodButtonActive : {}),
-                      }}
-                      onClick={() => setPeriod(p)}
+                <div style={{ display: 'flex', alignItems: 'center', gap: theme.spacing.md }}>
+                  <div style={styles.periodSelector}>
+                    {periods.map((p) => (
+                      <button
+                        key={p}
+                        style={{
+                          ...styles.periodButton,
+                          ...(period === p ? styles.periodButtonActive : {}),
+                        }}
+                        onClick={() => setPeriod(p)}
                     >
                       {p}
                     </button>
                   ))}
+                  </div>
+                  <BenchmarkSelector
+                    value={effectiveBenchmark}
+                    onChange={setBenchmarkSymbol}
+                    onSaveDefault={true}
+                  />
                 </div>
               }
             >
@@ -488,26 +520,28 @@ export function Analytics() {
           <div style={styles.rightColumn}>
             {/* Allocation */}
             <Widget title="Allocation">
-              {loadingAllocation ? (
-                <div style={styles.loading}>Loading...</div>
-              ) : allocation && allocation.length > 0 ? (
-                <div style={styles.allocationList}>
-                  {allocation.slice(0, 5).map((item) => (
-                    <div key={item.symbol} style={styles.allocationItem}>
-                      <span style={styles.allocationSymbol}>{item.symbol}</span>
-                      <span
-                        style={{
-                          ...styles.allocationPercent,
-                          color: getValueColor(item.unrealizedGain),
-                        }}
-                      >
-                        {item.allocation.toFixed(1)}%
-                      </span>
-                    </div>
-                  ))}
-                </div>
+              <AllocationViewTabs
+                value={allocationView}
+                onChange={setAllocationView}
+              />
+              {allocationView === 'position' ? (
+                loadingAllocation ? (
+                  <div style={styles.loading}>Loading...</div>
+                ) : (
+                  <AllocationPieChart
+                    data={allocation || []}
+                    type="position"
+                  />
+                )
               ) : (
-                <div style={styles.noData}>No positions</div>
+                loadingSector ? (
+                  <div style={styles.loading}>Loading...</div>
+                ) : (
+                  <AllocationPieChart
+                    data={sectorAllocation || []}
+                    type="sector"
+                  />
+                )
               )}
             </Widget>
 

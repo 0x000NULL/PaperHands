@@ -15,6 +15,8 @@ export interface PortfolioPosition {
   marketValue: number;
   gainLoss: number;
   gainLossPercent: number;
+  dividendYield: number | null;
+  annualDividendIncome: number | null;
 }
 
 export interface Portfolio {
@@ -79,14 +81,18 @@ export class PortfolioService {
       };
     }
 
-    // Get current quotes for all positions
+    // Get current quotes and metrics for all positions
     const symbols = positions.map((p) => p.symbol);
-    const quotes = await this.finnhubService.getQuotes(symbols);
+    const [quotes, metrics] = await Promise.all([
+      this.finnhubService.getQuotes(symbols),
+      this.finnhubService.getStockMetricsBatch(symbols),
+    ]);
     const quoteMap = new Map(quotes.map((q) => [q.symbol, q]));
 
     // Calculate portfolio positions with current values
     const portfolioPositions: PortfolioPosition[] = positions.map((p) => {
       const quote = quoteMap.get(p.symbol);
+      const stockMetrics = metrics.get(p.symbol);
       const currentPrice = quote?.last ?? 0;
       const quantity = Number(p.quantity);
       const avgCostBasis = Number(p.avgCostBasis);
@@ -94,6 +100,11 @@ export class PortfolioService {
       const costBasis = avgCostBasis * quantity;
       const gainLoss = marketValue - costBasis;
       const gainLossPercent = costBasis > 0 ? (gainLoss / costBasis) * 100 : 0;
+
+      // Calculate annual dividend income based on dividend per share
+      const annualDividendIncome = stockMetrics?.dividendPerShare
+        ? stockMetrics.dividendPerShare * quantity
+        : null;
 
       return {
         symbol: p.symbol,
@@ -103,6 +114,8 @@ export class PortfolioService {
         marketValue,
         gainLoss,
         gainLossPercent,
+        dividendYield: stockMetrics?.dividendYield ?? null,
+        annualDividendIncome,
       };
     });
 

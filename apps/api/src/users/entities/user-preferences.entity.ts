@@ -50,6 +50,12 @@ export class UserPreferences {
   })
   theme: 'light' | 'dark';
 
+  @Column({
+    type: 'varchar',
+    default: 'SPY',
+  })
+  defaultBenchmarkSymbol: string;
+
   @CreateDateColumn()
   createdAt: Date;
 

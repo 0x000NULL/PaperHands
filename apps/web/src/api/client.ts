@@ -290,10 +290,17 @@ export const api = {
       `/analytics/realized-gains${year ? `?year=${year}` : ''}`,
     ),
 
-  getBenchmarkComparison: (symbol: string = 'SPY', period: string = '1M') =>
-    request<BenchmarkComparison>(
-      `/analytics/benchmark?symbol=${symbol}&period=${period}`,
-    ),
+  getBenchmarkComparison: (symbol?: string, period: string = '1M') => {
+    const params = new URLSearchParams();
+    if (symbol) params.set('symbol', symbol);
+    params.set('period', period);
+    return request<BenchmarkComparison>(
+      `/analytics/benchmark?${params.toString()}`,
+    );
+  },
+
+  getSectorAllocation: () =>
+    request<SectorAllocation[]>('/analytics/sector-allocation'),
 
   getTaxLots: (symbol?: string) =>
     request<TaxLot[]>(`/analytics/tax-lots${symbol ? `?symbol=${symbol}` : ''}`),
@@ -539,6 +546,17 @@ export interface AllocationItem {
   sector?: string;
 }
 
+export interface SectorAllocation {
+  sector: string;
+  marketValue: number;
+  allocation: number;
+  positionCount: number;
+  symbols: string[];
+}
+
+export const VALID_BENCHMARKS = ['SPY', 'QQQ', 'DIA', 'IWM', 'VTI'] as const;
+export type BenchmarkSymbol = (typeof VALID_BENCHMARKS)[number];
+
 export interface GainsSummary {
   realizedGain: number;
   unrealizedGain: number;
@@ -678,6 +696,7 @@ export interface SettingsResponse {
     defaultOrderType: string;
     defaultTimeInForce: string;
     defaultCostBasisMethod: string;
+    defaultBenchmarkSymbol: string;
   };
   display: {
     theme: 'light' | 'dark';
@@ -689,6 +708,7 @@ export interface UpdateTradingPreferencesRequest {
   defaultOrderType?: string;
   defaultTimeInForce?: string;
   defaultCostBasisMethod?: string;
+  defaultBenchmarkSymbol?: BenchmarkSymbol;
 }
 
 export interface UpdateThemeRequest {

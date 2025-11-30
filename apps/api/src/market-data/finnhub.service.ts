@@ -42,7 +42,37 @@ interface FinnhubQuoteResponse {
 interface FinnhubProfileResponse {
   name: string;
   ticker: string;
-  // ... other fields we don't need
+  finnhubIndustry: string;
+  country: string;
+  exchange: string;
+  marketCapitalization: number;
+  logo: string;
+  weburl: string;
+}
+
+interface FinnhubMetricsResponse {
+  metric: {
+    dividendYieldIndicatedAnnual?: number;
+    dividendPerShareAnnual?: number;
+    dividendPayoutRatioTTM?: number;
+    [key: string]: number | undefined;
+  };
+}
+
+export interface CompanyProfile {
+  sector: string;
+  name: string;
+  country: string;
+  exchange: string;
+  marketCap: number;
+  logo: string;
+  weburl: string;
+}
+
+export interface StockMetrics {
+  dividendYield: number | null;
+  dividendPerShare: number | null;
+  dividendPayoutRatio: number | null;
 }
 
 interface FinnhubCandleResponse {
@@ -318,5 +348,157 @@ export class FinnhubService {
     await this.cacheManager.set(cacheKey, result, config.cacheTtlMs);
 
     return result;
+  }
+
+  /**
+   * Get full company profile including sector/industry
+   * Cache: 24 hours (sector rarely changes)
+   */
+  async getCompanyProfile(symbol: string): Promise<CompanyProfile | null> {
+    const upperSymbol = symbol.toUpperCase();
+    const cacheKey = `company:profile:${upperSymbol}`;
+
+    // Check cache first (24-hour TTL)
+    const cached = await this.cacheManager.get<CompanyProfile>(cacheKey);
+    if (cached) {
+      return cached;
+    }
+
+    try {
+      const response = await this.fetchWithRetry(
+        `${this.baseUrl}/stock/profile2?symbol=${upperSymbol}&token=${this.apiKey}`,
+        {
+          headers: { Accept: 'application/json' },
+        },
+      );
+
+      if (!response.ok) {
+        return null;
+      }
+
+      const data = (await response.json()) as FinnhubProfileResponse;
+
+      // Empty response means symbol not found
+      if (!data.name && !data.finnhubIndustry) {
+        return null;
+      }
+
+      const profile: CompanyProfile = {
+        sector: data.finnhubIndustry || 'Unknown',
+        name: data.name || upperSymbol,
+        country: data.country || '',
+        exchange: data.exchange || '',
+        marketCap: data.marketCapitalization || 0,
+        logo: data.logo || '',
+        weburl: data.weburl || '',
+      };
+
+      // Cache for 24 hours
+      await this.cacheManager.set(cacheKey, profile, 86_400_000);
+
+      return profile;
+    } catch {
+      return null;
+    }
+  }
+
+  /**
+   * Batch fetch company profiles for multiple symbols
+   */
+  async getCompanyProfiles(
+    symbols: string[],
+  ): Promise<Map<string, CompanyProfile>> {
+    const results = new Map<string, CompanyProfile>();
+
+    // Fetch in parallel
+    const profiles = await Promise.all(
+      symbols.map(async (symbol) => {
+        const profile = await this.getCompanyProfile(symbol);
+        return { symbol: symbol.toUpperCase(), profile };
+      }),
+    );
+
+    for (const { symbol, profile } of profiles) {
+      if (profile) {
+        results.set(symbol, profile);
+      }
+    }
+
+    return results;
+  }
+
+  /**
+   * Get stock metrics including dividend yield
+   * Cache: 1 hour (dividend data updates quarterly)
+   */
+  async getStockMetrics(symbol: string): Promise<StockMetrics> {
+    const upperSymbol = symbol.toUpperCase();
+    const cacheKey = `metrics:${upperSymbol}`;
+
+    // Check cache first (1-hour TTL)
+    const cached = await this.cacheManager.get<StockMetrics>(cacheKey);
+    if (cached) {
+      return cached;
+    }
+
+    try {
+      const response = await this.fetchWithRetry(
+        `${this.baseUrl}/stock/metric?symbol=${upperSymbol}&metric=all&token=${this.apiKey}`,
+        {
+          headers: { Accept: 'application/json' },
+        },
+      );
+
+      if (!response.ok) {
+        const emptyMetrics: StockMetrics = {
+          dividendYield: null,
+          dividendPerShare: null,
+          dividendPayoutRatio: null,
+        };
+        return emptyMetrics;
+      }
+
+      const data = (await response.json()) as FinnhubMetricsResponse;
+
+      const metrics: StockMetrics = {
+        dividendYield: data.metric?.dividendYieldIndicatedAnnual ?? null,
+        dividendPerShare: data.metric?.dividendPerShareAnnual ?? null,
+        dividendPayoutRatio: data.metric?.dividendPayoutRatioTTM ?? null,
+      };
+
+      // Cache for 1 hour
+      await this.cacheManager.set(cacheKey, metrics, 3_600_000);
+
+      return metrics;
+    } catch {
+      return {
+        dividendYield: null,
+        dividendPerShare: null,
+        dividendPayoutRatio: null,
+      };
+    }
+  }
+
+  /**
+   * Batch fetch stock metrics for multiple symbols
+   */
+  async getStockMetricsBatch(
+    symbols: string[],
+  ): Promise<Map<string, StockMetrics>> {
+    const results = new Map<string, StockMetrics>();
+
+    // Fetch in parallel
+    const metricsResults = await Promise.all(
+      symbols.map(async (symbol) => {
+        const metrics = await this.getStockMetrics(symbol);
+        return { symbol: symbol.toUpperCase(), metrics };
+      }),
+    );
+
+    for (const { symbol, metrics } of metricsResults) {
+      results.set(symbol, metrics);
+    }
+
+    return results;
   }
 }
