@@ -273,7 +273,7 @@ export function OrderMonitoring() {
         <tbody>
           {orders.map((order) => (
             <tr key={order.id}>
-              <td style={styles.td}>{order.user.email}</td>
+              <td style={styles.td}>{order.user?.email ?? 'Unknown'}</td>
               <td style={styles.td}>
                 {order.optionSymbol ?? order.symbol}
               </td>
