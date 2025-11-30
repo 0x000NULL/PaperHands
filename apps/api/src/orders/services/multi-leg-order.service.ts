@@ -317,7 +317,7 @@ export class MultiLegOrderService {
           optionSymbol: l.optionSymbol,
           side: l.side,
           quantity: l.quantity,
-          fillPrice: Number(l.fillPrice),
+          fillPrice: Number(l.filledPrice),
         })),
         netDebitCredit,
         maxProfit,

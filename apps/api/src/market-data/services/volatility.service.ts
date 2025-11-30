@@ -1,6 +1,6 @@
 import { Injectable, Inject, Logger } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { Repository, MoreThanOrEqual, LessThanOrEqual, Between } from 'typeorm';
+import { Repository, MoreThanOrEqual, LessThanOrEqual, Between, FindOperator } from 'typeorm';
 import { CACHE_MANAGER } from '@nestjs/cache-manager';
 import type { Cache } from 'cache-manager';
 import { VolatilitySnapshot } from '../entities/volatility-snapshot.entity';
@@ -449,7 +449,7 @@ export class VolatilityService {
 
     const whereClause: {
       symbol: string;
-      snapshotDate?: ReturnType<typeof Between>;
+      snapshotDate?: FindOperator<Date>;
     } = {
       symbol: upperSymbol,
     };

@@ -10,8 +10,8 @@ import {
   Index,
 } from 'typeorm';
 import { User } from '../../users/entities/user.entity';
-import { OrderStatus, OrderType } from '../enums/order.enums';
-import { MultiLegStrategyType } from '../enums/multi-leg.enums';
+import { OrderType } from '../enums/order.enums';
+import { MultiLegStrategyType, MultiLegStatus } from '../enums/multi-leg.enums';
 import { MultiLegOrderLeg } from './multi-leg-order-leg.entity';
 
 @Entity('multi_leg_orders')
@@ -57,9 +57,9 @@ export class MultiLegOrder {
   @Column({
     type: 'varchar',
     length: 20,
-    default: OrderStatus.PENDING,
+    default: MultiLegStatus.PENDING,
   })
-  status: OrderStatus;
+  status: MultiLegStatus;
 
   @Column({ type: 'int' })
   legCount: number;

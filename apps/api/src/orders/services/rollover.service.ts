@@ -399,7 +399,7 @@ export class RolloverService {
         status: RolloverStatus.FILLED,
         closingOrderId: savedClosingOrder.id,
         openingOrderId: savedOpeningOrder.id,
-        filledAt: rollTime,
+        executedAt: rollTime,
       });
 
       await queryRunner.commitTransaction();

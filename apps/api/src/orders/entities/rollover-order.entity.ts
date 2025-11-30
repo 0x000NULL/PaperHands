@@ -8,7 +8,8 @@ import {
   Index,
 } from 'typeorm';
 import { User } from '../../users/entities/user.entity';
-import { OrderStatus, OptionType } from '../enums/order.enums';
+import { OptionType } from '../enums/order.enums';
+import { RolloverStatus } from '../enums/multi-leg.enums';
 
 @Entity('rollover_orders')
 @Index(['userId', 'createdAt'])
@@ -86,9 +87,9 @@ export class RolloverOrder {
   @Column({
     type: 'varchar',
     length: 20,
-    default: OrderStatus.PENDING,
+    default: RolloverStatus.PENDING,
   })
-  status: OrderStatus;
+  status: RolloverStatus;
 
   // Net debit/credit for the rollover
   // Positive = net debit (paid more), Negative = net credit (received)

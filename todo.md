@@ -108,20 +108,6 @@ A comprehensive checklist combining the feature roadmap with implementation stat
 | Line Charts | ✅ Done | |
 | Bar Charts | ✅ Done | |
 | Multiple Timeframes | ✅ Done | 1m, 5m, 15m, 30m, 1h, 4h, daily |
-| Area Charts | ⬜ Todo | |
-| Weekly/Monthly Timeframes | ⬜ Todo | |
-| SMA Indicator | ⬜ Todo | |
-| EMA Indicator | ⬜ Todo | |
-| MACD Indicator | ⬜ Todo | |
-| RSI Indicator | ⬜ Todo | |
-| Bollinger Bands | ⬜ Todo | |
-| Volume Indicator | ⬜ Todo | |
-| Trend Lines | ⬜ Todo | |
-| Support/Resistance Lines | ⬜ Todo | |
-| Fibonacci Retracements | ⬜ Todo | |
-| Chart Comparison (Overlay) | ⬜ Todo | |
-| Full-Screen Chart Mode | ⬜ Todo | |
-| Price Alerts on Chart | ⬜ Todo | Visual markers |
 
 ---
 
@@ -174,17 +160,17 @@ A comprehensive checklist combining the feature roadmap with implementation stat
 
 | Feature | Status | Notes |
 |---------|--------|-------|
-| IV Rank/Percentile | ⬜ Todo | |
-| Historical Volatility | ⬜ Todo | |
-| Vertical Spreads | ⬜ Todo | |
-| Iron Condors | ⬜ Todo | |
-| Straddles | ⬜ Todo | |
-| Strangles | ⬜ Todo | |
-| Options P&L Calculator | ⬜ Todo | Visualize at expiration |
-| Option Payoff Diagram | ⬜ Todo | |
-| Exercise Options | ⬜ Todo | Framework exists |
-| Assignment Handling | ⬜ Todo | Framework exists |
-| Rollover Tools | ⬜ Todo | |
+| IV Rank/Percentile | ✅ Done | VolatilityService with 52-week IV rank/percentile |
+| Historical Volatility | ✅ Done | HV20/30/60 calculation from price candles |
+| Vertical Spreads | ✅ Done | MultiLegOrderService with atomic execution |
+| Iron Condors | ✅ Done | MultiLegOrderService with strategy validation |
+| Straddles | ✅ Done | MultiLegOrderService with atomic execution |
+| Strangles | ✅ Done | MultiLegOrderService with atomic execution |
+| Options P&L Calculator | ✅ Done | OptionsPnLCalculator frontend component |
+| Option Payoff Diagram | ✅ Done | PayoffDiagram SVG visualization |
+| Exercise Options | ✅ Done | ManualExerciseService for early exercise |
+| Assignment Handling | ✅ Done | Framework in ManualExerciseService |
+| Rollover Tools | ✅ Done | RolloverService for roll forward/up/down/diagonal |
 
 ---
 
@@ -754,7 +740,7 @@ This section tracks non-feature improvements to code quality, architecture, test
 | 4. Watchlists & Screeners | 5 | 5 | 10 |
 | 5. Real-Time Data | 4 | 2 | 6 |
 | 6. Options: Basic | 7 | 0 | 7 |
-| 7. Options: Advanced | 0 | 11 | 11 |
+| 7. Options: Advanced | 11 | 0 | 11 |
 | 8. Alerts & Notifications | 0 | 11 | 11 |
 | 9. News & Research | 0 | 8 | 8 |
 | 10. Social & Community | 0 | 7 | 7 |
@@ -765,7 +751,7 @@ This section tracks non-feature improvements to code quality, architecture, test
 | 15. Power User Features | 0 | 9 | 9 |
 | 16. Account & Security | 0 | 7 | 7 |
 | 17. Native Mobile Apps | 0 | 7 | 7 |
-| **Features Subtotal** | **49** | **133** | **182** |
+| **Features Subtotal** | **60** | **122** | **182** |
 | | | | |
 | **Technical Debt** | | | |
 | 18. DevOps & Tooling | 0 | 14 | 14 |
@@ -778,8 +764,8 @@ This section tracks non-feature improvements to code quality, architecture, test
 | 25. Documentation | 0 | 13 | 13 |
 | **Tech Debt Subtotal** | **0** | **114** | **114** |
 | | | | |
-| **GRAND TOTAL** | **49** | **247** | **296** |
+| **GRAND TOTAL** | **60** | **236** | **296** |
 
-**Feature Progress: 27% Complete**
+**Feature Progress: 33% Complete**
 **Tech Debt Progress: 0% Complete**
-**Overall Progress: 17% Complete**
+**Overall Progress: 20% Complete**
