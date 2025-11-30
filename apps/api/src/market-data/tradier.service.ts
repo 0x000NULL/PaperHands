@@ -101,7 +101,7 @@ interface PeriodConfig {
 const PERIOD_CONFIG: Record<string, PeriodConfig> = {
   '1D': {
     interval: '5min',
-    lookbackDays: 1,
+    lookbackDays: 4, // Account for weekends/holidays - get last trading day
     cacheTtlMs: 60_000,
     useTimesales: true,
   },
