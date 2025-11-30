@@ -34,7 +34,7 @@ export class RefreshToken {
   @Column({ name: 'revoked_at', type: 'timestamp', nullable: true })
   revokedAt: Date | null;
 
-  @Column({ name: 'revoked_reason', length: 255, nullable: true })
+  @Column({ name: 'revoked_reason', type: 'varchar', length: 255, nullable: true })
   revokedReason: string | null;
 
   @CreateDateColumn({ name: 'created_at' })
