@@ -22,6 +22,18 @@ import type {
   ExpirationCalendarItem,
   OnboardingStatus,
   OnboardingStepData,
+  UserRole,
+  AdminUser,
+  AdminUserDetails,
+  AdminOrder,
+  OrderAudit,
+  OrderStatistics,
+  SystemHealth,
+  SystemStats,
+  JobStatus,
+  AdminAuditLog,
+  PaginatedResponse,
+  OrderStatus,
 } from '../types';
 
 // API base URL from build-time environment variable
@@ -316,6 +328,123 @@ export const api = {
       method: 'POST',
       body: JSON.stringify(data),
     }),
+
+  // Admin - Users
+  admin: {
+    getUsers: (params?: {
+      search?: string;
+      role?: UserRole;
+      disabled?: boolean;
+      limit?: number;
+      offset?: number;
+      sortBy?: string;
+      sortOrder?: 'ASC' | 'DESC';
+    }) => {
+      const query = new URLSearchParams();
+      if (params?.search) query.set('search', params.search);
+      if (params?.role) query.set('role', params.role);
+      if (params?.disabled !== undefined)
+        query.set('disabled', String(params.disabled));
+      if (params?.limit) query.set('limit', String(params.limit));
+      if (params?.offset) query.set('offset', String(params.offset));
+      if (params?.sortBy) query.set('sortBy', params.sortBy);
+      if (params?.sortOrder) query.set('sortOrder', params.sortOrder);
+      return request<PaginatedResponse<AdminUser>>(
+        `/admin/users?${query.toString()}`,
+      );
+    },
+
+    getUser: (userId: string) =>
+      request<AdminUserDetails>(`/admin/users/${userId}`),
+
+    updateRole: (userId: string, role: UserRole, reason?: string) =>
+      request<AdminUser>(`/admin/users/${userId}/role`, {
+        method: 'PATCH',
+        body: JSON.stringify({ role, reason }),
+      }),
+
+    adjustBalance: (userId: string, adjustment: number, reason: string) =>
+      request<AdminUser>(`/admin/users/${userId}/balance`, {
+        method: 'PATCH',
+        body: JSON.stringify({ adjustment, reason }),
+      }),
+
+    disableUser: (userId: string, reason: string) =>
+      request<AdminUser>(`/admin/users/${userId}/disable`, {
+        method: 'PATCH',
+        body: JSON.stringify({ reason }),
+      }),
+
+    enableUser: (userId: string) =>
+      request<AdminUser>(`/admin/users/${userId}/enable`, {
+        method: 'PATCH',
+      }),
+
+    // Admin - Orders
+    getOrders: (params?: {
+      userId?: string;
+      status?: OrderStatus[];
+      symbol?: string;
+      from?: string;
+      to?: string;
+      limit?: number;
+      offset?: number;
+    }) => {
+      const query = new URLSearchParams();
+      if (params?.userId) query.set('userId', params.userId);
+      if (params?.status?.length) query.set('status', params.status.join(','));
+      if (params?.symbol) query.set('symbol', params.symbol);
+      if (params?.from) query.set('from', params.from);
+      if (params?.to) query.set('to', params.to);
+      if (params?.limit) query.set('limit', String(params.limit));
+      if (params?.offset) query.set('offset', String(params.offset));
+      return request<PaginatedResponse<AdminOrder>>(
+        `/admin/orders?${query.toString()}`,
+      );
+    },
+
+    getOrder: (orderId: string) =>
+      request<{ order: AdminOrder; audits: OrderAudit[] }>(
+        `/admin/orders/${orderId}`,
+      ),
+
+    getOrderStats: () => request<OrderStatistics>('/admin/orders/stats'),
+
+    cancelOrder: (orderId: string, reason: string) =>
+      request<AdminOrder>(`/admin/orders/${orderId}/cancel`, {
+        method: 'POST',
+        body: JSON.stringify({ reason }),
+      }),
+
+    // Admin - System
+    getHealth: () => request<SystemHealth>('/admin/system/health'),
+
+    getStats: () => request<SystemStats>('/admin/system/stats'),
+
+    getJobs: () => request<JobStatus[]>('/admin/system/jobs'),
+
+    getAuditLogs: (params?: {
+      adminId?: string;
+      targetUserId?: string;
+      action?: string;
+      from?: string;
+      to?: string;
+      limit?: number;
+      offset?: number;
+    }) => {
+      const query = new URLSearchParams();
+      if (params?.adminId) query.set('adminId', params.adminId);
+      if (params?.targetUserId) query.set('targetUserId', params.targetUserId);
+      if (params?.action) query.set('action', params.action);
+      if (params?.from) query.set('from', params.from);
+      if (params?.to) query.set('to', params.to);
+      if (params?.limit) query.set('limit', String(params.limit));
+      if (params?.offset) query.set('offset', String(params.offset));
+      return request<PaginatedResponse<AdminAuditLog>>(
+        `/admin/system/audit-logs?${query.toString()}`,
+      );
+    },
+  },
 };
 
 // Analytics types

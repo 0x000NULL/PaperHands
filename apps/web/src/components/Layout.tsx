@@ -107,6 +107,11 @@ export function Layout({ children }: LayoutProps) {
             <Link to="/greeks" style={styles.navLink}>
               Greeks
             </Link>
+            {(user?.role === 'admin' || user?.role === 'super_admin') && (
+              <Link to="/admin" style={styles.navLink}>
+                Admin
+              </Link>
+            )}
             <span style={styles.userEmail}>{user?.email}</span>
             <Link to="/settings" style={styles.settingsLink} title="Settings">
               &#9881;

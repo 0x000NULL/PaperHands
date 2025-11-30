@@ -21,6 +21,7 @@ import { StreamingModule } from './streaming/streaming.module';
 import { AnalyticsModule } from './analytics/analytics.module';
 import { OnboardingModule } from './onboarding/onboarding.module';
 import { SettingsModule } from './settings/settings.module';
+import { AdminModule } from './admin/admin.module';
 import { validate } from './config/env.validation';
 
 @Module({
@@ -123,6 +124,7 @@ import { validate } from './config/env.validation';
     AnalyticsModule,
     OnboardingModule,
     SettingsModule,
+    AdminModule,
   ],
   controllers: [AppController],
   providers: [

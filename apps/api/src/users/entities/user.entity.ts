@@ -10,6 +10,7 @@ import { Exclude } from 'class-transformer';
 import { Position } from '../../portfolio/entities/position.entity';
 import { Order } from '../../orders/entities/order.entity';
 import { Watchlist } from '../../watchlists/entities/watchlist.entity';
+import { UserRole } from '../enums/user-role.enum';
 
 @Entity('users')
 export class User {
@@ -40,6 +41,15 @@ export class User {
 
   @Column({ type: 'int', default: 0 })
   onboardingStep: number;
+
+  @Column({ type: 'enum', enum: UserRole, default: UserRole.USER })
+  role: UserRole;
+
+  @Column({ default: false })
+  disabled: boolean;
+
+  @Column({ type: 'timestamp', nullable: true })
+  disabledAt: Date | null;
 
   @OneToMany(() => Position, (position) => position.user)
   positions: Position[];

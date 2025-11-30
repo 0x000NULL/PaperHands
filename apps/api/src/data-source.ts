@@ -14,6 +14,7 @@ import { OrderAudit } from './orders/entities/order-audit.entity';
 import { Watchlist } from './watchlists/entities/watchlist.entity';
 import { WatchlistItem } from './watchlists/entities/watchlist-item.entity';
 import { PortfolioSnapshot } from './analytics/entities/portfolio-snapshot.entity';
+import { AdminAudit } from './admin/entities/admin-audit.entity';
 
 // eslint-disable-next-line @typescript-eslint/no-require-imports, @typescript-eslint/no-unsafe-call, @typescript-eslint/no-unsafe-member-access
 require('dotenv').config();
@@ -37,6 +38,7 @@ export const AppDataSource = new DataSource({
     Watchlist,
     WatchlistItem,
     PortfolioSnapshot,
+    AdminAudit,
   ],
   migrations: [__dirname + '/migrations/*{.ts,.js}'],
   synchronize: false,

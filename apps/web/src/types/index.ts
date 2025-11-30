@@ -1,3 +1,5 @@
+export type UserRole = 'user' | 'admin' | 'super_admin';
+
 export interface User {
   id: string;
   email: string;
@@ -5,6 +7,8 @@ export interface User {
   createdAt?: string;
   onboardingCompleted: boolean;
   onboardingStep: number;
+  role: UserRole;
+  disabled?: boolean;
 }
 
 export interface AuthResponse {
@@ -315,4 +319,111 @@ export interface OnboardingStepData {
   watchlistSetup?: { watchlistName: string; symbols: string[] };
   preferences?: Partial<UserPreferences>;
   userIntent?: 'stocks' | 'options' | 'testing' | 'exploring';
+}
+
+// Admin types
+export interface AdminUser {
+  id: string;
+  email: string;
+  role: UserRole;
+  cashBalance: number;
+  createdAt: string;
+  disabled: boolean;
+  disabledAt: string | null;
+  onboardingCompleted: boolean;
+}
+
+export interface AdminUserDetails {
+  user: AdminUser;
+  positionCount: number;
+  optionPositionCount: number;
+  orderCount: number;
+}
+
+export interface AdminOrder {
+  id: string;
+  userId: string;
+  user: {
+    id: string;
+    email: string;
+  };
+  symbol: string;
+  side: OrderSide;
+  quantity: number;
+  orderType: OrderType;
+  status: OrderStatus;
+  filledPrice: number | null;
+  limitPrice: number | null;
+  stopPrice: number | null;
+  createdAt: string;
+  orderCategory: OrderCategory;
+  optionSymbol: string | null;
+}
+
+export interface OrderAudit {
+  id: string;
+  orderId: string;
+  action: string;
+  previousState: Record<string, unknown> | null;
+  newState: Record<string, unknown> | null;
+  createdAt: string;
+}
+
+export interface OrderStatistics {
+  total: number;
+  byStatus: Record<string, number>;
+  today: number;
+  thisWeek: number;
+}
+
+export interface SystemHealth {
+  database: {
+    status: 'up' | 'down';
+    message?: string;
+  };
+  redis: {
+    status: 'up' | 'down';
+    message?: string;
+  };
+  timestamp: string;
+}
+
+export interface SystemStats {
+  totalUsers: number;
+  activeUsers24h: number;
+  disabledUsers: number;
+  totalOrders: number;
+  pendingOrders: number;
+  totalPositions: number;
+  adminCount: number;
+  superAdminCount: number;
+}
+
+export interface JobStatus {
+  name: string;
+  type: 'cron' | 'interval';
+  nextRun?: string;
+  isRunning: boolean;
+}
+
+export interface AdminAuditLog {
+  id: string;
+  adminId: string;
+  admin: { email: string };
+  targetUserId: string | null;
+  targetUser: { email: string } | null;
+  action: string;
+  previousState: Record<string, unknown> | null;
+  newState: Record<string, unknown> | null;
+  reason: string | null;
+  ipAddress: string;
+  createdAt: string;
+}
+
+export interface PaginatedResponse<T> {
+  data: T[];
+  total: number;
+  limit: number;
+  offset: number;
+  hasMore: boolean;
 }

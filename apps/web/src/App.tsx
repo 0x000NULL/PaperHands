@@ -13,6 +13,8 @@ import { Watchlists } from './pages/Watchlists';
 import { Analytics } from './pages/Analytics';
 import { Greeks } from './pages/Greeks';
 import { Settings } from './pages/Settings';
+import { Admin } from './pages/Admin';
+import { AdminRoute } from './components/AdminRoute';
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -119,6 +121,14 @@ function App() {
                 <ProtectedRoute>
                   <Settings />
                 </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/admin"
+              element={
+                <AdminRoute>
+                  <Admin />
+                </AdminRoute>
               }
             />
             {/* Redirect old routes to dashboard */}

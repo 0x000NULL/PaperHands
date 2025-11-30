@@ -2,6 +2,7 @@ import {
   Injectable,
   ConflictException,
   UnauthorizedException,
+  ForbiddenException,
   Inject,
 } from '@nestjs/common';
 import { JwtService } from '@nestjs/jwt';
@@ -60,6 +61,7 @@ export class AuthService {
         cashBalance: user.cashBalance,
         onboardingCompleted: user.onboardingCompleted,
         onboardingStep: user.onboardingStep,
+        role: user.role,
       },
     };
   }
@@ -83,6 +85,11 @@ export class AuthService {
       throw new UnauthorizedException('Invalid credentials');
     }
 
+    // Check if user is disabled
+    if (user.disabled) {
+      throw new ForbiddenException('Account is disabled');
+    }
+
     // Generate token
     const token = this.generateToken(user);
 
@@ -94,6 +101,7 @@ export class AuthService {
         cashBalance: user.cashBalance,
         onboardingCompleted: user.onboardingCompleted,
         onboardingStep: user.onboardingStep,
+        role: user.role,
       },
     };
   }
