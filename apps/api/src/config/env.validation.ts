@@ -30,12 +30,20 @@ class EnvironmentVariables {
   @IsOptional()
   TRADIER_BASE_URL: string = 'https://api.tradier.com/v1';
 
+  @IsNumber()
+  @IsOptional()
+  TRADIER_DAILY_QUOTA: number = 5000;
+
   @IsString()
   FINNHUB_API_KEY: string;
 
   @IsString()
   @IsOptional()
   FINNHUB_BASE_URL: string = 'https://finnhub.io/api/v1';
+
+  @IsNumber()
+  @IsOptional()
+  FINNHUB_DAILY_QUOTA: number = 500;
 
   @IsNumber()
   @IsOptional()

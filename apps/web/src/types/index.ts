@@ -412,7 +412,14 @@ export interface ApiUsageStats {
   callsToday: number;
   callsByEndpoint: Record<string, number>;
   lastResetDate: string;
-  apiType: 'production' | 'sandbox';
+  apiType?: 'production' | 'sandbox';
+  dailyQuota: number;
+  quotaUsedPercent: number;
+}
+
+export interface AllApiUsageStats {
+  tradier: ApiUsageStats;
+  finnhub: ApiUsageStats;
 }
 
 export interface AdminAuditLog {

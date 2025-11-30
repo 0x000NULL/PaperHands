@@ -151,6 +151,43 @@ const styles: Record<string, CSSProperties> = {
     padding: `${theme.spacing.xs} 0`,
     borderBottom: `1px solid ${theme.colors.border}`,
   },
+  progressBarContainer: {
+    width: '100%',
+    height: 8,
+    backgroundColor: theme.colors.bgTertiary,
+    borderRadius: theme.radius.sm,
+    overflow: 'hidden',
+    marginTop: theme.spacing.xs,
+  },
+  progressBar: {
+    height: '100%',
+    borderRadius: theme.radius.sm,
+    transition: 'width 0.3s ease',
+  },
+  quotaText: {
+    display: 'flex',
+    justifyContent: 'space-between',
+    fontSize: theme.typography.xs,
+    color: theme.colors.textSecondary,
+    marginTop: theme.spacing.xs,
+  },
+  apiCard: {
+    padding: theme.spacing.md,
+    backgroundColor: theme.colors.bgTertiary,
+    borderRadius: theme.radius.md,
+    marginBottom: theme.spacing.md,
+  },
+  apiCardHeader: {
+    display: 'flex',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: theme.spacing.sm,
+  },
+  apiName: {
+    fontSize: theme.typography.base,
+    fontWeight: theme.typography.semibold,
+    color: theme.colors.textPrimary,
+  },
 };
 
 export function SystemHealth() {
@@ -171,6 +208,12 @@ export function SystemHealth() {
           minute: '2-digit',
         })
       : '-';
+
+  const getQuotaColor = (percent: number) => {
+    if (percent >= 90) return theme.colors.negative;
+    if (percent >= 70) return theme.colors.warning;
+    return theme.colors.positive;
+  };
 
   if (healthLoading || statsLoading) {
     return <div style={styles.loading}>Loading system health...</div>;
@@ -285,62 +328,114 @@ export function SystemHealth() {
 
       {/* API Usage */}
       <div style={styles.section}>
-        <h3 style={styles.sectionTitle}>Tradier API Usage</h3>
+        <h3 style={styles.sectionTitle}>API Usage & Quotas</h3>
         {apiUsageLoading ? (
           <div style={styles.loading}>Loading API usage...</div>
         ) : apiUsage ? (
           <>
-            <div style={styles.healthGrid}>
-              <div style={styles.healthCard}>
-                <div style={styles.healthInfo}>
-                  <div style={styles.healthName}>API Type</div>
-                  <div style={{ marginTop: theme.spacing.xs }}>
-                    <span
-                      style={{
-                        ...styles.apiTypeBadge,
-                        ...(apiUsage.apiType === 'production'
-                          ? styles.productionBadge
-                          : styles.sandboxBadge),
-                      }}
-                    >
-                      {apiUsage.apiType}
-                    </span>
+            {/* Tradier API */}
+            <div style={styles.apiCard}>
+              <div style={styles.apiCardHeader}>
+                <span style={styles.apiName}>Tradier API</span>
+                {apiUsage.tradier.apiType && (
+                  <span
+                    style={{
+                      ...styles.apiTypeBadge,
+                      ...(apiUsage.tradier.apiType === 'production'
+                        ? styles.productionBadge
+                        : styles.sandboxBadge),
+                    }}
+                  >
+                    {apiUsage.tradier.apiType}
+                  </span>
+                )}
+              </div>
+              <div style={styles.progressBarContainer}>
+                <div
+                  style={{
+                    ...styles.progressBar,
+                    width: `${apiUsage.tradier.quotaUsedPercent}%`,
+                    backgroundColor: getQuotaColor(apiUsage.tradier.quotaUsedPercent),
+                  }}
+                />
+              </div>
+              <div style={styles.quotaText}>
+                <span>{formatNumber(apiUsage.tradier.callsToday)} / {formatNumber(apiUsage.tradier.dailyQuota)} calls today</span>
+                <span>{apiUsage.tradier.quotaUsedPercent.toFixed(1)}%</span>
+              </div>
+              <div style={{ ...styles.statsGrid, marginTop: theme.spacing.sm, gridTemplateColumns: 'repeat(2, 1fr)' }}>
+                <div style={styles.statCard}>
+                  <div style={styles.statValue}>{formatNumber(apiUsage.tradier.totalCalls)}</div>
+                  <div style={styles.statLabel}>Total (Session)</div>
+                </div>
+                <div style={styles.statCard}>
+                  <div style={styles.statValue}>{Object.keys(apiUsage.tradier.callsByEndpoint).length}</div>
+                  <div style={styles.statLabel}>Endpoints Used</div>
+                </div>
+              </div>
+              {Object.keys(apiUsage.tradier.callsByEndpoint).length > 0 && (
+                <div style={styles.endpointList}>
+                  <div style={{ fontWeight: theme.typography.medium, marginBottom: theme.spacing.xs }}>
+                    Top Endpoints:
                   </div>
+                  {Object.entries(apiUsage.tradier.callsByEndpoint)
+                    .sort(([, a], [, b]) => b - a)
+                    .slice(0, 3)
+                    .map(([endpoint, count]) => (
+                      <div key={endpoint} style={styles.endpointRow}>
+                        <span>{endpoint}</span>
+                        <span>{formatNumber(count)}</span>
+                      </div>
+                    ))}
                 </div>
-              </div>
-              <div style={styles.healthCard}>
-                <div style={styles.healthInfo}>
-                  <div style={styles.healthName}>Calls Today</div>
-                  <div style={styles.statValue}>{formatNumber(apiUsage.callsToday)}</div>
-                </div>
-              </div>
+              )}
             </div>
-            <div style={{ ...styles.statsGrid, marginTop: theme.spacing.md }}>
-              <div style={styles.statCard}>
-                <div style={styles.statValue}>{formatNumber(apiUsage.totalCalls)}</div>
-                <div style={styles.statLabel}>Total Calls (Session)</div>
+
+            {/* Finnhub API */}
+            <div style={styles.apiCard}>
+              <div style={styles.apiCardHeader}>
+                <span style={styles.apiName}>Finnhub API</span>
               </div>
-              <div style={styles.statCard}>
-                <div style={styles.statValue}>{apiUsage.lastResetDate}</div>
-                <div style={styles.statLabel}>Last Reset Date</div>
+              <div style={styles.progressBarContainer}>
+                <div
+                  style={{
+                    ...styles.progressBar,
+                    width: `${apiUsage.finnhub.quotaUsedPercent}%`,
+                    backgroundColor: getQuotaColor(apiUsage.finnhub.quotaUsedPercent),
+                  }}
+                />
               </div>
-            </div>
-            {Object.keys(apiUsage.callsByEndpoint).length > 0 && (
-              <div style={styles.endpointList}>
-                <div style={{ fontWeight: theme.typography.medium, marginBottom: theme.spacing.xs }}>
-                  Calls by Endpoint:
+              <div style={styles.quotaText}>
+                <span>{formatNumber(apiUsage.finnhub.callsToday)} / {formatNumber(apiUsage.finnhub.dailyQuota)} calls today</span>
+                <span>{apiUsage.finnhub.quotaUsedPercent.toFixed(1)}%</span>
+              </div>
+              <div style={{ ...styles.statsGrid, marginTop: theme.spacing.sm, gridTemplateColumns: 'repeat(2, 1fr)' }}>
+                <div style={styles.statCard}>
+                  <div style={styles.statValue}>{formatNumber(apiUsage.finnhub.totalCalls)}</div>
+                  <div style={styles.statLabel}>Total (Session)</div>
                 </div>
-                {Object.entries(apiUsage.callsByEndpoint)
-                  .sort(([, a], [, b]) => b - a)
-                  .slice(0, 5)
-                  .map(([endpoint, count]) => (
-                    <div key={endpoint} style={styles.endpointRow}>
-                      <span>{endpoint}</span>
-                      <span>{formatNumber(count)}</span>
-                    </div>
-                  ))}
+                <div style={styles.statCard}>
+                  <div style={styles.statValue}>{Object.keys(apiUsage.finnhub.callsByEndpoint).length}</div>
+                  <div style={styles.statLabel}>Endpoints Used</div>
+                </div>
               </div>
-            )}
+              {Object.keys(apiUsage.finnhub.callsByEndpoint).length > 0 && (
+                <div style={styles.endpointList}>
+                  <div style={{ fontWeight: theme.typography.medium, marginBottom: theme.spacing.xs }}>
+                    Top Endpoints:
+                  </div>
+                  {Object.entries(apiUsage.finnhub.callsByEndpoint)
+                    .sort(([, a], [, b]) => b - a)
+                    .slice(0, 3)
+                    .map(([endpoint, count]) => (
+                      <div key={endpoint} style={styles.endpointRow}>
+                        <span>{endpoint}</span>
+                        <span>{formatNumber(count)}</span>
+                      </div>
+                    ))}
+                </div>
+              )}
+            </div>
           </>
         ) : (
           <div style={styles.loading}>No API usage data available</div>

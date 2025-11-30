@@ -33,7 +33,7 @@ export class AdminSystemController {
 
   @Get('api-usage')
   getApiUsage() {
-    return this.adminSystemService.getApiUsageStats();
+    return this.adminSystemService.getAllApiUsageStats();
   }
 
   @Get('audit-logs')

@@ -143,6 +143,8 @@ export interface ApiUsageStats {
   callsByEndpoint: Record<string, number>;
   lastResetDate: string;
   apiType: 'production' | 'sandbox';
+  dailyQuota: number;
+  quotaUsedPercent: number;
 }
 
 @Injectable()
@@ -151,6 +153,7 @@ export class TradierService {
   private readonly apiToken: string;
   private readonly requestTimeout = 10000; // 10 seconds
   private readonly maxRetries = 3;
+  private readonly dailyQuota: number;
 
   // API call tracking
   private apiCallCount = 0;
@@ -167,6 +170,7 @@ export class TradierService {
       'https://api.tradier.com/v1',
     );
     this.apiToken = this.configService.get<string>('TRADIER_API_TOKEN', '');
+    this.dailyQuota = this.configService.get<number>('TRADIER_DAILY_QUOTA', 5000);
     this.lastResetDate = new Date().toISOString().split('T')[0];
   }
 
@@ -205,6 +209,10 @@ export class TradierService {
       callsByEndpoint: { ...this.callsByEndpoint },
       lastResetDate: this.lastResetDate,
       apiType: this.baseUrl.includes('sandbox') ? 'sandbox' : 'production',
+      dailyQuota: this.dailyQuota,
+      quotaUsedPercent: this.dailyQuota > 0
+        ? Math.min(100, (this.apiCallsToday / this.dailyQuota) * 100)
+        : 0,
     };
   }
 

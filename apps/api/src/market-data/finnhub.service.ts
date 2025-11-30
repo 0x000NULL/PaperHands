@@ -100,12 +100,28 @@ const PERIOD_CONFIG: Record<string, PeriodConfig> = {
   '5Y': { resolution: 'W', lookbackDays: 1825, cacheTtlMs: 3_600_000 },
 };
 
+export interface ApiUsageStats {
+  totalCalls: number;
+  callsToday: number;
+  callsByEndpoint: Record<string, number>;
+  lastResetDate: string;
+  dailyQuota: number;
+  quotaUsedPercent: number;
+}
+
 @Injectable()
 export class FinnhubService {
   private readonly baseUrl: string;
   private readonly apiKey: string;
   private readonly requestTimeout = 10000; // 10 seconds
   private readonly maxRetries = 3;
+  private readonly dailyQuota: number;
+
+  // API call tracking
+  private apiCallCount = 0;
+  private apiCallsToday = 0;
+  private callsByEndpoint: Record<string, number> = {};
+  private lastResetDate: string;
 
   constructor(
     private configService: ConfigService,
@@ -116,6 +132,49 @@ export class FinnhubService {
       'https://finnhub.io/api/v1',
     );
     this.apiKey = this.configService.get<string>('FINNHUB_API_KEY', '');
+    this.dailyQuota = this.configService.get<number>('FINNHUB_DAILY_QUOTA', 500);
+    this.lastResetDate = new Date().toISOString().split('T')[0];
+  }
+
+  /**
+   * Track an API call for quota monitoring
+   */
+  private trackApiCall(endpoint: string): void {
+    const today = new Date().toISOString().split('T')[0];
+
+    // Reset daily counter if new day
+    if (today !== this.lastResetDate) {
+      this.apiCallsToday = 0;
+      this.lastResetDate = today;
+    }
+
+    this.apiCallCount++;
+    this.apiCallsToday++;
+    this.callsByEndpoint[endpoint] = (this.callsByEndpoint[endpoint] || 0) + 1;
+  }
+
+  /**
+   * Get API usage statistics
+   */
+  getApiUsageStats(): ApiUsageStats {
+    const today = new Date().toISOString().split('T')[0];
+
+    // Reset daily counter if new day
+    if (today !== this.lastResetDate) {
+      this.apiCallsToday = 0;
+      this.lastResetDate = today;
+    }
+
+    return {
+      totalCalls: this.apiCallCount,
+      callsToday: this.apiCallsToday,
+      callsByEndpoint: { ...this.callsByEndpoint },
+      lastResetDate: this.lastResetDate,
+      dailyQuota: this.dailyQuota,
+      quotaUsedPercent: this.dailyQuota > 0
+        ? Math.min(100, (this.apiCallsToday / this.dailyQuota) * 100)
+        : 0,
+    };
   }
 
   private async fetchWithTimeout(
@@ -140,6 +199,10 @@ export class FinnhubService {
     url: string,
     options: RequestInit,
   ): Promise<Response> {
+    // Extract endpoint for tracking (e.g., "/quote" from full URL)
+    const endpoint = url.replace(this.baseUrl, '').split('?')[0];
+    this.trackApiCall(endpoint);
+
     let lastError: Error | null = null;
 
     for (let attempt = 0; attempt < this.maxRetries; attempt++) {

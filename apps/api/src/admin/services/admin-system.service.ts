@@ -8,7 +8,13 @@ import { HealthCheckService, TypeOrmHealthIndicator } from '@nestjs/terminus';
 import { User } from '../../users/entities/user.entity';
 import { Order } from '../../orders/entities/order.entity';
 import { Position } from '../../portfolio/entities/position.entity';
-import { TradierService, ApiUsageStats } from '../../market-data/tradier.service';
+import { TradierService, ApiUsageStats as TradierApiUsageStats } from '../../market-data/tradier.service';
+import { FinnhubService, ApiUsageStats as FinnhubApiUsageStats } from '../../market-data/finnhub.service';
+
+export interface AllApiUsageStats {
+  tradier: TradierApiUsageStats;
+  finnhub: FinnhubApiUsageStats;
+}
 
 export interface SystemHealth {
   database: {
@@ -55,10 +61,14 @@ export class AdminSystemService {
     @InjectRepository(Position)
     private positionRepository: Repository<Position>,
     private tradierService: TradierService,
+    private finnhubService: FinnhubService,
   ) {}
 
-  getApiUsageStats(): ApiUsageStats {
-    return this.tradierService.getApiUsageStats();
+  getAllApiUsageStats(): AllApiUsageStats {
+    return {
+      tradier: this.tradierService.getApiUsageStats(),
+      finnhub: this.finnhubService.getApiUsageStats(),
+    };
   }
 
   async getExtendedHealth(): Promise<SystemHealth> {

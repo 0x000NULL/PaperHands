@@ -31,7 +31,7 @@ import type {
   SystemHealth,
   SystemStats,
   JobStatus,
-  ApiUsageStats,
+  AllApiUsageStats,
   AdminAuditLog,
   PaginatedResponse,
   OrderStatus,
@@ -489,7 +489,7 @@ export const api = {
 
     getJobs: () => request<JobStatus[]>('/admin/system/jobs'),
 
-    getApiUsage: () => request<ApiUsageStats>('/admin/system/api-usage'),
+    getApiUsage: () => request<AllApiUsageStats>('/admin/system/api-usage'),
 
     getAuditLogs: (params?: {
       adminId?: string;
