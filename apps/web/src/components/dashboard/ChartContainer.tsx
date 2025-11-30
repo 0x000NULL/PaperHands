@@ -152,12 +152,9 @@ export function ChartContainer({
 
     const chart = chartRef.current;
 
-    // Debug: log sample candle data
-    console.log('[ChartContainer] Sample candles:', {
-      first: candles[0],
-      last: candles[candles.length - 1],
-      total: candles.length,
-    });
+    // Debug: log sample candle data with full details
+    console.log('[ChartContainer] Sample candle (first):', JSON.stringify(candles[0]));
+    console.log('[ChartContainer] Sample candle (last):', JSON.stringify(candles[candles.length - 1]));
 
     // Remove existing price series
     if (seriesRef.current) {
@@ -165,57 +162,37 @@ export function ChartContainer({
       seriesRef.current = null;
     }
 
-    // Remove existing volume series to recreate with proper order
+    // Remove existing volume series
     if (volumeSeriesRef.current) {
       chart.removeSeries(volumeSeriesRef.current);
       volumeSeriesRef.current = null;
     }
 
-    // Create volume series FIRST on separate scale (so it renders behind price)
-    const volumeSeries = chart.addSeries(HistogramSeries, {
-      priceFormat: { type: 'volume' },
-      priceScaleId: 'volume',
-    });
-    volumeSeries.priceScale().applyOptions({
-      scaleMargins: { top: 0.8, bottom: 0 },
-    });
-    volumeSeries.setData(transformToVolumeData(candles));
-    volumeSeriesRef.current = volumeSeries;
-
-    // Create new price series based on type (renders on top of volume)
+    // Create price series FIRST (default right scale)
     if (chartType === 'candlestick') {
       const candleData = transformToCandlestickData(candles);
-      console.log('[ChartContainer] Candlestick data:', {
-        first: candleData[0],
-        last: candleData[candleData.length - 1],
-        total: candleData.length,
-      });
-      const series = chart.addSeries(CandlestickSeries, {
-        ...candlestickColors,
-        priceScaleId: 'right',
-      });
-      series.priceScale().applyOptions({
-        scaleMargins: { top: 0.1, bottom: 0.3 },
-      });
+      console.log('[ChartContainer] Transformed candlestick (first):', JSON.stringify(candleData[0]));
+      const series = chart.addSeries(CandlestickSeries, candlestickColors);
       series.setData(candleData);
       seriesRef.current = series;
     } else {
       const lineData = transformToLineData(candles);
-      console.log('[ChartContainer] Line data:', {
-        first: lineData[0],
-        last: lineData[lineData.length - 1],
-        total: lineData.length,
-      });
-      const series = chart.addSeries(LineSeries, {
-        ...lineColors,
-        priceScaleId: 'right',
-      });
-      series.priceScale().applyOptions({
-        scaleMargins: { top: 0.1, bottom: 0.3 },
-      });
+      console.log('[ChartContainer] Transformed line (first):', JSON.stringify(lineData[0]));
+      const series = chart.addSeries(LineSeries, lineColors);
       series.setData(lineData);
       seriesRef.current = series;
     }
+
+    // Create volume series on separate scale at bottom
+    const volumeSeries = chart.addSeries(HistogramSeries, {
+      priceFormat: { type: 'volume' },
+      priceScaleId: 'volume',
+    });
+    chart.priceScale('volume').applyOptions({
+      scaleMargins: { top: 0.8, bottom: 0 },
+    });
+    volumeSeries.setData(transformToVolumeData(candles));
+    volumeSeriesRef.current = volumeSeries;
 
     // Fit content
     chart.timeScale().fitContent();
