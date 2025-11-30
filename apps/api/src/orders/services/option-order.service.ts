@@ -137,16 +137,15 @@ export class OptionOrderService {
 
     // Validate funds/positions
     if (isOpeningLong || isClosingShort) {
-      const availableCash = await this.orderValidationService.getAvailableCash(
-        userId,
-      );
+      const availableCash =
+        await this.orderValidationService.getAvailableCash(userId);
       if (availableCash < totalPremium) {
         throw new BadRequestException(
           `Insufficient funds. Required: $${totalPremium.toFixed(2)}, Available: $${availableCash.toFixed(2)}`,
         );
       }
     } else if (isClosingLong) {
-      const availableContracts = Number(existingPosition!.quantity);
+      const availableContracts = Number(existingPosition.quantity);
       if (availableContracts < quantity) {
         throw new BadRequestException(
           `Insufficient contracts. Required: ${quantity}, Available: ${availableContracts}`,
@@ -160,9 +159,8 @@ export class OptionOrderService {
         quantity,
         contractMultiplier,
       );
-      const availableCash = await this.orderValidationService.getAvailableCash(
-        userId,
-      );
+      const availableCash =
+        await this.orderValidationService.getAvailableCash(userId);
       if (availableCash < marginRequired) {
         throw new BadRequestException(
           `Insufficient margin. Required: $${marginRequired.toFixed(2)}, Available: $${availableCash.toFixed(2)}`,

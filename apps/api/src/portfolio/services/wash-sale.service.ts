@@ -5,7 +5,10 @@ import { WashSale, WashSaleType } from '../entities/wash-sale.entity';
 import { LotSale } from '../entities/lot-sale.entity';
 import { TaxLot } from '../entities/tax-lot.entity';
 import { OptionClosure } from '../entities/option-closure.entity';
-import { WashSaleDetectorService, WashSaleDetectionResult as DetectorResult } from './wash-sale-detector.service';
+import {
+  WashSaleDetectorService,
+  WashSaleDetectionResult as DetectorResult,
+} from './wash-sale-detector.service';
 import { WashSaleQueueService } from './wash-sale-queue.service';
 
 /**
@@ -85,7 +88,10 @@ export class WashSaleService {
       symbol: lotSale.symbol,
       washSaleType: result.washSaleType as WashSaleType,
       triggeringSaleId: lotSale.id,
-      replacementTaxLotId: result.replacementPurchase.type === 'stock' ? result.replacementPurchase.id : undefined,
+      replacementTaxLotId:
+        result.replacementPurchase.type === 'stock'
+          ? result.replacementPurchase.id
+          : undefined,
       replacementOptionSymbol: result.replacementPurchase.optionSymbol,
       originalLoss: result.triggeringSale.loss,
       quantityAffected: result.quantityAffected!,
@@ -127,7 +133,10 @@ export class WashSaleService {
       symbol: closure.underlyingSymbol,
       washSaleType: result.washSaleType as WashSaleType,
       triggeringOptionClosureId: closure.id,
-      replacementTaxLotId: result.replacementPurchase.type === 'stock' ? result.replacementPurchase.id : undefined,
+      replacementTaxLotId:
+        result.replacementPurchase.type === 'stock'
+          ? result.replacementPurchase.id
+          : undefined,
       replacementOptionSymbol: result.replacementPurchase.optionSymbol,
       originalLoss: result.triggeringSale.loss,
       quantityAffected: result.quantityAffected!,
@@ -146,7 +155,9 @@ export class WashSaleService {
    * Queue wash sale detection for an option closure (asynchronous).
    * Returns the job ID for tracking.
    */
-  async queueDetectionForOptionClosure(optionClosureId: string): Promise<string> {
+  async queueDetectionForOptionClosure(
+    optionClosureId: string,
+  ): Promise<string> {
     return this.queue.queueOptionClosureDetection(optionClosureId);
   }
 
@@ -356,14 +367,21 @@ export class WashSaleService {
       loss: number;
     }[];
   }> {
-    return this.detector.wouldPurchaseTriggerWashSale(userId, symbol, purchaseDate);
+    return this.detector.wouldPurchaseTriggerWashSale(
+      userId,
+      symbol,
+      purchaseDate,
+    );
   }
 
   /**
    * Queue a batch scan for a user's recent sales.
    * Useful for backfilling wash sale records.
    */
-  async queueBatchScanForUser(userId: string, sinceDate?: Date): Promise<string> {
+  async queueBatchScanForUser(
+    userId: string,
+    sinceDate?: Date,
+  ): Promise<string> {
     return this.queue.queueBatchScanForUser(userId, sinceDate);
   }
 

@@ -32,7 +32,11 @@ export interface WashSaleDetectionResult {
     date: Date;
   };
   replacementPurchase?: ReplacementSecurityResult;
-  washSaleType?: 'STOCK_TO_STOCK' | 'STOCK_TO_OPTION' | 'OPTION_TO_STOCK' | 'OPTION_TO_OPTION';
+  washSaleType?:
+    | 'STOCK_TO_STOCK'
+    | 'STOCK_TO_OPTION'
+    | 'OPTION_TO_STOCK'
+    | 'OPTION_TO_OPTION';
   quantityAffected?: number;
   daysBetween?: number;
 }
@@ -151,7 +155,9 @@ export class WashSaleDetectorService {
    * Detect if an option closure triggers a wash sale.
    * Returns detection result without recording the wash sale.
    */
-  async detectForOptionClosure(closure: OptionClosure): Promise<WashSaleDetectionResult> {
+  async detectForOptionClosure(
+    closure: OptionClosure,
+  ): Promise<WashSaleDetectionResult> {
     const triggeringSale = {
       type: 'option' as const,
       id: closure.id,
@@ -390,7 +396,8 @@ export class WashSaleDetectorService {
     excludeClosureId: string,
   ): Promise<ReplacementSecurityResult | null> {
     // Use domain object to get strike bounds
-    const strikeBounds = SubstantiallyIdenticalRules.getStrikeBounds(strikePrice);
+    const strikeBounds =
+      SubstantiallyIdenticalRules.getStrikeBounds(strikePrice);
 
     const result: OptionPositionQueryResult[] =
       await this.optionClosureRepository.manager.query(
@@ -427,7 +434,11 @@ export class WashSaleDetectorService {
     // Double-check with domain object
     const isIdentical = SubstantiallyIdenticalRules.isSubstantiallyIdentical(
       { symbol: underlyingSymbol, type: optionType, strikePrice },
-      { symbol: underlyingSymbol, type: optionType as 'call' | 'put', strikePrice: option.strikePrice },
+      {
+        symbol: underlyingSymbol,
+        type: optionType,
+        strikePrice: option.strikePrice,
+      },
     );
 
     if (!isIdentical) return null;

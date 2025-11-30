@@ -8,8 +8,14 @@ import { HealthCheckService, TypeOrmHealthIndicator } from '@nestjs/terminus';
 import { User } from '../../users/entities/user.entity';
 import { Order } from '../../orders/entities/order.entity';
 import { Position } from '../../portfolio/entities/position.entity';
-import { TradierService, ApiUsageStats as TradierApiUsageStats } from '../../market-data/tradier.service';
-import { FinnhubService, ApiUsageStats as FinnhubApiUsageStats } from '../../market-data/finnhub.service';
+import {
+  TradierService,
+  ApiUsageStats as TradierApiUsageStats,
+} from '../../market-data/tradier.service';
+import {
+  FinnhubService,
+  ApiUsageStats as FinnhubApiUsageStats,
+} from '../../market-data/finnhub.service';
 
 export interface AllApiUsageStats {
   tradier: TradierApiUsageStats;

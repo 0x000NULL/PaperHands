@@ -7,7 +7,10 @@ import { LotSale } from '../entities/lot-sale.entity';
 import { OptionClosure } from '../entities/option-closure.entity';
 import { WashSale, WashSaleType } from '../entities/wash-sale.entity';
 import { TaxLot } from '../entities/tax-lot.entity';
-import { WashSaleDetectorService, WashSaleDetectionResult } from '../services/wash-sale-detector.service';
+import {
+  WashSaleDetectorService,
+  WashSaleDetectionResult,
+} from '../services/wash-sale-detector.service';
 
 export const WASH_SALE_QUEUE = 'wash-sale-detection';
 
@@ -74,10 +77,14 @@ export class WashSaleDetectionProcessor extends WorkerHost {
   async process(job: Job<unknown>): Promise<unknown> {
     switch (job.name) {
       case WashSaleJobType.DETECT_FOR_STOCK_SALE:
-        return this.processStockSaleDetection(job as Job<DetectStockSaleJobData>);
+        return this.processStockSaleDetection(
+          job as Job<DetectStockSaleJobData>,
+        );
 
       case WashSaleJobType.DETECT_FOR_OPTION_CLOSURE:
-        return this.processOptionClosureDetection(job as Job<DetectOptionClosureJobData>);
+        return this.processOptionClosureDetection(
+          job as Job<DetectOptionClosureJobData>,
+        );
 
       case WashSaleJobType.BATCH_SCAN_USER:
         return this.processBatchScanUser(job as Job<BatchScanUserJobData>);
@@ -151,7 +158,9 @@ export class WashSaleDetectionProcessor extends WorkerHost {
     });
 
     if (existingWashSale) {
-      this.logger.debug(`OptionClosure ${optionClosureId} already has wash sale record`);
+      this.logger.debug(
+        `OptionClosure ${optionClosureId} already has wash sale record`,
+      );
       return { detected: true, washSaleId: existingWashSale.id };
     }
 
@@ -168,9 +177,11 @@ export class WashSaleDetectionProcessor extends WorkerHost {
   /**
    * Batch scan a user's recent sales for wash sales.
    */
-  private async processBatchScanUser(
-    job: Job<BatchScanUserJobData>,
-  ): Promise<{ stockSalesProcessed: number; optionClosuresProcessed: number; washSalesDetected: number }> {
+  private async processBatchScanUser(job: Job<BatchScanUserJobData>): Promise<{
+    stockSalesProcessed: number;
+    optionClosuresProcessed: number;
+    washSalesDetected: number;
+  }> {
     const { userId, sinceDate } = job.data;
     const since = sinceDate ? new Date(sinceDate) : this.getDefaultScanDate();
 
@@ -318,9 +329,20 @@ export class WashSaleDetectionProcessor extends WorkerHost {
     userId: string,
     result: WashSaleDetectionResult,
   ): Promise<WashSale> {
-    const { triggeringSale, replacementPurchase, washSaleType, quantityAffected, daysBetween } = result;
+    const {
+      triggeringSale,
+      replacementPurchase,
+      washSaleType,
+      quantityAffected,
+      daysBetween,
+    } = result;
 
-    if (!replacementPurchase || !washSaleType || quantityAffected === undefined || daysBetween === undefined) {
+    if (
+      !replacementPurchase ||
+      !washSaleType ||
+      quantityAffected === undefined ||
+      daysBetween === undefined
+    ) {
       throw new Error('Invalid wash sale detection result');
     }
 
@@ -331,10 +353,16 @@ export class WashSaleDetectionProcessor extends WorkerHost {
       userId,
       symbol: triggeringSale.symbol,
       washSaleType: washSaleType as WashSaleType,
-      triggeringSaleId: triggeringSale.type === 'stock' ? triggeringSale.id : null,
-      triggeringOptionClosureId: triggeringSale.type === 'option' ? triggeringSale.id : null,
-      replacementTaxLotId: replacementPurchase.type === 'stock' ? replacementPurchase.id : null,
-      replacementOptionSymbol: replacementPurchase.type === 'option' ? replacementPurchase.optionSymbol : null,
+      triggeringSaleId:
+        triggeringSale.type === 'stock' ? triggeringSale.id : null,
+      triggeringOptionClosureId:
+        triggeringSale.type === 'option' ? triggeringSale.id : null,
+      replacementTaxLotId:
+        replacementPurchase.type === 'stock' ? replacementPurchase.id : null,
+      replacementOptionSymbol:
+        replacementPurchase.type === 'option'
+          ? replacementPurchase.optionSymbol
+          : null,
       disallowedLoss,
       originalLoss: triggeringSale.loss,
       quantityAffected,

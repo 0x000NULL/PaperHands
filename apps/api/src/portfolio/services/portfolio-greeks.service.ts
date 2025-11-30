@@ -5,7 +5,10 @@ import { OptionPosition } from '../entities/option-position.entity';
 import { Position } from '../entities/position.entity';
 import { User } from '../../users/entities/user.entity';
 import { TradierService } from '../../market-data/tradier.service';
-import { GreeksAggregatorService, UnderlyingGreeksGroup } from './greeks-aggregator.service';
+import {
+  GreeksAggregatorService,
+  UnderlyingGreeksGroup,
+} from './greeks-aggregator.service';
 import { SensitivityAnalysisService } from './sensitivity-analysis.service';
 
 export interface OptionGreeks {
@@ -203,7 +206,10 @@ export class PortfolioGreeksService {
     userId: string,
     days: number = 30,
   ): Promise<ThetaProjection[]> {
-    const projections = await this.sensitivityAnalysis.projectThetaDecay(userId, days);
+    const projections = await this.sensitivityAnalysis.projectThetaDecay(
+      userId,
+      days,
+    );
 
     return projections.map((p) => ({
       date: p.date,
@@ -221,7 +227,10 @@ export class PortfolioGreeksService {
     userId: string,
     symbol?: string,
   ): Promise<DeltaExposure[]> {
-    const exposures = await this.sensitivityAnalysis.analyzeDeltaExposure(userId, symbol);
+    const exposures = await this.sensitivityAnalysis.analyzeDeltaExposure(
+      userId,
+      symbol,
+    );
 
     return exposures.map((e) => ({
       priceLevel: e.priceLevel,

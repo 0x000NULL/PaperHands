@@ -8,8 +8,14 @@ import { OrderQueryService } from './services/order-query.service';
 import { EquityPositionService } from './services/equity-position.service';
 import { OrderExecutionService } from './services/order-execution.service';
 import { OptionOrderService } from './services/option-order.service';
+import { ManualExerciseService } from './services/manual-exercise.service';
+import { RolloverService } from './services/rollover.service';
+import { MultiLegOrderService } from './services/multi-leg-order.service';
 import { Order } from './entities/order.entity';
 import { OrderAudit } from './entities/order-audit.entity';
+import { MultiLegOrder } from './entities/multi-leg-order.entity';
+import { MultiLegOrderLeg } from './entities/multi-leg-order-leg.entity';
+import { RolloverOrder } from './entities/rollover-order.entity';
 import { User } from '../users/entities/user.entity';
 import { Position } from '../portfolio/entities/position.entity';
 import { OptionPosition } from '../portfolio/entities/option-position.entity';
@@ -42,6 +48,9 @@ import {
     TypeOrmModule.forFeature([
       Order,
       OrderAudit,
+      MultiLegOrder,
+      MultiLegOrderLeg,
+      RolloverOrder,
       User,
       Position,
       OptionPosition,
@@ -62,6 +71,9 @@ import {
     EquityPositionService,
     OrderExecutionService,
     OptionOrderService,
+    ManualExerciseService,
+    RolloverService,
+    MultiLegOrderService,
     MarketHoursService,
     // Execution Strategies
     MarketOrderStrategy,

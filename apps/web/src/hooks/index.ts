@@ -16,3 +16,4 @@ export {
   useOptionsChain,
   optionsKeys,
 } from './useOptionsChain';
+export { useVolatilityMetrics, volatilityKeys } from './useVolatility';

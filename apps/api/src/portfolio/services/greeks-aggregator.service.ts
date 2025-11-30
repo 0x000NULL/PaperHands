@@ -4,7 +4,10 @@ import { Repository } from 'typeorm';
 import { OptionPosition } from '../entities/option-position.entity';
 import { Position } from '../entities/position.entity';
 import { TradierService } from '../../market-data/tradier.service';
-import { GreeksSnapshot, SensitivityCalculator } from '../domain/greeks-snapshot';
+import {
+  GreeksSnapshot,
+  SensitivityCalculator,
+} from '../domain/greeks-snapshot';
 
 /**
  * Aggregated position Greeks after scaling by quantity and contract multiplier.
@@ -86,7 +89,9 @@ export class GreeksAggregatorService {
   /**
    * Aggregate Greeks for a user's entire portfolio.
    */
-  async aggregatePortfolioGreeks(userId: string): Promise<AggregatedGreeksSummary> {
+  async aggregatePortfolioGreeks(
+    userId: string,
+  ): Promise<AggregatedGreeksSummary> {
     const optionPositions = await this.optionPositionRepository.find({
       where: { userId },
     });
@@ -101,9 +106,10 @@ export class GreeksAggregatorService {
 
     // Fetch fresh Greeks
     const optionSymbols = optionPositions.map((p) => p.optionSymbol);
-    const quotes = optionSymbols.length > 0
-      ? await this.tradierService.getOptionQuotes(optionSymbols)
-      : new Map();
+    const quotes =
+      optionSymbols.length > 0
+        ? await this.tradierService.getOptionQuotes(optionSymbols)
+        : new Map();
 
     // Fetch underlying prices
     const underlyingSymbols = [
@@ -112,9 +118,10 @@ export class GreeksAggregatorService {
         ...stockPositions.map((p) => p.symbol),
       ]),
     ];
-    const underlyingQuotes = underlyingSymbols.length > 0
-      ? await this.tradierService.getQuotes(underlyingSymbols)
-      : [];
+    const underlyingQuotes =
+      underlyingSymbols.length > 0
+        ? await this.tradierService.getQuotes(underlyingSymbols)
+        : [];
     const underlyingPrices = new Map(
       underlyingQuotes.map((q) => [q.symbol, q.last]),
     );
@@ -125,7 +132,10 @@ export class GreeksAggregatorService {
     let shortDelta = 0;
     let notionalExposure = 0;
 
-    const expirationMap = new Map<string, { delta: number; theta: number; count: number }>();
+    const expirationMap = new Map<
+      string,
+      { delta: number; theta: number; count: number }
+    >();
     const underlyingMap = new Map<string, UnderlyingGreeksGroup>();
 
     // Initialize with stock positions (stocks have delta of 1 per share)
@@ -147,7 +157,9 @@ export class GreeksAggregatorService {
       });
 
       // Add stock delta to totals
-      totalGreeks = totalGreeks.accumulate(new GreeksSnapshot(stockDelta, 0, 0, 0, 0, 0));
+      totalGreeks = totalGreeks.accumulate(
+        new GreeksSnapshot(stockDelta, 0, 0, 0, 0, 0),
+      );
       if (stockDelta > 0) {
         longDelta += stockDelta;
       } else {
@@ -165,10 +177,13 @@ export class GreeksAggregatorService {
 
       const qty = Number(position.quantity);
       const multiplier = SensitivityCalculator.CONTRACT_MULTIPLIER;
-      const underlyingPrice = underlyingPrices.get(position.underlyingSymbol) || 0;
+      const underlyingPrice =
+        underlyingPrices.get(position.underlyingSymbol) || 0;
 
       // Create scaled Greeks snapshot
-      const positionGreeks = GreeksSnapshot.fromRaw(rawGreeks).scale(qty * multiplier);
+      const positionGreeks = GreeksSnapshot.fromRaw(rawGreeks).scale(
+        qty * multiplier,
+      );
 
       // Accumulate totals
       totalGreeks = totalGreeks.accumulate(positionGreeks);
@@ -182,8 +197,14 @@ export class GreeksAggregatorService {
       notionalExposure += Math.abs(positionGreeks.delta) * underlyingPrice;
 
       // Group by expiration
-      const expDateStr = new Date(position.expirationDate).toISOString().split('T')[0];
-      const existing = expirationMap.get(expDateStr) || { delta: 0, theta: 0, count: 0 };
+      const expDateStr = new Date(position.expirationDate)
+        .toISOString()
+        .split('T')[0];
+      const existing = expirationMap.get(expDateStr) || {
+        delta: 0,
+        theta: 0,
+        count: 0,
+      };
       existing.delta += positionGreeks.delta;
       existing.theta += positionGreeks.theta;
       existing.count++;
@@ -220,7 +241,8 @@ export class GreeksAggregatorService {
         greeks: positionGreeks,
       });
 
-      underlyingGroup.totalGreeks = underlyingGroup.totalGreeks.accumulate(positionGreeks);
+      underlyingGroup.totalGreeks =
+        underlyingGroup.totalGreeks.accumulate(positionGreeks);
     }
 
     // Build expiration buckets
@@ -241,7 +263,9 @@ export class GreeksAggregatorService {
 
     // Sort by expiration date
     byExpiration.sort(
-      (a, b) => new Date(a.expirationDate).getTime() - new Date(b.expirationDate).getTime(),
+      (a, b) =>
+        new Date(a.expirationDate).getTime() -
+        new Date(b.expirationDate).getTime(),
     );
 
     // Sort underlying groups by symbol
@@ -265,15 +289,23 @@ export class GreeksAggregatorService {
   /**
    * Get aggregated Greeks for a specific underlying symbol.
    */
-  async aggregateByUnderlying(userId: string, symbol: string): Promise<UnderlyingGreeksGroup | null> {
+  async aggregateByUnderlying(
+    userId: string,
+    symbol: string,
+  ): Promise<UnderlyingGreeksGroup | null> {
     const summary = await this.aggregatePortfolioGreeks(userId);
-    return summary.byUnderlying.find((g) => g.underlyingSymbol === symbol) || null;
+    return (
+      summary.byUnderlying.find((g) => g.underlyingSymbol === symbol) || null
+    );
   }
 
   /**
    * Get aggregated Greeks for positions expiring on a specific date.
    */
-  async aggregateByExpiration(userId: string, expirationDate: string): Promise<AggregatedPositionGreeks[]> {
+  async aggregateByExpiration(
+    userId: string,
+    expirationDate: string,
+  ): Promise<AggregatedPositionGreeks[]> {
     const summary = await this.aggregatePortfolioGreeks(userId);
     const positions: AggregatedPositionGreeks[] = [];
 

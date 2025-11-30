@@ -170,7 +170,10 @@ export class TradierService {
       'https://api.tradier.com/v1',
     );
     this.apiToken = this.configService.get<string>('TRADIER_API_TOKEN', '');
-    this.dailyQuota = this.configService.get<number>('TRADIER_DAILY_QUOTA', 5000);
+    this.dailyQuota = this.configService.get<number>(
+      'TRADIER_DAILY_QUOTA',
+      5000,
+    );
     this.lastResetDate = new Date().toISOString().split('T')[0];
   }
 
@@ -210,9 +213,10 @@ export class TradierService {
       lastResetDate: this.lastResetDate,
       apiType: this.baseUrl.includes('sandbox') ? 'sandbox' : 'production',
       dailyQuota: this.dailyQuota,
-      quotaUsedPercent: this.dailyQuota > 0
-        ? Math.min(100, (this.apiCallsToday / this.dailyQuota) * 100)
-        : 0,
+      quotaUsedPercent:
+        this.dailyQuota > 0
+          ? Math.min(100, (this.apiCallsToday / this.dailyQuota) * 100)
+          : 0,
     };
   }
 

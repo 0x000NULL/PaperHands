@@ -59,7 +59,9 @@ export class WashSaleQueueService {
       },
     );
 
-    this.logger.debug(`Queued wash sale detection for stock sale ${lotSaleId}, job ${job.id}`);
+    this.logger.debug(
+      `Queued wash sale detection for stock sale ${lotSaleId}, job ${job.id}`,
+    );
     return job.id!;
   }
 
@@ -97,7 +99,9 @@ export class WashSaleQueueService {
       },
     );
 
-    this.logger.debug(`Queued wash sale detection for option closure ${optionClosureId}, job ${job.id}`);
+    this.logger.debug(
+      `Queued wash sale detection for option closure ${optionClosureId}, job ${job.id}`,
+    );
     return job.id!;
   }
 
@@ -135,7 +139,9 @@ export class WashSaleQueueService {
       },
     );
 
-    this.logger.log(`Queued batch wash sale scan for user ${userId}, job ${job.id}`);
+    this.logger.log(
+      `Queued batch wash sale scan for user ${userId}, job ${job.id}`,
+    );
     return job.id!;
   }
 

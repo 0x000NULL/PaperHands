@@ -132,7 +132,10 @@ export class FinnhubService {
       'https://finnhub.io/api/v1',
     );
     this.apiKey = this.configService.get<string>('FINNHUB_API_KEY', '');
-    this.dailyQuota = this.configService.get<number>('FINNHUB_DAILY_QUOTA', 500);
+    this.dailyQuota = this.configService.get<number>(
+      'FINNHUB_DAILY_QUOTA',
+      500,
+    );
     this.lastResetDate = new Date().toISOString().split('T')[0];
   }
 
@@ -171,9 +174,10 @@ export class FinnhubService {
       callsByEndpoint: { ...this.callsByEndpoint },
       lastResetDate: this.lastResetDate,
       dailyQuota: this.dailyQuota,
-      quotaUsedPercent: this.dailyQuota > 0
-        ? Math.min(100, (this.apiCallsToday / this.dailyQuota) * 100)
-        : 0,
+      quotaUsedPercent:
+        this.dailyQuota > 0
+          ? Math.min(100, (this.apiCallsToday / this.dailyQuota) * 100)
+          : 0,
     };
   }
 

@@ -3,19 +3,22 @@ import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { OptionPosition } from '../entities/option-position.entity';
 import { TradierService } from '../../market-data/tradier.service';
-import { GreeksSnapshot, SensitivityCalculator } from '../domain/greeks-snapshot';
+import {
+  GreeksSnapshot,
+  SensitivityCalculator,
+} from '../domain/greeks-snapshot';
 
 /**
  * Single sensitivity scenario with price and IV changes.
  */
 export interface SensitivityScenario {
-  priceChange: number;    // Percentage change in underlying price
-  ivChange: number;       // Percentage point change in IV
-  newPrice: number;       // Resulting underlying price
-  newIV: number;          // Resulting IV
-  pnlEstimate: number;    // Estimated P&L in dollars
-  newDelta: number;       // Estimated new portfolio delta
-  newTheta: number;       // Estimated new portfolio theta
+  priceChange: number; // Percentage change in underlying price
+  ivChange: number; // Percentage point change in IV
+  newPrice: number; // Resulting underlying price
+  newIV: number; // Resulting IV
+  pnlEstimate: number; // Estimated P&L in dollars
+  newDelta: number; // Estimated new portfolio delta
+  newTheta: number; // Estimated new portfolio theta
 }
 
 /**
@@ -89,9 +92,10 @@ export class SensitivityAnalysisService {
     const currentPrice = quote.last;
 
     const optionSymbols = positions.map((p) => p.optionSymbol);
-    const optionQuotes = optionSymbols.length > 0
-      ? await this.tradierService.getOptionQuotes(optionSymbols)
-      : new Map();
+    const optionQuotes =
+      optionSymbols.length > 0
+        ? await this.tradierService.getOptionQuotes(optionSymbols)
+        : new Map();
 
     // Calculate average current IV
     let totalIV = 0;
@@ -153,9 +157,14 @@ export class SensitivityAnalysisService {
     }
 
     // Get current prices
-    const underlyingSymbols = [...new Set(positions.map((p) => p.underlyingSymbol))];
-    const underlyingQuotes = await this.tradierService.getQuotes(underlyingSymbols);
-    const currentPrices = new Map(underlyingQuotes.map((q) => [q.symbol, q.last]));
+    const underlyingSymbols = [
+      ...new Set(positions.map((p) => p.underlyingSymbol)),
+    ];
+    const underlyingQuotes =
+      await this.tradierService.getQuotes(underlyingSymbols);
+    const currentPrices = new Map(
+      underlyingQuotes.map((q) => [q.symbol, q.last]),
+    );
 
     const optionSymbols = positions.map((p) => p.optionSymbol);
     const quotes = await this.tradierService.getOptionQuotes(optionSymbols);
@@ -215,7 +224,10 @@ export class SensitivityAnalysisService {
    * @param userId - User ID
    * @param days - Number of days to project
    */
-  async projectThetaDecay(userId: string, days: number = 30): Promise<ThetaDecayPoint[]> {
+  async projectThetaDecay(
+    userId: string,
+    days: number = 30,
+  ): Promise<ThetaDecayPoint[]> {
     const positions = await this.optionPositionRepository.find({
       where: { userId },
     });
@@ -257,7 +269,11 @@ export class SensitivityAnalysisService {
             const multiplier = SensitivityCalculator.CONTRACT_MULTIPLIER;
             // Theta is typically negative, so we take absolute value for "decay"
             dailyTheta += Math.abs(
-              SensitivityCalculator.calculateDailyDecay(rawGreeks.theta, qty, multiplier),
+              SensitivityCalculator.calculateDailyDecay(
+                rawGreeks.theta,
+                qty,
+                multiplier,
+              ),
             );
           }
         }

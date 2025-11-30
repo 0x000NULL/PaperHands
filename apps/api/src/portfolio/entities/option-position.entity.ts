@@ -61,6 +61,10 @@ export class OptionPosition {
   @Column({ type: 'jsonb', nullable: true })
   greeksSnapshot: OptionGreeks | null;
 
+  // Reference to multi-leg order that created this position (if any)
+  @Column({ type: 'uuid', nullable: true })
+  multiLegOrderId: string | null;
+
   @CreateDateColumn()
   createdAt: Date;
 

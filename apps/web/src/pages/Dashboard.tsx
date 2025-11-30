@@ -10,7 +10,9 @@ import {
   ChartPanel,
   OptionsChainPanel,
   ExpirationCalendar,
+  IVGauge,
 } from '../components/dashboard';
+import { useDashboardStore } from '../store/dashboardStore';
 import { SpotlightTour } from '../components/onboarding';
 
 const styles: Record<string, CSSProperties> = {
@@ -66,6 +68,7 @@ const getResponsiveStyles = (): Record<string, CSSProperties> => {
 
 export function Dashboard() {
   const responsiveStyles = getResponsiveStyles();
+  const selectedSymbol = useDashboardStore((state) => state.selectedSymbol);
 
   return (
     <Layout>
@@ -85,6 +88,11 @@ export function Dashboard() {
           {/* Middle Column - Quote */}
           <div style={responsiveStyles.quoteColumn} data-tour-id="tour-quote-panel">
             <QuotePanel />
+            {selectedSymbol && (
+              <div style={{ marginTop: theme.spacing.md }}>
+                <IVGauge symbol={selectedSymbol} />
+              </div>
+            )}
           </div>
 
           {/* Right Column - Trade Form */}

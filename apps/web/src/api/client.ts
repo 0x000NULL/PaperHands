@@ -35,6 +35,7 @@ import type {
   AdminAuditLog,
   PaginatedResponse,
   OrderStatus,
+  VolatilityMetrics,
 } from '../types';
 
 // API base URL from build-time environment variable
@@ -272,6 +273,10 @@ export const api = {
     request<OptionsChainResponse>(
       `/market-data/options/chain/${symbol}?expiration=${expiration}`,
     ),
+
+  // Volatility
+  getVolatilityMetrics: (symbol: string) =>
+    request<VolatilityMetrics>(`/market-data/volatility/${symbol}`),
 
   // Analytics
   getPerformanceHistory: (period: string = '1M') =>

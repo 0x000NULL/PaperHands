@@ -2,6 +2,7 @@ import { Controller, Get, Param, Query, UseGuards } from '@nestjs/common';
 import { JwtAuthGuard } from '../common/guards/jwt-auth.guard';
 import { FinnhubService } from './finnhub.service';
 import { TradierService } from './tradier.service';
+import { VolatilityService } from './services/volatility.service';
 import { CandleQueryDto } from './dto/candle-query.dto';
 import { OptionsQueryDto } from './dto/options.dto';
 import { MarketHoursService } from '../common/services/market-hours.service';
@@ -12,6 +13,7 @@ export class MarketDataController {
   constructor(
     private readonly finnhubService: FinnhubService,
     private readonly tradierService: TradierService,
+    private readonly volatilityService: VolatilityService,
     private readonly marketHoursService: MarketHoursService,
   ) {}
 
@@ -58,5 +60,33 @@ export class MarketDataController {
       query.expiration,
       query.strikeRange,
     );
+  }
+
+  // Volatility endpoints
+
+  @Get('volatility/:symbol')
+  async getVolatilityMetrics(@Param('symbol') symbol: string) {
+    return this.volatilityService.getVolatilityMetrics(symbol);
+  }
+
+  @Get('volatility/:symbol/rank')
+  async getIVRank(@Param('symbol') symbol: string) {
+    return this.volatilityService.getIVRank(symbol);
+  }
+
+  @Get('volatility/:symbol/comparison')
+  async getVolatilityComparison(@Param('symbol') symbol: string) {
+    return this.volatilityService.getVolatilityComparison(symbol);
+  }
+
+  @Get('volatility/:symbol/history')
+  async getVolatilityHistory(
+    @Param('symbol') symbol: string,
+    @Query('startDate') startDate?: string,
+    @Query('endDate') endDate?: string,
+  ) {
+    const start = startDate ? new Date(startDate) : undefined;
+    const end = endDate ? new Date(endDate) : undefined;
+    return this.volatilityService.getVolatilityHistory(symbol, start, end);
   }
 }

@@ -158,4 +158,12 @@ export class Order {
 
   @Column({ type: 'jsonb', nullable: true })
   greeksAtFill: OptionGreeks | null;
+
+  // Reference to multi-leg order (if this order is part of a spread)
+  @Column({ type: 'uuid', nullable: true })
+  multiLegOrderId: string | null;
+
+  // Reference to rollover order (if this order is part of a rollover)
+  @Column({ type: 'uuid', nullable: true })
+  rolloverOrderId: string | null;
 }

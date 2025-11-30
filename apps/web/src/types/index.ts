@@ -206,6 +206,42 @@ export interface OptionsChainResponse {
   puts: OptionContract[];
 }
 
+// Volatility types
+export interface VolatilityMetrics {
+  symbol: string;
+  currentIV: number | null;
+  ivRank: number | null;
+  ivPercentile: number | null;
+  iv52WeekHigh: number | null;
+  iv52WeekLow: number | null;
+  hv20: number | null;
+  hv30: number | null;
+  hv60: number | null;
+  ivHvSpread: number | null;
+  underlyingPrice: number | null;
+  lastUpdated: string | null;
+}
+
+export interface IVRankResult {
+  symbol: string;
+  currentIV: number | null;
+  ivRank: number | null;
+  ivPercentile: number | null;
+  iv52WeekHigh: number | null;
+  iv52WeekLow: number | null;
+  dataPoints: number;
+}
+
+export interface VolatilityComparison {
+  symbol: string;
+  currentIV: number | null;
+  hv20: number | null;
+  hv30: number | null;
+  hv60: number | null;
+  ivHvSpread: number | null;
+  isIVElevated: boolean;
+}
+
 // Greeks Dashboard types
 export interface PortfolioGreeksSummary {
   netDelta: number;

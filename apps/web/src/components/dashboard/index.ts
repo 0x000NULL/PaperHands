@@ -12,3 +12,6 @@ export { ExpirationTabs } from './ExpirationTabs';
 export { OptionsChainTable } from './OptionsChainTable';
 export { OptionDetailModal } from './OptionDetailModal';
 export { ExpirationCalendar } from './ExpirationCalendar';
+export { IVGauge } from './IVGauge';
+export { OptionsPnLCalculator } from './OptionsPnLCalculator';
+export { PayoffDiagram } from './PayoffDiagram';
