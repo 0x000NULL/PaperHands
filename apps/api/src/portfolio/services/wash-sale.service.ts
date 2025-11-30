@@ -1,20 +1,16 @@
 import { Injectable, Logger } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { Repository, Between, LessThan } from 'typeorm';
+import { Repository } from 'typeorm';
 import { WashSale, WashSaleType } from '../entities/wash-sale.entity';
 import { LotSale } from '../entities/lot-sale.entity';
 import { TaxLot } from '../entities/tax-lot.entity';
 import { OptionClosure } from '../entities/option-closure.entity';
+import { WashSaleDetectorService, WashSaleDetectionResult as DetectorResult } from './wash-sale-detector.service';
+import { WashSaleQueueService } from './wash-sale-queue.service';
 
-interface OptionPositionQueryResult {
-  id: string;
-  optionSymbol: string;
-  quantity: number;
-  createdAt: Date;
-}
-
-const WASH_SALE_WINDOW_DAYS = 30;
-
+/**
+ * Public detection result returned by WashSaleService.
+ */
 interface WashSaleDetectionResult {
   isWashSale: boolean;
   washSale?: WashSale;
@@ -42,6 +38,17 @@ interface WashSaleSummary {
   }[];
 }
 
+/**
+ * Service for wash sale detection and management.
+ *
+ * This is the public-facing service that orchestrates wash sale detection.
+ * It delegates to:
+ * - WashSaleDetectorService for detection logic
+ * - WashSaleQueueService for background job scheduling
+ *
+ * The service provides both synchronous (immediate) and asynchronous (queued)
+ * wash sale detection options.
+ */
 @Injectable()
 export class WashSaleService {
   private readonly logger = new Logger(WashSaleService.name);
@@ -55,310 +62,92 @@ export class WashSaleService {
     private taxLotRepository: Repository<TaxLot>,
     @InjectRepository(OptionClosure)
     private optionClosureRepository: Repository<OptionClosure>,
+    private readonly detector: WashSaleDetectorService,
+    private readonly queue: WashSaleQueueService,
   ) {}
 
   /**
-   * Detect wash sale for a stock sale (LotSale)
+   * Detect wash sale for a stock sale (LotSale) - synchronous detection.
+   * For asynchronous (background) detection, use queueDetectionForStockSale().
    */
   async detectWashSaleForStockSale(
     lotSale: LotSale,
   ): Promise<WashSaleDetectionResult> {
-    // Only check for losses
-    if (lotSale.realizedGain >= 0) {
+    const result = await this.detector.detectForStockSale(lotSale);
+
+    if (!result.isWashSale || !result.replacementPurchase) {
       return { isWashSale: false };
     }
 
-    const saleDate = new Date(lotSale.soldAt);
-    const windowStart = new Date(saleDate);
-    windowStart.setDate(windowStart.getDate() - WASH_SALE_WINDOW_DAYS);
-    const windowEnd = new Date(saleDate);
-    windowEnd.setDate(windowEnd.getDate() + WASH_SALE_WINDOW_DAYS);
+    // Record the wash sale
+    const washSale = await this.recordWashSale({
+      userId: lotSale.userId,
+      symbol: lotSale.symbol,
+      washSaleType: result.washSaleType as WashSaleType,
+      triggeringSaleId: lotSale.id,
+      replacementTaxLotId: result.replacementPurchase.type === 'stock' ? result.replacementPurchase.id : undefined,
+      replacementOptionSymbol: result.replacementPurchase.optionSymbol,
+      originalLoss: result.triggeringSale.loss,
+      quantityAffected: result.quantityAffected!,
+      saleDate: result.triggeringSale.date,
+      replacementDate: result.replacementPurchase.date,
+    });
 
-    // Check for replacement stock purchases
-    const replacementStockLot = await this.findReplacementStockPurchase(
-      lotSale.userId,
-      lotSale.symbol,
-      saleDate,
-      windowStart,
-      windowEnd,
-      lotSale.taxLotId, // Exclude the original lot
-    );
-
-    if (replacementStockLot) {
-      const washSale = await this.recordWashSale({
-        userId: lotSale.userId,
-        symbol: lotSale.symbol,
-        washSaleType: WashSaleType.STOCK_TO_STOCK,
-        triggeringSaleId: lotSale.id,
-        replacementTaxLotId: replacementStockLot.id,
-        originalLoss: lotSale.realizedGain,
-        quantityAffected: Math.min(
-          lotSale.quantitySold,
-          Number(replacementStockLot.originalQuantity),
-        ),
-        saleDate,
-        replacementDate: new Date(replacementStockLot.acquiredAt),
-      });
-
-      return {
-        isWashSale: true,
-        washSale,
-        replacementPurchase: {
-          type: 'stock',
-          id: replacementStockLot.id,
-          symbol: lotSale.symbol,
-          date: new Date(replacementStockLot.acquiredAt),
-          quantity: Number(replacementStockLot.originalQuantity),
-        },
-      };
-    }
-
-    // Check for replacement option purchases (calls on the same underlying)
-    const replacementOption = await this.findReplacementCallOption(
-      lotSale.userId,
-      lotSale.symbol,
-      saleDate,
-      windowStart,
-      windowEnd,
-    );
-
-    if (replacementOption) {
-      const washSale = await this.recordWashSale({
-        userId: lotSale.userId,
-        symbol: lotSale.symbol,
-        washSaleType: WashSaleType.STOCK_TO_OPTION,
-        triggeringSaleId: lotSale.id,
-        replacementOptionSymbol: replacementOption.optionSymbol,
-        originalLoss: lotSale.realizedGain,
-        quantityAffected: Math.min(
-          lotSale.quantitySold,
-          Math.abs(replacementOption.quantity) * 100,
-        ),
-        saleDate,
-        replacementDate: new Date(replacementOption.createdAt),
-      });
-
-      return {
-        isWashSale: true,
-        washSale,
-        replacementPurchase: {
-          type: 'option',
-          id: replacementOption.id,
-          symbol: replacementOption.optionSymbol,
-          date: new Date(replacementOption.createdAt),
-          quantity: Math.abs(replacementOption.quantity) * 100,
-        },
-      };
-    }
-
-    return { isWashSale: false };
+    return {
+      isWashSale: true,
+      washSale,
+      replacementPurchase: result.replacementPurchase,
+    };
   }
 
   /**
-   * Detect wash sale for an option closure
+   * Queue wash sale detection for a stock sale (asynchronous).
+   * Returns the job ID for tracking.
+   */
+  async queueDetectionForStockSale(lotSaleId: string): Promise<string> {
+    return this.queue.queueStockSaleDetection(lotSaleId);
+  }
+
+  /**
+   * Detect wash sale for an option closure - synchronous detection.
+   * For asynchronous (background) detection, use queueDetectionForOptionClosure().
    */
   async detectWashSaleForOptionClosure(
     closure: OptionClosure,
   ): Promise<WashSaleDetectionResult> {
-    // Only check for losses
-    if (closure.realizedGain >= 0) {
+    const result = await this.detector.detectForOptionClosure(closure);
+
+    if (!result.isWashSale || !result.replacementPurchase) {
       return { isWashSale: false };
     }
 
-    const saleDate = new Date(closure.closedAt);
-    const windowStart = new Date(saleDate);
-    windowStart.setDate(windowStart.getDate() - WASH_SALE_WINDOW_DAYS);
-    const windowEnd = new Date(saleDate);
-    windowEnd.setDate(windowEnd.getDate() + WASH_SALE_WINDOW_DAYS);
+    // Record the wash sale
+    const washSale = await this.recordWashSale({
+      userId: closure.userId,
+      symbol: closure.underlyingSymbol,
+      washSaleType: result.washSaleType as WashSaleType,
+      triggeringOptionClosureId: closure.id,
+      replacementTaxLotId: result.replacementPurchase.type === 'stock' ? result.replacementPurchase.id : undefined,
+      replacementOptionSymbol: result.replacementPurchase.optionSymbol,
+      originalLoss: result.triggeringSale.loss,
+      quantityAffected: result.quantityAffected!,
+      saleDate: result.triggeringSale.date,
+      replacementDate: result.replacementPurchase.date,
+    });
 
-    // Check for replacement option purchases (substantially identical)
-    const replacementOption = await this.findSubstantiallyIdenticalOption(
-      closure.userId,
-      closure.underlyingSymbol,
-      closure.optionType as 'call' | 'put',
-      Number(closure.strikePrice),
-      closure.id,
-      saleDate,
-      windowStart,
-      windowEnd,
-    );
-
-    if (replacementOption) {
-      const washSale = await this.recordWashSale({
-        userId: closure.userId,
-        symbol: closure.underlyingSymbol,
-        washSaleType: WashSaleType.OPTION_TO_OPTION,
-        triggeringOptionClosureId: closure.id,
-        replacementOptionSymbol: replacementOption.optionSymbol,
-        originalLoss: Number(closure.realizedGain),
-        quantityAffected: Math.min(
-          Math.abs(closure.quantityClosed),
-          Math.abs(replacementOption.quantity),
-        ),
-        saleDate,
-        replacementDate: new Date(replacementOption.createdAt),
-      });
-
-      return {
-        isWashSale: true,
-        washSale,
-        replacementPurchase: {
-          type: 'option',
-          id: replacementOption.id,
-          symbol: replacementOption.optionSymbol,
-          date: new Date(replacementOption.createdAt),
-          quantity: Math.abs(replacementOption.quantity),
-        },
-      };
-    }
-
-    // For call options, check for replacement stock purchases
-    if (String(closure.optionType) === 'call') {
-      const replacementStock = await this.findReplacementStockPurchase(
-        closure.userId,
-        closure.underlyingSymbol,
-        saleDate,
-        windowStart,
-        windowEnd,
-      );
-
-      if (replacementStock) {
-        const washSale = await this.recordWashSale({
-          userId: closure.userId,
-          symbol: closure.underlyingSymbol,
-          washSaleType: WashSaleType.OPTION_TO_STOCK,
-          triggeringOptionClosureId: closure.id,
-          replacementTaxLotId: replacementStock.id,
-          originalLoss: Number(closure.realizedGain),
-          quantityAffected: Math.min(
-            Math.abs(closure.quantityClosed) * 100,
-            Number(replacementStock.originalQuantity),
-          ),
-          saleDate,
-          replacementDate: new Date(replacementStock.acquiredAt),
-        });
-
-        return {
-          isWashSale: true,
-          washSale,
-          replacementPurchase: {
-            type: 'stock',
-            id: replacementStock.id,
-            symbol: closure.underlyingSymbol,
-            date: new Date(replacementStock.acquiredAt),
-            quantity: Number(replacementStock.originalQuantity),
-          },
-        };
-      }
-    }
-
-    return { isWashSale: false };
+    return {
+      isWashSale: true,
+      washSale,
+      replacementPurchase: result.replacementPurchase,
+    };
   }
 
   /**
-   * Find replacement stock purchase within wash sale window
+   * Queue wash sale detection for an option closure (asynchronous).
+   * Returns the job ID for tracking.
    */
-  private async findReplacementStockPurchase(
-    userId: string,
-    symbol: string,
-    saleDate: Date,
-    windowStart: Date,
-    windowEnd: Date,
-    excludeLotId?: string,
-  ): Promise<TaxLot | null> {
-    const queryBuilder = this.taxLotRepository
-      .createQueryBuilder('lot')
-      .where('lot.userId = :userId', { userId })
-      .andWhere('lot.symbol = :symbol', { symbol })
-      .andWhere('lot.acquiredAt BETWEEN :windowStart AND :windowEnd', {
-        windowStart,
-        windowEnd,
-      })
-      .andWhere('lot.acquiredAt != :saleDate', { saleDate }); // Exclude same-day transactions
-
-    if (excludeLotId) {
-      queryBuilder.andWhere('lot.id != :excludeLotId', { excludeLotId });
-    }
-
-    return queryBuilder.orderBy('lot.acquiredAt', 'ASC').getOne();
-  }
-
-  /**
-   * Find replacement call option purchase
-   */
-  private async findReplacementCallOption(
-    userId: string,
-    underlyingSymbol: string,
-    saleDate: Date,
-    windowStart: Date,
-    windowEnd: Date,
-  ): Promise<OptionPositionQueryResult | null> {
-    // Look for open long call positions acquired within the window
-    const result: OptionPositionQueryResult[] =
-      await this.optionClosureRepository.manager.query(
-        `
-      SELECT op.id, op."optionSymbol", op.quantity, op."createdAt"
-      FROM option_positions op
-      WHERE op."userId" = $1
-        AND op."underlyingSymbol" = $2
-        AND op."optionType" = 'call'
-        AND op.quantity > 0
-        AND op."createdAt" BETWEEN $3 AND $4
-        AND op."createdAt" != $5
-      ORDER BY op."createdAt" ASC
-      LIMIT 1
-      `,
-        [userId, underlyingSymbol, windowStart, windowEnd, saleDate],
-      );
-
-    return result.length > 0 ? result[0] : null;
-  }
-
-  /**
-   * Find substantially identical option
-   */
-  private async findSubstantiallyIdenticalOption(
-    userId: string,
-    underlyingSymbol: string,
-    optionType: 'call' | 'put',
-    strikePrice: number,
-    _excludeClosureId: string,
-    saleDate: Date,
-    windowStart: Date,
-    windowEnd: Date,
-  ): Promise<OptionPositionQueryResult | null> {
-    // Look for options with same underlying, type, and similar strike (within 5%)
-    const strikeLow = strikePrice * 0.95;
-    const strikeHigh = strikePrice * 1.05;
-
-    const result: OptionPositionQueryResult[] =
-      await this.optionClosureRepository.manager.query(
-        `
-      SELECT op.id, op."optionSymbol", op.quantity, op."createdAt"
-      FROM option_positions op
-      WHERE op."userId" = $1
-        AND op."underlyingSymbol" = $2
-        AND op."optionType" = $3
-        AND op."strikePrice" BETWEEN $4 AND $5
-        AND op.quantity > 0
-        AND op."createdAt" BETWEEN $6 AND $7
-        AND op."createdAt" != $8
-      ORDER BY op."createdAt" ASC
-      LIMIT 1
-      `,
-        [
-          userId,
-          underlyingSymbol,
-          optionType,
-          strikeLow,
-          strikeHigh,
-          windowStart,
-          windowEnd,
-          saleDate,
-        ],
-      );
-
-    return result.length > 0 ? result[0] : null;
+  async queueDetectionForOptionClosure(optionClosureId: string): Promise<string> {
+    return this.queue.queueOptionClosureDetection(optionClosureId);
   }
 
   /**
@@ -567,47 +356,27 @@ export class WashSaleService {
       loss: number;
     }[];
   }> {
-    const windowStart = new Date(purchaseDate);
-    windowStart.setDate(windowStart.getDate() - WASH_SALE_WINDOW_DAYS);
+    return this.detector.wouldPurchaseTriggerWashSale(userId, symbol, purchaseDate);
+  }
 
-    // Check for recent stock losses
-    const recentStockLosses = await this.lotSaleRepository.find({
-      where: {
-        userId,
-        symbol,
-        soldAt: Between(windowStart, purchaseDate),
-        realizedGain: LessThan(0),
-      },
-      order: { soldAt: 'DESC' },
-    });
+  /**
+   * Queue a batch scan for a user's recent sales.
+   * Useful for backfilling wash sale records.
+   */
+  async queueBatchScanForUser(userId: string, sinceDate?: Date): Promise<string> {
+    return this.queue.queueBatchScanForUser(userId, sinceDate);
+  }
 
-    // Check for recent option losses
-    const recentOptionLosses = await this.optionClosureRepository.find({
-      where: {
-        userId,
-        underlyingSymbol: symbol,
-        closedAt: Between(windowStart, purchaseDate),
-        realizedGain: LessThan(0),
-      },
-      order: { closedAt: 'DESC' },
-    });
-
-    const recentLosses = [
-      ...recentStockLosses.map((s) => ({
-        type: 'stock' as const,
-        date: new Date(s.soldAt),
-        loss: Number(s.realizedGain),
-      })),
-      ...recentOptionLosses.map((o) => ({
-        type: 'option' as const,
-        date: new Date(o.closedAt),
-        loss: Number(o.realizedGain),
-      })),
-    ];
-
-    return {
-      wouldTrigger: recentLosses.length > 0,
-      recentLosses,
-    };
+  /**
+   * Get queue statistics for monitoring.
+   */
+  async getQueueStats(): Promise<{
+    waiting: number;
+    active: number;
+    completed: number;
+    failed: number;
+    delayed: number;
+  }> {
+    return this.queue.getQueueStats();
   }
 }

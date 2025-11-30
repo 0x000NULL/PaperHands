@@ -1,6 +1,7 @@
 import { Injectable, Logger } from '@nestjs/common';
 import { Cron } from '@nestjs/schedule';
-import { OrdersService } from '../orders.service';
+import { OrderQueryService } from '../services/order-query.service';
+import { OrderExecutionService } from '../services/order-execution.service';
 import { FinnhubService, Quote } from '../../market-data/finnhub.service';
 import {
   MarketHoursService,
@@ -15,7 +16,8 @@ export class PriceMonitorService {
   private isProcessing = false;
 
   constructor(
-    private ordersService: OrdersService,
+    private orderQueryService: OrderQueryService,
+    private orderExecutionService: OrderExecutionService,
     private finnhubService: FinnhubService,
     private marketHoursService: MarketHoursService,
   ) {}
@@ -44,7 +46,7 @@ export class PriceMonitorService {
       // During extended hours, only check orders that allow extended hours trading
       const extendedHoursOnly = session !== 'regular';
       const symbols =
-        await this.ordersService.getActiveOrderSymbols(extendedHoursOnly);
+        await this.orderQueryService.getActiveOrderSymbols(extendedHoursOnly);
 
       if (symbols.length === 0) {
         return;
@@ -99,7 +101,7 @@ export class PriceMonitorService {
     session: TradingSession,
   ): Promise<void> {
     const extendedHoursOnly = session !== 'regular';
-    const orders = await this.ordersService.getPendingConditionalOrders(
+    const orders = await this.orderQueryService.getPendingConditionalOrders(
       [quote.symbol],
       extendedHoursOnly,
     );
@@ -197,7 +199,7 @@ export class PriceMonitorService {
       if (stopTriggered) {
         // Mark as triggered (status changes to OPEN)
         try {
-          await this.ordersService.markStopLimitTriggered(order.id);
+          await this.orderExecutionService.markStopLimitTriggered(order.id);
           this.logger.log(
             `Stop-limit order ${order.id} stop triggered at ${price}`,
           );
@@ -266,7 +268,7 @@ export class PriceMonitorService {
       const newTriggerPrice =
         order.side === OrderSide.SELL ? newPeak - offset : newPeak + offset;
 
-      await this.ordersService.updateTrailingStopPeak(
+      await this.orderExecutionService.updateTrailingStopPeak(
         order.id,
         newPeak,
         newTriggerPrice,
@@ -310,7 +312,7 @@ export class PriceMonitorService {
       `Triggering ${order.orderType} order ${order.id} for ${order.symbol} at ${finalExecutionPrice}`,
     );
 
-    await this.ordersService.executeConditionalOrder(
+    await this.orderExecutionService.executeConditionalOrder(
       order.id,
       triggerPrice,
       finalExecutionPrice,

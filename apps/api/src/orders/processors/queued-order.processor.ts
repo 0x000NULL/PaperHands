@@ -1,6 +1,6 @@
 import { Injectable, Logger } from '@nestjs/common';
 import { Cron } from '@nestjs/schedule';
-import { OrdersService } from '../orders.service';
+import { OrderExecutionService } from '../services/order-execution.service';
 import { MarketHoursService } from '../../common/services/market-hours.service';
 
 @Injectable()
@@ -11,7 +11,7 @@ export class QueuedOrderProcessor {
   private lastProcessedDate: string | null = null;
 
   constructor(
-    private ordersService: OrdersService,
+    private orderExecutionService: OrderExecutionService,
     private marketHoursService: MarketHoursService,
   ) {}
 
@@ -44,7 +44,7 @@ export class QueuedOrderProcessor {
     this.isProcessing = true;
 
     try {
-      const queuedOrders = await this.ordersService.getQueuedOrders();
+      const queuedOrders = await this.orderExecutionService.getQueuedOrders();
 
       if (queuedOrders.length === 0) {
         this.logger.log('No queued orders to process at market open');
@@ -62,7 +62,7 @@ export class QueuedOrderProcessor {
 
       for (const order of queuedOrders) {
         try {
-          await this.ordersService.executeQueuedMarketOrder(order.id);
+          await this.orderExecutionService.executeQueuedMarketOrder(order.id);
           successCount++;
           this.logger.log(
             `Executed queued order ${order.id}: ${order.side} ${order.quantity} ${order.symbol}`,

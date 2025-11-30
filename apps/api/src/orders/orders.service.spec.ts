@@ -14,6 +14,9 @@ import { TradierService } from '../market-data/tradier.service';
 import { MarketHoursService } from '../common/services/market-hours.service';
 import { TaxLotService } from '../portfolio/services/tax-lot.service';
 import { OptionTaxService } from '../portfolio/services/option-tax.service';
+import { OrderAuditService } from './services/order-audit.service';
+import { OrderValidationService } from './services/order-validation.service';
+import { OrderQueryService } from './services/order-query.service';
 
 describe('OrdersService', () => {
   let service: OrdersService;
@@ -55,6 +58,31 @@ describe('OrdersService', () => {
     recordBuyToClose: jest.Mock;
   };
   let mockDataSource: { createQueryRunner: jest.Mock };
+  let mockOrderAuditService: {
+    createAuditRecord: jest.Mock;
+    getAuditHistory: jest.Mock;
+    formatAuditHistory: jest.Mock;
+    orderToSnapshot: jest.Mock;
+  };
+  let mockOrderValidationService: {
+    validateConditionalOrderPrices: jest.Mock;
+    estimateOrderCost: jest.Mock;
+    getAvailableCash: jest.Mock;
+    getAvailableShares: jest.Mock;
+    getAvailableOptionContracts: jest.Mock;
+    validateSufficientFunds: jest.Mock;
+    validateSufficientShares: jest.Mock;
+  };
+  let mockOrderQueryService: {
+    getOrders: jest.Mock;
+    getPendingOrders: jest.Mock;
+    getOrder: jest.Mock;
+    getOrderById: jest.Mock;
+    getOrderByIdWithAuth: jest.Mock;
+    getPendingConditionalOrders: jest.Mock;
+    getActiveOrderSymbols: jest.Mock;
+    formatOrderResponse: jest.Mock;
+  };
   let mockQueryRunner: {
     connect: jest.Mock;
     startTransaction: jest.Mock;
@@ -174,6 +202,46 @@ describe('OrdersService', () => {
       createQueryRunner: jest.fn().mockReturnValue(mockQueryRunner),
     };
 
+    mockOrderAuditService = {
+      createAuditRecord: jest.fn().mockResolvedValue({}),
+      getAuditHistory: jest.fn().mockResolvedValue([]),
+      formatAuditHistory: jest.fn().mockReturnValue([]),
+      orderToSnapshot: jest.fn().mockReturnValue({}),
+    };
+
+    mockOrderValidationService = {
+      validateConditionalOrderPrices: jest.fn(),
+      estimateOrderCost: jest.fn().mockReturnValue(0),
+      getAvailableCash: jest.fn().mockResolvedValue(100000),
+      getAvailableShares: jest.fn().mockResolvedValue(0),
+      getAvailableOptionContracts: jest.fn().mockResolvedValue(0),
+      validateSufficientFunds: jest.fn().mockResolvedValue(undefined),
+      validateSufficientShares: jest.fn().mockResolvedValue(undefined),
+    };
+
+    mockOrderQueryService = {
+      getOrders: jest.fn().mockResolvedValue([]),
+      getPendingOrders: jest.fn().mockResolvedValue([]),
+      getOrder: jest.fn().mockResolvedValue({}),
+      getOrderById: jest.fn().mockResolvedValue(null),
+      getOrderByIdWithAuth: jest.fn().mockResolvedValue({}),
+      getPendingConditionalOrders: jest.fn().mockResolvedValue([]),
+      getActiveOrderSymbols: jest.fn().mockResolvedValue([]),
+      formatOrderResponse: jest.fn().mockImplementation((order: Order) => ({
+        id: order.id,
+        symbol: order.symbol,
+        side: order.side,
+        orderType: order.orderType,
+        quantity: Number(order.quantity),
+        filledQuantity: Number(order.filledQuantity),
+        filledPrice: order.filledPrice ? Number(order.filledPrice) : null,
+        avgFillPrice: order.avgFillPrice ? Number(order.avgFillPrice) : null,
+        status: order.status,
+        createdAt: order.createdAt,
+        updatedAt: order.updatedAt,
+      })),
+    };
+
     const module: TestingModule = await Test.createTestingModule({
       providers: [
         OrdersService,
@@ -220,6 +288,18 @@ describe('OrdersService', () => {
         {
           provide: DataSource,
           useValue: mockDataSource,
+        },
+        {
+          provide: OrderAuditService,
+          useValue: mockOrderAuditService,
+        },
+        {
+          provide: OrderValidationService,
+          useValue: mockOrderValidationService,
+        },
+        {
+          provide: OrderQueryService,
+          useValue: mockOrderQueryService,
         },
       ],
     }).compile();
@@ -362,30 +442,20 @@ describe('OrdersService', () => {
         },
       ];
 
-      mockOrderRepository.createQueryBuilder.mockReturnValue({
-        where: jest.fn().mockReturnThis(),
-        andWhere: jest.fn().mockReturnThis(),
-        orderBy: jest.fn().mockReturnThis(),
-        skip: jest.fn().mockReturnThis(),
-        take: jest.fn().mockReturnThis(),
-        getMany: jest.fn().mockResolvedValue(mockOrders),
-      });
+      mockOrderQueryService.getOrders.mockResolvedValue(mockOrders);
 
       const result = await service.getOrders(mockUser.id!);
 
+      expect(mockOrderQueryService.getOrders).toHaveBeenCalledWith(
+        mockUser.id!,
+        undefined,
+      );
       expect(result).toHaveLength(2);
       expect(result[0].symbol).toBe('AAPL');
     });
 
     it('should return empty array if no orders', async () => {
-      mockOrderRepository.createQueryBuilder.mockReturnValue({
-        where: jest.fn().mockReturnThis(),
-        andWhere: jest.fn().mockReturnThis(),
-        orderBy: jest.fn().mockReturnThis(),
-        skip: jest.fn().mockReturnThis(),
-        take: jest.fn().mockReturnThis(),
-        getMany: jest.fn().mockResolvedValue([]),
-      });
+      mockOrderQueryService.getOrders.mockResolvedValue([]);
 
       const result = await service.getOrders(mockUser.id!);
 

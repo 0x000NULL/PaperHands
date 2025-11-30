@@ -22,6 +22,7 @@ import { AnalyticsModule } from './analytics/analytics.module';
 import { OnboardingModule } from './onboarding/onboarding.module';
 import { SettingsModule } from './settings/settings.module';
 import { AdminModule } from './admin/admin.module';
+import { CommonModule } from './common/common.module';
 import { validate } from './config/env.validation';
 
 @Module({
@@ -111,6 +112,9 @@ import { validate } from './config/env.validation';
 
     // Event emitter for internal pub/sub
     EventEmitterModule.forRoot(),
+
+    // Common module (global)
+    CommonModule,
 
     // Feature modules
     AuthModule,

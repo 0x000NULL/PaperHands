@@ -6,7 +6,7 @@ import {
   Logger,
 } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { Repository, DataSource, EntityManager, In } from 'typeorm';
+import { Repository, DataSource, EntityManager } from 'typeorm';
 import { Order } from './entities/order.entity';
 import { OrderAudit } from './entities/order-audit.entity';
 import {
@@ -30,6 +30,9 @@ import { CostBasisMethod } from '../portfolio/enums/cost-basis.enums';
 import { CreateOrderDto } from './dto/create-order.dto';
 import { UpdateOrderDto } from './dto/update-order.dto';
 import { QueryOrdersDto } from './dto/query-orders.dto';
+import { OrderAuditService } from './services/order-audit.service';
+import { OrderValidationService } from './services/order-validation.service';
+import { OrderQueryService } from './services/order-query.service';
 
 @Injectable()
 export class OrdersService {
@@ -52,6 +55,9 @@ export class OrdersService {
     private taxLotService: TaxLotService,
     private optionTaxService: OptionTaxService,
     private dataSource: DataSource,
+    private orderAuditService: OrderAuditService,
+    private orderValidationService: OrderValidationService,
+    private orderQueryService: OrderQueryService,
   ) {}
 
   /**
@@ -1361,87 +1367,21 @@ export class OrdersService {
    * Get orders with optional filters
    */
   async getOrders(userId: string, query?: QueryOrdersDto) {
-    const whereClause: Record<string, unknown> = { userId };
-
-    if (query?.status && query.status.length > 0) {
-      whereClause.status = In(query.status);
-    }
-    if (query?.symbol) {
-      whereClause.symbol = query.symbol.toUpperCase();
-    }
-    if (query?.side) {
-      whereClause.side = query.side;
-    }
-
-    const queryBuilder = this.orderRepository
-      .createQueryBuilder('order')
-      .where('order.userId = :userId', { userId });
-
-    if (query?.status && query.status.length > 0) {
-      queryBuilder.andWhere('order.status IN (:...statuses)', {
-        statuses: query.status,
-      });
-    }
-    if (query?.symbol) {
-      queryBuilder.andWhere('order.symbol = :symbol', {
-        symbol: query.symbol.toUpperCase(),
-      });
-    }
-    if (query?.side) {
-      queryBuilder.andWhere('order.side = :side', { side: query.side });
-    }
-    if (query?.from) {
-      queryBuilder.andWhere('order.createdAt >= :from', { from: query.from });
-    }
-    if (query?.to) {
-      queryBuilder.andWhere('order.createdAt <= :to', { to: query.to });
-    }
-
-    queryBuilder
-      .orderBy('order.createdAt', 'DESC')
-      .skip(query?.offset || 0)
-      .take(query?.limit || 50);
-
-    const orders = await queryBuilder.getMany();
-    return orders.map((order) => this.formatOrderResponse(order));
+    return this.orderQueryService.getOrders(userId, query);
   }
 
   /**
    * Get pending/open orders for a user
    */
   async getPendingOrders(userId: string) {
-    const orders = await this.orderRepository.find({
-      where: {
-        userId,
-        status: In([
-          OrderStatus.PENDING,
-          OrderStatus.OPEN,
-          OrderStatus.PARTIALLY_FILLED,
-        ]),
-      },
-      order: { createdAt: 'DESC' },
-    });
-
-    return orders.map((order) => this.formatOrderResponse(order));
+    return this.orderQueryService.getPendingOrders(userId);
   }
 
   /**
    * Get a single order by ID
    */
   async getOrder(userId: string, orderId: string) {
-    const order = await this.orderRepository.findOne({
-      where: { id: orderId },
-    });
-
-    if (!order) {
-      throw new NotFoundException('Order not found');
-    }
-
-    if (order.userId !== userId) {
-      throw new ForbiddenException('Not authorized to view this order');
-    }
-
-    return this.formatOrderResponse(order);
+    return this.orderQueryService.getOrder(userId, orderId);
   }
 
   /**
@@ -1460,20 +1400,11 @@ export class OrdersService {
       throw new ForbiddenException('Not authorized to view this order');
     }
 
-    const audits = await this.orderAuditRepository.find({
-      where: { orderId },
-      order: { createdAt: 'ASC' },
-    });
+    const audits = await this.orderAuditService.getAuditHistory(orderId);
 
     return {
       order: this.formatOrderResponse(order),
-      history: audits.map((audit) => ({
-        id: audit.id,
-        action: audit.action,
-        triggerPrice: audit.triggerPrice ? Number(audit.triggerPrice) : null,
-        notes: audit.notes,
-        createdAt: audit.createdAt,
-      })),
+      history: this.orderAuditService.formatAuditHistory(audits),
     };
   }
 
@@ -1481,62 +1412,14 @@ export class OrdersService {
    * Get available cash (excluding reserved for pending buy orders)
    */
   async getAvailableCash(userId: string): Promise<number> {
-    const user = await this.userRepository.findOne({ where: { id: userId } });
-    if (!user) {
-      throw new NotFoundException('User not found');
-    }
-
-    const result = await this.orderRepository
-      .createQueryBuilder('order')
-      .select(
-        'SUM((order.quantity - order.filledQuantity) * COALESCE(order.limitPrice, order.stopPrice, order.currentTriggerPrice, 0))',
-        'reserved',
-      )
-      .where('order.userId = :userId', { userId })
-      .andWhere('order.status IN (:...statuses)', {
-        statuses: [
-          OrderStatus.PENDING,
-          OrderStatus.OPEN,
-          OrderStatus.PARTIALLY_FILLED,
-        ],
-      })
-      .andWhere('order.side = :side', { side: OrderSide.BUY })
-      .andWhere('order.orderType != :market', { market: OrderType.MARKET })
-      .getRawOne<{ reserved: string | null }>();
-
-    const reserved = Number(result?.reserved) || 0;
-    return Number(user.cashBalance) - reserved;
+    return this.orderValidationService.getAvailableCash(userId);
   }
 
   /**
    * Get available shares (excluding reserved for pending sell orders)
    */
   async getAvailableShares(userId: string, symbol: string): Promise<number> {
-    const position = await this.positionRepository.findOne({
-      where: { userId, symbol: symbol.toUpperCase() },
-    });
-
-    if (!position) {
-      return 0;
-    }
-
-    const result = await this.orderRepository
-      .createQueryBuilder('order')
-      .select('SUM(order.quantity - order.filledQuantity)', 'reserved')
-      .where('order.userId = :userId', { userId })
-      .andWhere('order.symbol = :symbol', { symbol: symbol.toUpperCase() })
-      .andWhere('order.status IN (:...statuses)', {
-        statuses: [
-          OrderStatus.PENDING,
-          OrderStatus.OPEN,
-          OrderStatus.PARTIALLY_FILLED,
-        ],
-      })
-      .andWhere('order.side = :side', { side: OrderSide.SELL })
-      .getRawOne<{ reserved: string | null }>();
-
-    const reserved = Number(result?.reserved) || 0;
-    return Number(position.quantity) - reserved;
+    return this.orderValidationService.getAvailableShares(userId, symbol);
   }
 
   /**
@@ -1546,42 +1429,17 @@ export class OrdersService {
     symbols?: string[],
     extendedHoursOnly?: boolean,
   ): Promise<Order[]> {
-    const queryBuilder = this.orderRepository
-      .createQueryBuilder('order')
-      .where('order.status IN (:...statuses)', {
-        statuses: [OrderStatus.PENDING, OrderStatus.OPEN],
-      })
-      .andWhere('order.orderType != :market', { market: OrderType.MARKET });
-
-    if (symbols && symbols.length > 0) {
-      queryBuilder.andWhere('order.symbol IN (:...symbols)', { symbols });
-    }
-
-    if (extendedHoursOnly) {
-      queryBuilder.andWhere('order.extendedHours = true');
-    }
-
-    return queryBuilder.getMany();
+    return this.orderQueryService.getPendingConditionalOrders(
+      symbols,
+      extendedHoursOnly,
+    );
   }
 
   /**
    * Get unique symbols with pending conditional orders
    */
   async getActiveOrderSymbols(extendedHoursOnly?: boolean): Promise<string[]> {
-    const queryBuilder = this.orderRepository
-      .createQueryBuilder('order')
-      .select('DISTINCT order.symbol', 'symbol')
-      .where('order.status IN (:...statuses)', {
-        statuses: [OrderStatus.PENDING, OrderStatus.OPEN],
-      })
-      .andWhere('order.orderType != :market', { market: OrderType.MARKET });
-
-    if (extendedHoursOnly) {
-      queryBuilder.andWhere('order.extendedHours = true');
-    }
-
-    const results = await queryBuilder.getRawMany<{ symbol: string }>();
-    return results.map((r) => r.symbol);
+    return this.orderQueryService.getActiveOrderSymbols(extendedHoursOnly);
   }
 
   /**
@@ -1711,37 +1569,13 @@ export class OrdersService {
     limitPrice?: number,
     stopPrice?: number,
   ): void {
-    // For stop orders: buy stop above market, sell stop below market
-    // Note: TRAILING_STOP doesn't use stopPrice, it uses trailAmount/trailPercent
-    if (
-      [OrderType.STOP, OrderType.STOP_LIMIT].includes(orderType) &&
-      stopPrice
-    ) {
-      if (side === OrderSide.BUY && stopPrice <= currentPrice) {
-        throw new BadRequestException(
-          `Buy stop price must be above current price ($${currentPrice.toFixed(2)})`,
-        );
-      }
-      if (side === OrderSide.SELL && stopPrice >= currentPrice) {
-        throw new BadRequestException(
-          `Sell stop price must be below current price ($${currentPrice.toFixed(2)})`,
-        );
-      }
-    }
-
-    // For limit orders: buy limit below market, sell limit above market
-    if ([OrderType.LIMIT].includes(orderType) && limitPrice) {
-      if (side === OrderSide.BUY && limitPrice >= currentPrice) {
-        throw new BadRequestException(
-          `Buy limit price must be below current price ($${currentPrice.toFixed(2)})`,
-        );
-      }
-      if (side === OrderSide.SELL && limitPrice <= currentPrice) {
-        throw new BadRequestException(
-          `Sell limit price must be above current price ($${currentPrice.toFixed(2)})`,
-        );
-      }
-    }
+    this.orderValidationService.validateConditionalOrderPrices(
+      orderType,
+      side,
+      currentPrice,
+      limitPrice,
+      stopPrice,
+    );
   }
 
   private estimateOrderCost(
@@ -1751,11 +1585,13 @@ export class OrdersService {
     stopPrice?: number,
     currentPrice?: number,
   ): number {
-    // Use the most conservative estimate for fund reservation
-    if (limitPrice) return quantity * limitPrice;
-    if (stopPrice) return quantity * stopPrice;
-    if (currentPrice) return quantity * currentPrice * 1.1; // Add 10% buffer for market orders
-    return 0;
+    return this.orderValidationService.estimateOrderCost(
+      orderType,
+      quantity,
+      limitPrice,
+      stopPrice,
+      currentPrice,
+    );
   }
 
   private async createAuditRecord(
@@ -1764,72 +1600,20 @@ export class OrdersService {
     notes: string | null,
     triggerPrice: number | null,
   ): Promise<void> {
-    const audit = this.orderAuditRepository.create({
-      orderId: order.id,
+    await this.orderAuditService.createAuditRecord(
+      order,
       action,
-      newState: this.orderToSnapshot(order),
-      triggerPrice,
       notes,
-    });
-    await this.orderAuditRepository.save(audit);
+      triggerPrice,
+    );
   }
 
   private orderToSnapshot(order: Order): Record<string, unknown> {
-    return {
-      status: order.status,
-      quantity: Number(order.quantity),
-      filledQuantity: Number(order.filledQuantity),
-      limitPrice: order.limitPrice ? Number(order.limitPrice) : null,
-      stopPrice: order.stopPrice ? Number(order.stopPrice) : null,
-      trailAmount: order.trailAmount ? Number(order.trailAmount) : null,
-      trailPercent: order.trailPercent ? Number(order.trailPercent) : null,
-    };
+    return this.orderAuditService.orderToSnapshot(order);
   }
 
   private formatOrderResponse(order: Order) {
-    const response: Record<string, unknown> = {
-      id: order.id,
-      symbol: order.symbol,
-      side: order.side,
-      orderType: order.orderType,
-      timeInForce: order.timeInForce,
-      extendedHours: order.extendedHours,
-      quantity: Number(order.quantity),
-      filledQuantity: Number(order.filledQuantity),
-      limitPrice: order.limitPrice ? Number(order.limitPrice) : null,
-      stopPrice: order.stopPrice ? Number(order.stopPrice) : null,
-      trailAmount: order.trailAmount ? Number(order.trailAmount) : null,
-      trailPercent: order.trailPercent ? Number(order.trailPercent) : null,
-      currentTriggerPrice: order.currentTriggerPrice
-        ? Number(order.currentTriggerPrice)
-        : null,
-      filledPrice: order.filledPrice ? Number(order.filledPrice) : null,
-      avgFillPrice: order.avgFillPrice ? Number(order.avgFillPrice) : null,
-      status: order.status,
-      rejectionReason: order.rejectionReason,
-      createdAt: order.createdAt,
-      updatedAt: order.updatedAt,
-      expiresAt: order.expiresAt,
-      triggeredAt: order.triggeredAt,
-      filledAt: order.filledAt,
-      cancelledAt: order.cancelledAt,
-      orderCategory: order.orderCategory,
-    };
-
-    // Add option-specific fields if this is an option order
-    if (order.orderCategory === OrderCategory.OPTION) {
-      response.optionSymbol = order.optionSymbol;
-      response.underlyingSymbol = order.underlyingSymbol;
-      response.optionType = order.optionType;
-      response.strikePrice = order.strikePrice
-        ? Number(order.strikePrice)
-        : null;
-      response.expirationDate = order.expirationDate;
-      response.contractMultiplier = order.contractMultiplier;
-      response.greeksAtFill = order.greeksAtFill;
-    }
-
-    return response;
+    return this.orderQueryService.formatOrderResponse(order);
   }
 
   // ============ Option Order Methods ============
@@ -2389,31 +2173,9 @@ export class OrdersService {
     userId: string,
     optionSymbol: string,
   ): Promise<number> {
-    const position = await this.optionPositionRepository.findOne({
-      where: { userId, optionSymbol },
-    });
-
-    if (!position || Number(position.quantity) <= 0) {
-      return 0;
-    }
-
-    // Check for pending sell orders on this option
-    const result = await this.orderRepository
-      .createQueryBuilder('order')
-      .select('SUM(order.quantity - order.filledQuantity)', 'reserved')
-      .where('order.userId = :userId', { userId })
-      .andWhere('order.optionSymbol = :optionSymbol', { optionSymbol })
-      .andWhere('order.status IN (:...statuses)', {
-        statuses: [
-          OrderStatus.PENDING,
-          OrderStatus.OPEN,
-          OrderStatus.PARTIALLY_FILLED,
-        ],
-      })
-      .andWhere('order.side = :side', { side: OrderSide.SELL })
-      .getRawOne<{ reserved: string | null }>();
-
-    const reserved = Number(result?.reserved) || 0;
-    return Math.max(0, Number(position.quantity) - reserved);
+    return this.orderValidationService.getAvailableOptionContracts(
+      userId,
+      optionSymbol,
+    );
   }
 }
