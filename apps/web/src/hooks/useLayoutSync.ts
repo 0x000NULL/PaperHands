@@ -74,6 +74,7 @@ export function useLayoutSync() {
   const isAuthenticated = useAuthStore((state) => state.isAuthenticated);
   const lastSyncedRef = useRef<string | null>(null);
   const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const isApplyingServerLayout = useRef(false);
 
   // Fetch saved layouts from server
   const { data: savedLayouts } = useQuery({
@@ -98,10 +99,16 @@ export function useLayoutSync() {
         const { layouts: newLayouts, hiddenWidgets: serverHiddenWidgets } = fromApiFormat(defaultLayout.widgets);
         // Only apply if we have valid layouts
         if (newLayouts.lg && newLayouts.lg.length > 0) {
+          // Mark that we're applying server layout to prevent save loop
+          isApplyingServerLayout.current = true;
           setLayouts(newLayouts);
           // Also update hidden widgets from server
           useLayoutStore.setState({ hiddenWidgets: serverHiddenWidgets });
           lastSyncedRef.current = serverWidgetsHash;
+          // Reset flag after a short delay to allow state to settle
+          setTimeout(() => {
+            isApplyingServerLayout.current = false;
+          }, 100);
         }
       }
     }
@@ -123,8 +130,10 @@ export function useLayoutSync() {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['layouts'] });
       queryClient.invalidateQueries({ queryKey: ['layouts', 'default'] });
+      setSyncing(false);
     },
-    onSettled: () => {
+    onError: (error) => {
+      console.error('Failed to save layout:', error);
       setSyncing(false);
     },
   });
@@ -162,6 +171,9 @@ export function useLayoutSync() {
   // Watch for local layout changes and sync
   useEffect(() => {
     const unsubscribe = useLayoutStore.subscribe((state, prevState) => {
+      // Skip if we're applying server layout (avoid save loop)
+      if (isApplyingServerLayout.current) return;
+
       const layoutsChanged = state.layouts !== prevState.layouts;
       const hiddenChanged = state.hiddenWidgets !== prevState.hiddenWidgets;
       if ((layoutsChanged || hiddenChanged) && isAuthenticated()) {
