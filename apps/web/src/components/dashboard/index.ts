@@ -17,4 +17,4 @@ export { OptionsPnLCalculator } from './OptionsPnLCalculator';
 export { PayoffDiagram } from './PayoffDiagram';
 export { WatchlistWidget } from './WatchlistWidget';
 export { DraggableWidget, WidgetWrapper } from './DraggableWidget';
-export { WidgetGrid, GridWidget } from './WidgetGrid';
+export { WidgetGrid } from './WidgetGrid';

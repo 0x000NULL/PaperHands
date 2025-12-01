@@ -1,5 +1,3 @@
-import { useSortable } from '@dnd-kit/sortable';
-import { CSS } from '@dnd-kit/utilities';
 import { type CSSProperties, type ReactNode } from 'react';
 import { theme } from '../../theme/constants';
 import { useLayoutStore, getWidgetConfig, type WidgetId } from '../../store/layoutStore';
@@ -19,6 +17,7 @@ const styles: Record<string, CSSProperties> = {
     flexDirection: 'column',
     overflow: 'hidden',
     height: '100%',
+    minHeight: 0,
   },
   header: {
     display: 'flex',
@@ -43,13 +42,11 @@ const styles: Record<string, CSSProperties> = {
     alignItems: 'center',
     gap: '2px',
   },
-  dragHandleActive: {
-    cursor: 'grabbing',
-  },
   content: {
     flex: 1,
     overflow: 'auto',
     padding: theme.spacing.sm,
+    minHeight: 0,
   },
   controls: {
     display: 'flex',
@@ -79,19 +76,6 @@ const styles: Record<string, CSSProperties> = {
     pointerEvents: 'none',
     borderRadius: theme.radius.lg,
   },
-  resizeHandle: {
-    position: 'absolute',
-    bottom: 0,
-    right: 0,
-    width: '20px',
-    height: '20px',
-    cursor: 'se-resize',
-    color: theme.colors.textTertiary,
-    display: 'flex',
-    alignItems: 'center',
-    justifyContent: 'center',
-    fontSize: '10px',
-  },
 };
 
 // Drag handle icon (6 dots)
@@ -112,42 +96,14 @@ export function DraggableWidget({ id, children, className }: DraggableWidgetProp
   const { isEditMode, hideWidget } = useLayoutStore();
   const config = getWidgetConfig(id);
 
-  const {
-    attributes,
-    listeners,
-    setNodeRef,
-    transform,
-    transition,
-    isDragging,
-  } = useSortable({
-    id,
-    disabled: !isEditMode,
-  });
-
-  const style: CSSProperties = {
-    transform: CSS.Transform.toString(transform),
-    transition,
-    opacity: isDragging ? 0.5 : 1,
-    zIndex: isDragging ? 1000 : 'auto',
-    position: 'relative',
-  };
-
   return (
-    <div
-      ref={setNodeRef}
-      style={style}
-      className={className}
-    >
+    <div style={{ height: '100%', position: 'relative' }} className={className}>
       <div style={styles.widget}>
         <div style={styles.header}>
           {isEditMode && (
             <div
-              style={{
-                ...styles.dragHandle,
-                ...(isDragging ? styles.dragHandleActive : {}),
-              }}
-              {...attributes}
-              {...listeners}
+              className="widget-drag-handle"
+              style={styles.dragHandle}
             >
               <DragHandleIcon />
             </div>

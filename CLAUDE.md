@@ -24,16 +24,22 @@ pnpm build         # Build both apps
 pnpm build:api     # Build API only
 pnpm build:web     # Build web only
 
-# API-specific commands (run from apps/api or use --filter)
-pnpm --filter api test           # Run unit tests
-pnpm --filter api test:watch     # Watch mode
-pnpm --filter api test:e2e       # E2E tests
+# API Testing
+pnpm --filter api test                        # Run all unit tests
+pnpm --filter api test -- path/to/file.spec   # Run single test file
+pnpm --filter api test:watch                  # Watch mode
+pnpm --filter api test:cov                    # Coverage report
+pnpm --filter api test:e2e                    # E2E tests
+
+# Linting & Formatting
 pnpm --filter api lint           # ESLint with auto-fix
 pnpm --filter api format         # Prettier formatting
-
-# Web-specific commands
 pnpm --filter web lint           # ESLint
-pnpm --filter web preview        # Preview production build
+
+# TypeORM Migrations (run from apps/api)
+pnpm --filter api typeorm migration:generate src/migrations/MigrationName
+pnpm --filter api typeorm migration:run
+pnpm --filter api typeorm migration:revert
 ```
 
 ## Architecture
@@ -100,7 +106,9 @@ pnpm --filter web preview        # Preview production build
 - `PortfolioSnapshot` - Daily snapshots for performance tracking
 - `Watchlist` / `WatchlistItem` - User watchlist management
 
-### Order Enums (`apps/api/src/orders/enums/`)
+### Key Enums
+
+**Orders (`apps/api/src/orders/enums/`):**
 - `OrderCategory`: EQUITY, OPTION
 - `OptionType`: CALL, PUT
 - `OrderSide`: BUY, SELL
@@ -108,42 +116,21 @@ pnpm --filter web preview        # Preview production build
 - `TimeInForce`: DAY, GTC, IOC, FOK
 - `OrderStatus`: PENDING, FILLED, CANCELLED, EXPIRED, REJECTED
 
-### Cost Basis Enums (`apps/api/src/portfolio/enums/`)
+**Cost Basis (`apps/api/src/portfolio/enums/`):**
 - `CostBasisMethod`: FIFO, LIFO, HIFO, SPECIFIC
 - `GainType`: SHORT_TERM, LONG_TERM
 - `OptionClosureType`: SOLD_TO_CLOSE, BOUGHT_TO_CLOSE, EXPIRED_WORTHLESS, EXERCISED, ASSIGNED
 
-### Frontend Pages (`apps/web/src/pages/`)
-- `Dashboard.tsx` - Main trading dashboard with quotes, charts, trade form
-- `Greeks.tsx` - Greeks dashboard with portfolio delta/gamma/theta/vega/rho
-- `Analytics.tsx` - Tax lots, realized gains, dividends, option closures
-- `Watchlists.tsx` - Watchlist management
-- `Portfolio.tsx` - Positions overview
-- `Orders.tsx` - Order history
+### Frontend Architecture
 
-### Frontend Components (`apps/web/src/components/dashboard/`)
-- `OptionsChainPanel.tsx` / `OptionsChainTable.tsx` - Options chain with bid/ask/Greeks
-- `OptionDetailModal.tsx` - Full option details modal
-- `ExpirationCalendar.tsx` / `ExpirationTabs.tsx` - Expiration management
-- `ChartContainer.tsx` / `ChartPanel.tsx` - Lightweight charts integration
-- `TradeForm.tsx` - Order form for stocks and options
-- `PositionsTable.tsx` - Positions with P&L
-- `QuotePanel.tsx` - Real-time quotes
-- `PortfolioSummary.tsx` - Portfolio value and allocation
-
-### Frontend Hooks (`apps/web/src/hooks/`)
-- `useOptionsChain.ts` - Fetch options chain data
-- `useHistoricalData.ts` - Historical candles
-- `useStreamingQuote.ts` / `useWebSocket.ts` - Real-time streaming
-- `useRealtimeCandles.ts` / `useRealtimePnL.ts` - Live updates
-- `useMarketStatus.ts` - Market hours and status
-- `usePortfolio.ts` / `useQuote.ts` / `useOrders.ts` - Data fetching
-- `useWatchlists.ts` - Watchlist operations
-
-### Frontend State Management
+**State Management:**
 - `useAuthStore` (Zustand + persist) - JWT token and user state
 - TanStack Query for server state and API calls
-- Protected/Public route wrappers in App.tsx
+- Protected/Public route wrappers in `App.tsx`
+
+**Key Pages:** Dashboard (trading), Greeks (analytics), Analytics (tax/gains), Portfolio, Orders, Watchlists
+
+**Real-time Features:** WebSocket hooks (`useStreamingQuote`, `useWebSocket`) connect to backend streaming service
 
 ### External Services
 - Tradier API for market data, options chains, streaming (sandbox by default)
@@ -151,13 +138,25 @@ pnpm --filter web preview        # Preview production build
 - PostgreSQL (DigitalOcean managed)
 - Redis/Valkey for caching and BullMQ queues
 
+## Deployment
+
+Deployed on DigitalOcean App Platform via `app.yaml`:
+- API service at `/api` route prefix (stripped before reaching NestJS)
+- Frontend as static site at `/`
+- Health checks at `/health`
+
+```bash
+# Check deployment logs
+doctl apps logs <app-id> --type build --follow
+doctl apps logs <app-id> --type run --follow
+```
+
 ## Environment Variables
 
 Required environment variables are validated at startup. See `apps/api/.env.example`:
 - `DATABASE_URL` - PostgreSQL connection string
-- `REDIS_HOST`, `REDIS_PASSWORD` - Redis connection
-- `JWT_SECRET` - JWT signing key
-- `TRADIER_API_TOKEN` - Tradier API access token
-- `TRADIER_BASE_URL` - Tradier API endpoint (sandbox default)
-- `FINNHUB_API_KEY` - Finnhub API key (optional)
-- `FINNHUB_BASE_URL` - Finnhub API endpoint
+- `REDIS_HOST`, `REDIS_PORT`, `REDIS_PASSWORD` - Redis connection
+- `JWT_SECRET`, `JWT_EXPIRES_IN` - JWT configuration
+- `TRADIER_API_TOKEN`, `TRADIER_BASE_URL` - Tradier API (optional)
+- `FINNHUB_API_KEY`, `FINNHUB_BASE_URL` - Finnhub API
+- `PORT`, `NODE_ENV` - Application settings

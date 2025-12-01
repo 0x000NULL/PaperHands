@@ -18,6 +18,8 @@ const styles: Record<string, CSSProperties> = {
     overflow: 'hidden',
     display: 'flex',
     flexDirection: 'column',
+    height: '100%',
+    minHeight: 0,
   },
   header: {
     padding: `${theme.spacing.md} ${theme.spacing.lg}`,
@@ -39,11 +41,13 @@ const styles: Record<string, CSSProperties> = {
     padding: theme.spacing.lg,
     flex: 1,
     overflow: 'auto',
+    minHeight: 0,
   },
   bodyNoPadding: {
     padding: 0,
     flex: 1,
     overflow: 'auto',
+    minHeight: 0,
   },
 };
 

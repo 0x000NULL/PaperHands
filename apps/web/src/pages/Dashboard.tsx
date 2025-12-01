@@ -12,13 +12,12 @@ import {
   IVGauge,
   WatchlistWidget,
   WidgetGrid,
-  GridWidget,
   DraggableWidget,
 } from '../components/dashboard';
 import { PerformanceHeatMap } from '../components/heatmap/PerformanceHeatMap';
 import { useDashboardStore } from '../store/dashboardStore';
 import { SpotlightTour } from '../components/onboarding';
-import { type WidgetId, type WidgetPosition } from '../store/layoutStore';
+import { type WidgetId } from '../store/layoutStore';
 import { useLayoutSync } from '../hooks/useLayoutSync';
 import { QuickTradePanel } from '../components/common/QuickTradePanel';
 import { ShortcutsModal } from '../components/common/ShortcutsModal';
@@ -92,14 +91,15 @@ export function Dashboard() {
     <Layout>
       <div style={styles.container}>
         <WidgetGrid>
-          {(visibleWidgets: WidgetPosition[]) => (
+          {(visibleWidgetIds: WidgetId[]) => (
             <>
-              {visibleWidgets.map((widget) => (
-                <GridWidget key={widget.id} widget={widget}>
-                  <DraggableWidget id={widget.id}>
-                    {renderWidgetContent(widget.id, selectedSymbol)}
+              {visibleWidgetIds.map((widgetId) => (
+                // react-grid-layout requires a div wrapper with key matching layout.i
+                <div key={widgetId}>
+                  <DraggableWidget id={widgetId}>
+                    {renderWidgetContent(widgetId, selectedSymbol)}
                   </DraggableWidget>
-                </GridWidget>
+                </div>
               ))}
             </>
           )}

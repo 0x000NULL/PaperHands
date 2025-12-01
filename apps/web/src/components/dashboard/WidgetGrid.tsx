@@ -1,29 +1,22 @@
 import { type CSSProperties, type ReactNode, useCallback } from 'react';
-import {
-  DndContext,
-  type DragEndEvent,
-  closestCenter,
-  KeyboardSensor,
-  PointerSensor,
-  useSensor,
-  useSensors,
-} from '@dnd-kit/core';
-import {
-  SortableContext,
-  sortableKeyboardCoordinates,
-  rectSortingStrategy,
-} from '@dnd-kit/sortable';
+import { Responsive, WidthProvider } from 'react-grid-layout';
+import type { Layout, Layouts } from 'react-grid-layout';
+import 'react-grid-layout/css/styles.css';
+import 'react-resizable/css/styles.css';
 import { theme } from '../../theme/constants';
 import {
   useLayoutStore,
-  getVisibleWidgets,
   getPresets,
+  getVisibleLayouts,
+  getVisibleWidgetIds,
   WIDGET_CONFIGS,
+  GRID_CONFIG,
   type WidgetId,
-  type WidgetPosition,
 } from '../../store/layoutStore';
-import { useIsDesktop, useIsTablet } from '../../hooks/useMediaQuery';
 import '../../styles/responsive.css';
+import '../../styles/dashboard.css';
+
+const ResponsiveGridLayout = WidthProvider(Responsive);
 
 const styles: Record<string, CSSProperties> = {
   container: {
@@ -120,50 +113,44 @@ const styles: Record<string, CSSProperties> = {
 };
 
 interface WidgetGridProps {
-  children: (widgets: WidgetPosition[]) => ReactNode;
+  children: (visibleWidgetIds: WidgetId[]) => ReactNode;
 }
 
 export function WidgetGrid({ children }: WidgetGridProps) {
   const {
-    widgets,
+    layouts,
+    hiddenWidgets,
     activePreset,
     isEditMode,
     isSyncing,
+    currentBreakpoint,
     setEditMode,
     applyPreset,
     showWidget,
     hideWidget,
+    updateLayoutsForBreakpoint,
+    setCurrentBreakpoint,
   } = useLayoutStore();
 
-  const sensors = useSensors(
-    useSensor(PointerSensor, {
-      activationConstraint: {
-        distance: 8,
-      },
-    }),
-    useSensor(KeyboardSensor, {
-      coordinateGetter: sortableKeyboardCoordinates,
-    }),
-  );
-
-  const visibleWidgets = getVisibleWidgets(widgets);
   const presets = getPresets();
+  const visibleWidgetIds = getVisibleWidgetIds(hiddenWidgets);
+  const visibleLayouts = getVisibleLayouts(layouts, hiddenWidgets);
 
-  const handleDragEnd = useCallback(
-    (event: DragEndEvent) => {
-      const { active, over } = event;
-
-      if (over && active.id !== over.id) {
-        // For now, just reorder in the visible list
-        // More complex grid repositioning could be added later
-        const { moveWidget } = useLayoutStore.getState();
-        const overWidget = widgets.find((w) => w.id === over.id);
-        if (overWidget) {
-          moveWidget(active.id as WidgetId, overWidget.x, overWidget.y);
-        }
+  const handleLayoutChange = useCallback(
+    (currentLayout: Layout[], _allLayouts: Layouts) => {
+      // Only update if in edit mode to prevent layout changes from re-renders
+      if (isEditMode) {
+        updateLayoutsForBreakpoint(currentBreakpoint, currentLayout);
       }
     },
-    [widgets],
+    [isEditMode, currentBreakpoint, updateLayoutsForBreakpoint]
+  );
+
+  const handleBreakpointChange = useCallback(
+    (newBreakpoint: string) => {
+      setCurrentBreakpoint(newBreakpoint);
+    },
+    [setCurrentBreakpoint]
   );
 
   const handlePresetChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
@@ -174,16 +161,15 @@ export function WidgetGrid({ children }: WidgetGridProps) {
   };
 
   const toggleWidgetVisibility = (id: WidgetId) => {
-    const widget = widgets.find((w) => w.id === id);
-    if (widget?.visible) {
-      hideWidget(id);
-    } else {
+    if (hiddenWidgets.includes(id)) {
       showWidget(id);
+    } else {
+      hideWidget(id);
     }
   };
 
   return (
-    <div style={styles.container}>
+    <div style={styles.container} className={isEditMode ? 'edit-mode' : ''}>
       <div style={styles.toolbar} data-tour-id="tour-layout-toolbar">
         <div style={styles.toolbarLeft}>
           <span style={styles.label}>Layout:</span>
@@ -204,7 +190,7 @@ export function WidgetGrid({ children }: WidgetGridProps) {
             <>
               <span style={{ ...styles.label, marginLeft: theme.spacing.md }}>Widgets:</span>
               {WIDGET_CONFIGS.map((config) => {
-                const isVisible = widgets.find((w) => w.id === config.id)?.visible;
+                const isVisible = !hiddenWidgets.includes(config.id);
                 return (
                   <button
                     key={config.id}
@@ -242,53 +228,27 @@ export function WidgetGrid({ children }: WidgetGridProps) {
         </div>
       </div>
 
-      <DndContext
-        sensors={sensors}
-        collisionDetection={closestCenter}
-        onDragEnd={handleDragEnd}
-      >
-        <SortableContext
-          items={visibleWidgets.map((w) => w.id)}
-          strategy={rectSortingStrategy}
+      <div style={styles.grid}>
+        <ResponsiveGridLayout
+          layouts={visibleLayouts}
+          breakpoints={GRID_CONFIG.breakpoints}
+          cols={GRID_CONFIG.cols}
+          rowHeight={GRID_CONFIG.rowHeight}
+          margin={GRID_CONFIG.margin}
+          containerPadding={GRID_CONFIG.containerPadding}
+          isDraggable={isEditMode}
+          isResizable={isEditMode}
+          compactType="vertical"
+          preventCollision={false}
+          onLayoutChange={handleLayoutChange}
+          onBreakpointChange={handleBreakpointChange}
+          draggableHandle=".widget-drag-handle"
+          resizeHandles={['se']}
+          useCSSTransforms={true}
         >
-          <div className="widget-grid" style={styles.grid}>
-            {children(visibleWidgets)}
-          </div>
-        </SortableContext>
-      </DndContext>
+          {children(visibleWidgetIds)}
+        </ResponsiveGridLayout>
+      </div>
     </div>
   );
-}
-
-// Helper component to position widgets in a CSS Grid
-interface GridWidgetProps {
-  widget: WidgetPosition;
-  children: ReactNode;
-}
-
-export function GridWidget({ widget, children }: GridWidgetProps) {
-  const isDesktop = useIsDesktop();
-  const isTablet = useIsTablet();
-
-  // On mobile/tablet, widgets span full width and stack vertically
-  // On desktop (xl+), use the configured grid positioning
-  const style: CSSProperties = isDesktop
-    ? {
-        gridColumn: `${widget.x + 1} / span ${widget.width}`,
-        gridRow: `${widget.y + 1} / span ${widget.height}`,
-        minHeight: `${widget.height * 100}px`,
-      }
-    : isTablet
-      ? {
-          // On tablet, span half width (2-column grid) or full if widget is wide
-          gridColumn: widget.width > 3 ? '1 / -1' : 'span 1',
-          minHeight: '200px',
-        }
-      : {
-          // On mobile, all widgets span full width (single column)
-          gridColumn: '1 / -1',
-          minHeight: '200px',
-        };
-
-  return <div style={style}>{children}</div>;
 }

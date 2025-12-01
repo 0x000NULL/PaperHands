@@ -1,5 +1,6 @@
 import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
+import type { Layout, Layouts } from 'react-grid-layout';
 
 export type WidgetId =
   | 'quote'
@@ -19,11 +20,12 @@ export interface WidgetConfig {
   title: string;
   description: string;
   defaultVisible: boolean;
-  minWidth?: number;
-  minHeight?: number;
+  minW?: number;
+  minH?: number;
 }
 
-export interface WidgetPosition {
+// Legacy format for migration
+interface LegacyWidgetPosition {
   id: WidgetId;
   x: number;
   y: number;
@@ -32,10 +34,16 @@ export interface WidgetPosition {
   visible: boolean;
 }
 
+// New format using react-grid-layout's Layout type
+export interface WidgetLayout extends Layout {
+  i: string; // Widget ID
+}
+
 export interface LayoutPreset {
   id: string;
   name: string;
-  widgets: WidgetPosition[];
+  layouts: Layouts;
+  hiddenWidgets: WidgetId[];
 }
 
 // Widget definitions
@@ -45,223 +53,344 @@ export const WIDGET_CONFIGS: WidgetConfig[] = [
     title: 'Quote',
     description: 'Real-time price and quote data',
     defaultVisible: true,
-    minWidth: 2,
-    minHeight: 1,
+    minW: 2,
+    minH: 1,
   },
   {
     id: 'chart',
     title: 'Chart',
     description: 'Price chart with candlesticks',
     defaultVisible: true,
-    minWidth: 3,
-    minHeight: 2,
+    minW: 3,
+    minH: 2,
   },
   {
     id: 'trade',
     title: 'Trade',
     description: 'Order entry form',
     defaultVisible: true,
-    minWidth: 2,
-    minHeight: 2,
+    minW: 2,
+    minH: 2,
   },
   {
     id: 'positions',
     title: 'Positions',
     description: 'Current portfolio positions',
     defaultVisible: true,
-    minWidth: 3,
-    minHeight: 2,
+    minW: 3,
+    minH: 2,
   },
   {
     id: 'orders',
     title: 'Recent Orders',
     description: 'Recent order history',
     defaultVisible: false,
-    minWidth: 3,
-    minHeight: 2,
+    minW: 3,
+    minH: 2,
   },
   {
     id: 'watchlist',
     title: 'Watchlist',
     description: 'Tracked symbols',
     defaultVisible: true,
-    minWidth: 2,
-    minHeight: 2,
+    minW: 2,
+    minH: 2,
   },
   {
     id: 'options',
     title: 'Options Chain',
     description: 'Options chain data',
     defaultVisible: false,
-    minWidth: 4,
-    minHeight: 3,
+    minW: 4,
+    minH: 3,
   },
   {
     id: 'heatmap',
     title: 'Heat Map',
     description: 'Performance heatmap',
     defaultVisible: false,
-    minWidth: 2,
-    minHeight: 2,
+    minW: 2,
+    minH: 2,
   },
   {
     id: 'expirations',
     title: 'Expirations',
     description: 'Options expiration calendar',
     defaultVisible: false,
-    minWidth: 2,
-    minHeight: 2,
+    minW: 2,
+    minH: 2,
   },
   {
     id: 'ivGauge',
     title: 'IV Gauge',
     description: 'Implied volatility indicator',
     defaultVisible: false,
-    minWidth: 2,
-    minHeight: 1,
+    minW: 2,
+    minH: 1,
   },
   {
     id: 'summary',
     title: 'Portfolio Summary',
     description: 'Portfolio value and P&L',
     defaultVisible: true,
-    minWidth: 2,
-    minHeight: 1,
+    minW: 2,
+    minH: 1,
   },
 ];
 
-// Default layout - grid positions (x, y are grid cells, width/height are spans)
-const DEFAULT_LAYOUT: WidgetPosition[] = [
-  { id: 'summary', x: 0, y: 0, width: 4, height: 1, visible: true },
-  { id: 'quote', x: 4, y: 0, width: 2, height: 1, visible: true },
-  { id: 'chart', x: 0, y: 1, width: 4, height: 3, visible: true },
-  { id: 'trade', x: 4, y: 1, width: 2, height: 2, visible: true },
-  { id: 'watchlist', x: 4, y: 3, width: 2, height: 2, visible: true },
-  { id: 'positions', x: 0, y: 4, width: 4, height: 2, visible: true },
-  { id: 'orders', x: 0, y: 6, width: 3, height: 2, visible: false },
-  { id: 'options', x: 0, y: 6, width: 6, height: 3, visible: false },
-  { id: 'heatmap', x: 3, y: 6, width: 3, height: 2, visible: false },
-  { id: 'expirations', x: 0, y: 8, width: 3, height: 2, visible: false },
-  { id: 'ivGauge', x: 3, y: 8, width: 3, height: 1, visible: false },
-];
+// Grid configuration
+export const GRID_CONFIG = {
+  cols: { lg: 6, md: 4, sm: 2, xs: 1 },
+  breakpoints: { lg: 1280, md: 768, sm: 640, xs: 0 },
+  rowHeight: 100,
+  margin: [16, 16] as [number, number],
+  containerPadding: [16, 16] as [number, number],
+};
+
+// Default layouts for different breakpoints
+const DEFAULT_LAYOUTS: Layouts = {
+  lg: [
+    { i: 'summary', x: 0, y: 0, w: 4, h: 1, minW: 2, minH: 1 },
+    { i: 'quote', x: 4, y: 0, w: 2, h: 1, minW: 2, minH: 1 },
+    { i: 'chart', x: 0, y: 1, w: 4, h: 3, minW: 3, minH: 2 },
+    { i: 'trade', x: 4, y: 1, w: 2, h: 2, minW: 2, minH: 2 },
+    { i: 'watchlist', x: 4, y: 3, w: 2, h: 2, minW: 2, minH: 2 },
+    { i: 'positions', x: 0, y: 4, w: 4, h: 2, minW: 3, minH: 2 },
+    { i: 'orders', x: 0, y: 6, w: 3, h: 2, minW: 3, minH: 2 },
+    { i: 'options', x: 0, y: 6, w: 6, h: 3, minW: 4, minH: 3 },
+    { i: 'heatmap', x: 3, y: 6, w: 3, h: 2, minW: 2, minH: 2 },
+    { i: 'expirations', x: 0, y: 8, w: 3, h: 2, minW: 2, minH: 2 },
+    { i: 'ivGauge', x: 3, y: 8, w: 3, h: 1, minW: 2, minH: 1 },
+  ],
+  md: [
+    { i: 'summary', x: 0, y: 0, w: 4, h: 1, minW: 2, minH: 1 },
+    { i: 'quote', x: 0, y: 1, w: 2, h: 1, minW: 2, minH: 1 },
+    { i: 'chart', x: 0, y: 2, w: 4, h: 3, minW: 2, minH: 2 },
+    { i: 'trade', x: 2, y: 1, w: 2, h: 2, minW: 2, minH: 2 },
+    { i: 'watchlist', x: 0, y: 5, w: 2, h: 2, minW: 2, minH: 2 },
+    { i: 'positions', x: 0, y: 7, w: 4, h: 2, minW: 2, minH: 2 },
+    { i: 'orders', x: 0, y: 9, w: 4, h: 2, minW: 2, minH: 2 },
+    { i: 'options', x: 0, y: 11, w: 4, h: 3, minW: 2, minH: 2 },
+    { i: 'heatmap', x: 2, y: 5, w: 2, h: 2, minW: 2, minH: 2 },
+    { i: 'expirations', x: 0, y: 14, w: 2, h: 2, minW: 2, minH: 2 },
+    { i: 'ivGauge', x: 2, y: 14, w: 2, h: 1, minW: 2, minH: 1 },
+  ],
+  sm: [
+    { i: 'summary', x: 0, y: 0, w: 2, h: 1, minW: 1, minH: 1 },
+    { i: 'quote', x: 0, y: 1, w: 2, h: 1, minW: 1, minH: 1 },
+    { i: 'chart', x: 0, y: 2, w: 2, h: 3, minW: 1, minH: 2 },
+    { i: 'trade', x: 0, y: 5, w: 2, h: 2, minW: 1, minH: 2 },
+    { i: 'watchlist', x: 0, y: 7, w: 2, h: 2, minW: 1, minH: 2 },
+    { i: 'positions', x: 0, y: 9, w: 2, h: 2, minW: 1, minH: 2 },
+    { i: 'orders', x: 0, y: 11, w: 2, h: 2, minW: 1, minH: 2 },
+    { i: 'options', x: 0, y: 13, w: 2, h: 3, minW: 1, minH: 2 },
+    { i: 'heatmap', x: 0, y: 16, w: 2, h: 2, minW: 1, minH: 2 },
+    { i: 'expirations', x: 0, y: 18, w: 2, h: 2, minW: 1, minH: 2 },
+    { i: 'ivGauge', x: 0, y: 20, w: 2, h: 1, minW: 1, minH: 1 },
+  ],
+  xs: [
+    { i: 'summary', x: 0, y: 0, w: 1, h: 1, minW: 1, minH: 1 },
+    { i: 'quote', x: 0, y: 1, w: 1, h: 1, minW: 1, minH: 1 },
+    { i: 'chart', x: 0, y: 2, w: 1, h: 3, minW: 1, minH: 2 },
+    { i: 'trade', x: 0, y: 5, w: 1, h: 3, minW: 1, minH: 2 },
+    { i: 'watchlist', x: 0, y: 8, w: 1, h: 2, minW: 1, minH: 2 },
+    { i: 'positions', x: 0, y: 10, w: 1, h: 2, minW: 1, minH: 2 },
+    { i: 'orders', x: 0, y: 12, w: 1, h: 2, minW: 1, minH: 2 },
+    { i: 'options', x: 0, y: 14, w: 1, h: 3, minW: 1, minH: 2 },
+    { i: 'heatmap', x: 0, y: 17, w: 1, h: 2, minW: 1, minH: 2 },
+    { i: 'expirations', x: 0, y: 19, w: 1, h: 2, minW: 1, minH: 2 },
+    { i: 'ivGauge', x: 0, y: 21, w: 1, h: 1, minW: 1, minH: 1 },
+  ],
+};
+
+const DEFAULT_HIDDEN_WIDGETS: WidgetId[] = ['orders', 'options', 'heatmap', 'expirations', 'ivGauge'];
 
 // Preset layouts
 const PRESET_LAYOUTS: LayoutPreset[] = [
   {
     id: 'default',
     name: 'Default',
-    widgets: DEFAULT_LAYOUT,
+    layouts: DEFAULT_LAYOUTS,
+    hiddenWidgets: DEFAULT_HIDDEN_WIDGETS,
   },
   {
     id: 'trading',
     name: 'Trading Focus',
-    widgets: [
-      { id: 'quote', x: 0, y: 0, width: 3, height: 1, visible: true },
-      { id: 'ivGauge', x: 3, y: 0, width: 3, height: 1, visible: true },
-      { id: 'chart', x: 0, y: 1, width: 4, height: 3, visible: true },
-      { id: 'trade', x: 4, y: 1, width: 2, height: 3, visible: true },
-      { id: 'positions', x: 0, y: 4, width: 6, height: 2, visible: true },
-      { id: 'summary', x: 0, y: 6, width: 6, height: 1, visible: true },
-      { id: 'watchlist', x: 0, y: 0, width: 2, height: 2, visible: false },
-      { id: 'orders', x: 0, y: 0, width: 2, height: 2, visible: false },
-      { id: 'options', x: 0, y: 0, width: 2, height: 2, visible: false },
-      { id: 'heatmap', x: 0, y: 0, width: 2, height: 2, visible: false },
-      { id: 'expirations', x: 0, y: 0, width: 2, height: 2, visible: false },
-    ],
+    layouts: {
+      lg: [
+        { i: 'quote', x: 0, y: 0, w: 3, h: 1, minW: 2, minH: 1 },
+        { i: 'ivGauge', x: 3, y: 0, w: 3, h: 1, minW: 2, minH: 1 },
+        { i: 'chart', x: 0, y: 1, w: 4, h: 3, minW: 3, minH: 2 },
+        { i: 'trade', x: 4, y: 1, w: 2, h: 3, minW: 2, minH: 2 },
+        { i: 'positions', x: 0, y: 4, w: 6, h: 2, minW: 3, minH: 2 },
+        { i: 'summary', x: 0, y: 6, w: 6, h: 1, minW: 2, minH: 1 },
+        { i: 'watchlist', x: 0, y: 7, w: 2, h: 2, minW: 2, minH: 2 },
+        { i: 'orders', x: 2, y: 7, w: 2, h: 2, minW: 2, minH: 2 },
+        { i: 'options', x: 4, y: 7, w: 2, h: 2, minW: 2, minH: 2 },
+        { i: 'heatmap', x: 0, y: 9, w: 2, h: 2, minW: 2, minH: 2 },
+        { i: 'expirations', x: 2, y: 9, w: 2, h: 2, minW: 2, minH: 2 },
+      ],
+      md: DEFAULT_LAYOUTS.md,
+      sm: DEFAULT_LAYOUTS.sm,
+      xs: DEFAULT_LAYOUTS.xs,
+    },
+    hiddenWidgets: ['watchlist', 'orders', 'options', 'heatmap', 'expirations'],
   },
   {
     id: 'options',
     name: 'Options Trading',
-    widgets: [
-      { id: 'quote', x: 0, y: 0, width: 2, height: 1, visible: true },
-      { id: 'ivGauge', x: 2, y: 0, width: 2, height: 1, visible: true },
-      { id: 'chart', x: 0, y: 1, width: 4, height: 2, visible: true },
-      { id: 'options', x: 0, y: 3, width: 6, height: 3, visible: true },
-      { id: 'trade', x: 4, y: 0, width: 2, height: 3, visible: true },
-      { id: 'expirations', x: 0, y: 6, width: 3, height: 2, visible: true },
-      { id: 'positions', x: 3, y: 6, width: 3, height: 2, visible: true },
-      { id: 'summary', x: 0, y: 0, width: 2, height: 1, visible: false },
-      { id: 'watchlist', x: 0, y: 0, width: 2, height: 2, visible: false },
-      { id: 'orders', x: 0, y: 0, width: 2, height: 2, visible: false },
-      { id: 'heatmap', x: 0, y: 0, width: 2, height: 2, visible: false },
-    ],
+    layouts: {
+      lg: [
+        { i: 'quote', x: 0, y: 0, w: 2, h: 1, minW: 2, minH: 1 },
+        { i: 'ivGauge', x: 2, y: 0, w: 2, h: 1, minW: 2, minH: 1 },
+        { i: 'trade', x: 4, y: 0, w: 2, h: 3, minW: 2, minH: 2 },
+        { i: 'chart', x: 0, y: 1, w: 4, h: 2, minW: 3, minH: 2 },
+        { i: 'options', x: 0, y: 3, w: 6, h: 3, minW: 4, minH: 3 },
+        { i: 'expirations', x: 0, y: 6, w: 3, h: 2, minW: 2, minH: 2 },
+        { i: 'positions', x: 3, y: 6, w: 3, h: 2, minW: 3, minH: 2 },
+        { i: 'summary', x: 0, y: 8, w: 2, h: 1, minW: 2, minH: 1 },
+        { i: 'watchlist', x: 2, y: 8, w: 2, h: 2, minW: 2, minH: 2 },
+        { i: 'orders', x: 4, y: 8, w: 2, h: 2, minW: 2, minH: 2 },
+        { i: 'heatmap', x: 0, y: 9, w: 2, h: 2, minW: 2, minH: 2 },
+      ],
+      md: DEFAULT_LAYOUTS.md,
+      sm: DEFAULT_LAYOUTS.sm,
+      xs: DEFAULT_LAYOUTS.xs,
+    },
+    hiddenWidgets: ['summary', 'watchlist', 'orders', 'heatmap'],
   },
   {
     id: 'monitoring',
     name: 'Portfolio Monitor',
-    widgets: [
-      { id: 'summary', x: 0, y: 0, width: 6, height: 1, visible: true },
-      { id: 'positions', x: 0, y: 1, width: 4, height: 3, visible: true },
-      { id: 'watchlist', x: 4, y: 1, width: 2, height: 3, visible: true },
-      { id: 'heatmap', x: 0, y: 4, width: 3, height: 2, visible: true },
-      { id: 'orders', x: 3, y: 4, width: 3, height: 2, visible: true },
-      { id: 'quote', x: 0, y: 0, width: 2, height: 1, visible: false },
-      { id: 'chart', x: 0, y: 0, width: 4, height: 3, visible: false },
-      { id: 'trade', x: 0, y: 0, width: 2, height: 2, visible: false },
-      { id: 'options', x: 0, y: 0, width: 6, height: 3, visible: false },
-      { id: 'expirations', x: 0, y: 0, width: 3, height: 2, visible: false },
-      { id: 'ivGauge', x: 0, y: 0, width: 3, height: 1, visible: false },
-    ],
+    layouts: {
+      lg: [
+        { i: 'summary', x: 0, y: 0, w: 6, h: 1, minW: 2, minH: 1 },
+        { i: 'positions', x: 0, y: 1, w: 4, h: 3, minW: 3, minH: 2 },
+        { i: 'watchlist', x: 4, y: 1, w: 2, h: 3, minW: 2, minH: 2 },
+        { i: 'heatmap', x: 0, y: 4, w: 3, h: 2, minW: 2, minH: 2 },
+        { i: 'orders', x: 3, y: 4, w: 3, h: 2, minW: 3, minH: 2 },
+        { i: 'quote', x: 0, y: 6, w: 2, h: 1, minW: 2, minH: 1 },
+        { i: 'chart', x: 2, y: 6, w: 4, h: 3, minW: 3, minH: 2 },
+        { i: 'trade', x: 0, y: 7, w: 2, h: 2, minW: 2, minH: 2 },
+        { i: 'options', x: 0, y: 9, w: 6, h: 3, minW: 4, minH: 3 },
+        { i: 'expirations', x: 0, y: 12, w: 3, h: 2, minW: 2, minH: 2 },
+        { i: 'ivGauge', x: 3, y: 12, w: 3, h: 1, minW: 2, minH: 1 },
+      ],
+      md: DEFAULT_LAYOUTS.md,
+      sm: DEFAULT_LAYOUTS.sm,
+      xs: DEFAULT_LAYOUTS.xs,
+    },
+    hiddenWidgets: ['quote', 'chart', 'trade', 'options', 'expirations', 'ivGauge'],
   },
 ];
 
 interface LayoutState {
-  widgets: WidgetPosition[];
+  layouts: Layouts;
+  hiddenWidgets: WidgetId[];
   activePreset: string | null;
   isEditMode: boolean;
   isSyncing: boolean;
+  currentBreakpoint: string;
 
   // Actions
-  updateWidget: (id: WidgetId, updates: Partial<WidgetPosition>) => void;
+  setLayouts: (layouts: Layouts) => void;
+  updateLayoutsForBreakpoint: (breakpoint: string, layout: Layout[]) => void;
   toggleWidget: (id: WidgetId) => void;
   showWidget: (id: WidgetId) => void;
   hideWidget: (id: WidgetId) => void;
   applyPreset: (presetId: string) => void;
   resetToDefault: () => void;
   setEditMode: (enabled: boolean) => void;
-  moveWidget: (id: WidgetId, x: number, y: number) => void;
-  resizeWidget: (id: WidgetId, width: number, height: number) => void;
-  setWidgets: (widgets: WidgetPosition[]) => void;
+  setCurrentBreakpoint: (breakpoint: string) => void;
   setSyncing: (syncing: boolean) => void;
+}
+
+// Migration function: Convert legacy format to new format
+function migrateLegacyLayout(legacyWidgets: LegacyWidgetPosition[]): { layouts: Layouts; hiddenWidgets: WidgetId[] } {
+  const hiddenWidgets: WidgetId[] = legacyWidgets
+    .filter((w) => !w.visible)
+    .map((w) => w.id);
+
+  const lgLayout: Layout[] = legacyWidgets.map((w) => {
+    const config = WIDGET_CONFIGS.find((c) => c.id === w.id);
+    return {
+      i: w.id,
+      x: w.x,
+      y: w.y,
+      w: w.width,
+      h: w.height,
+      minW: config?.minW || 1,
+      minH: config?.minH || 1,
+    };
+  });
+
+  return {
+    layouts: {
+      lg: lgLayout,
+      md: DEFAULT_LAYOUTS.md,
+      sm: DEFAULT_LAYOUTS.sm,
+      xs: DEFAULT_LAYOUTS.xs,
+    },
+    hiddenWidgets,
+  };
+}
+
+// Check if state has legacy format
+function isLegacyFormat(state: unknown): state is { widgets: LegacyWidgetPosition[] } {
+  return (
+    typeof state === 'object' &&
+    state !== null &&
+    'widgets' in state &&
+    Array.isArray((state as { widgets: unknown }).widgets) &&
+    (state as { widgets: unknown[] }).widgets.length > 0 &&
+    'width' in ((state as { widgets: unknown[] }).widgets[0] as object)
+  );
 }
 
 export const useLayoutStore = create<LayoutState>()(
   persist(
     (set) => ({
-      widgets: DEFAULT_LAYOUT,
+      layouts: DEFAULT_LAYOUTS,
+      hiddenWidgets: DEFAULT_HIDDEN_WIDGETS,
       activePreset: 'default',
       isEditMode: false,
       isSyncing: false,
+      currentBreakpoint: 'lg',
 
-      updateWidget: (id, updates) =>
+      setLayouts: (layouts) =>
+        set({
+          layouts,
+          activePreset: null,
+        }),
+
+      updateLayoutsForBreakpoint: (breakpoint, layout) =>
         set((state) => ({
-          widgets: state.widgets.map((w) =>
-            w.id === id ? { ...w, ...updates } : w
-          ),
-          activePreset: null, // Clear preset when manually edited
+          layouts: {
+            ...state.layouts,
+            [breakpoint]: layout,
+          },
+          activePreset: null,
         })),
 
       toggleWidget: (id) =>
         set((state) => ({
-          widgets: state.widgets.map((w) =>
-            w.id === id ? { ...w, visible: !w.visible } : w
-          ),
+          hiddenWidgets: state.hiddenWidgets.includes(id)
+            ? state.hiddenWidgets.filter((w) => w !== id)
+            : [...state.hiddenWidgets, id],
           activePreset: null,
         })),
 
       showWidget: (id) =>
         set((state) => ({
-          widgets: state.widgets.map((w) =>
-            w.id === id ? { ...w, visible: true } : w
-          ),
+          hiddenWidgets: state.hiddenWidgets.filter((w) => w !== id),
           activePreset: null,
         })),
 
       hideWidget: (id) =>
         set((state) => ({
-          widgets: state.widgets.map((w) =>
-            w.id === id ? { ...w, visible: false } : w
-          ),
+          hiddenWidgets: state.hiddenWidgets.includes(id)
+            ? state.hiddenWidgets
+            : [...state.hiddenWidgets, id],
           activePreset: null,
         })),
 
@@ -269,7 +398,8 @@ export const useLayoutStore = create<LayoutState>()(
         const preset = PRESET_LAYOUTS.find((p) => p.id === presetId);
         if (preset) {
           set({
-            widgets: preset.widgets,
+            layouts: preset.layouts,
+            hiddenWidgets: preset.hiddenWidgets,
             activePreset: presetId,
           });
         }
@@ -277,38 +407,51 @@ export const useLayoutStore = create<LayoutState>()(
 
       resetToDefault: () =>
         set({
-          widgets: DEFAULT_LAYOUT,
+          layouts: DEFAULT_LAYOUTS,
+          hiddenWidgets: DEFAULT_HIDDEN_WIDGETS,
           activePreset: 'default',
         }),
 
       setEditMode: (enabled) => set({ isEditMode: enabled }),
 
-      moveWidget: (id, x, y) =>
-        set((state) => ({
-          widgets: state.widgets.map((w) =>
-            w.id === id ? { ...w, x, y } : w
-          ),
-          activePreset: null,
-        })),
-
-      resizeWidget: (id, width, height) =>
-        set((state) => ({
-          widgets: state.widgets.map((w) =>
-            w.id === id ? { ...w, width, height } : w
-          ),
-          activePreset: null,
-        })),
-
-      setWidgets: (widgets) => set({ widgets }),
+      setCurrentBreakpoint: (breakpoint) => set({ currentBreakpoint: breakpoint }),
 
       setSyncing: (syncing) => set({ isSyncing: syncing }),
     }),
     {
       name: 'paperhands-layout',
       partialize: (state) => ({
-        widgets: state.widgets,
+        layouts: state.layouts,
+        hiddenWidgets: state.hiddenWidgets,
         activePreset: state.activePreset,
       }),
+      // Migrate legacy format on load
+      onRehydrateStorage: () => (_state, error) => {
+        if (error) {
+          console.error('Error rehydrating layout state:', error);
+          return;
+        }
+        // Migration is handled in merge
+      },
+      merge: (persistedState, currentState) => {
+        // Handle legacy format migration
+        if (isLegacyFormat(persistedState)) {
+          console.log('Migrating legacy layout format...');
+          const migrated = migrateLegacyLayout(persistedState.widgets);
+          return {
+            ...currentState,
+            layouts: migrated.layouts,
+            hiddenWidgets: migrated.hiddenWidgets,
+            activePreset: null,
+          };
+        }
+
+        // Normal merge
+        return {
+          ...currentState,
+          ...(persistedState as Partial<LayoutState>),
+        };
+      },
     }
   )
 );
@@ -316,10 +459,19 @@ export const useLayoutStore = create<LayoutState>()(
 // Export presets for UI
 export const getPresets = () => PRESET_LAYOUTS;
 
-// Helper to get visible widgets
-export const getVisibleWidgets = (widgets: WidgetPosition[]) =>
-  widgets.filter((w) => w.visible);
+// Helper to get visible widget IDs
+export const getVisibleWidgetIds = (hiddenWidgets: WidgetId[]): WidgetId[] =>
+  WIDGET_CONFIGS.map((c) => c.id).filter((id) => !hiddenWidgets.includes(id));
 
 // Helper to get widget config by id
 export const getWidgetConfig = (id: WidgetId) =>
   WIDGET_CONFIGS.find((c) => c.id === id);
+
+// Helper to get layouts for visible widgets only
+export const getVisibleLayouts = (layouts: Layouts, hiddenWidgets: WidgetId[]): Layouts => {
+  const result: Layouts = {};
+  for (const [breakpoint, layout] of Object.entries(layouts)) {
+    result[breakpoint] = layout.filter((item) => !hiddenWidgets.includes(item.i as WidgetId));
+  }
+  return result;
+};

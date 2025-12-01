@@ -1,0 +1,112 @@
+/* ==========================================================================
+   Dashboard Grid Layout Styles (react-grid-layout)
+   ========================================================================== */
+
+/* Override react-grid-layout default styles for dark theme */
+.react-grid-layout {
+  position: relative;
+}
+
+/* Widget item styling */
+.react-grid-item {
+  transition: all 200ms ease;
+  transition-property: left, top, width, height;
+}
+
+/* Dragging state - lift effect */
+.react-grid-item.react-draggable-dragging {
+  z-index: 100;
+  opacity: 0.9;
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.4);
+  transition: none;
+}
+
+/* Resizing state */
+.react-grid-item.resizing {
+  z-index: 100;
+  opacity: 0.9;
+}
+
+/* Drop placeholder styling */
+.react-grid-item.react-grid-placeholder {
+  background: rgba(74, 144, 226, 0.15);
+  border: 2px dashed rgba(74, 144, 226, 0.6);
+  border-radius: 12px;
+  opacity: 1;
+  z-index: 2;
+  -webkit-user-select: none;
+  -moz-user-select: none;
+  -ms-user-select: none;
+  -o-user-select: none;
+  user-select: none;
+}
+
+/* Resize handle styling - hidden by default */
+.react-grid-item > .react-resizable-handle {
+  display: none;
+  position: absolute;
+  width: 20px;
+  height: 20px;
+  bottom: 0;
+  right: 0;
+  cursor: se-resize;
+}
+
+/* Show resize handle only in edit mode */
+.edit-mode .react-grid-item > .react-resizable-handle {
+  display: block;
+}
+
+/* Custom resize handle appearance */
+.edit-mode .react-grid-item > .react-resizable-handle::after {
+  content: '';
+  position: absolute;
+  right: 4px;
+  bottom: 4px;
+  width: 8px;
+  height: 8px;
+  border-right: 2px solid rgba(255, 255, 255, 0.4);
+  border-bottom: 2px solid rgba(255, 255, 255, 0.4);
+}
+
+.edit-mode .react-grid-item > .react-resizable-handle:hover::after {
+  border-color: rgba(74, 144, 226, 0.8);
+}
+
+/* Prevent text selection during drag */
+.react-grid-item.react-draggable-dragging * {
+  -webkit-user-select: none;
+  -moz-user-select: none;
+  -ms-user-select: none;
+  user-select: none;
+}
+
+/* Edit mode visual indicator */
+.edit-mode .react-grid-item {
+  border: 1px dashed rgba(74, 144, 226, 0.3);
+  border-radius: 12px;
+}
+
+/* Drag handle cursor styling */
+.widget-drag-handle {
+  cursor: grab;
+}
+
+.widget-drag-handle:active {
+  cursor: grabbing;
+}
+
+/* Ensure widgets fill their grid cells */
+.react-grid-item > div {
+  height: 100%;
+}
+
+/* Spinner animation for sync indicator */
+@keyframes spin {
+  0% {
+    transform: rotate(0deg);
+  }
+  100% {
+    transform: rotate(360deg);
+  }
+}
