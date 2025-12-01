@@ -4,7 +4,7 @@ import { theme } from '../../theme/constants';
 export type MobileCardVariant = 'default' | 'call' | 'put' | 'itmCall' | 'itmPut' | 'positive' | 'negative';
 
 export interface MobileCardProps {
-  header: ReactNode;
+  header?: ReactNode;
   headerRight?: ReactNode;
   children: ReactNode;
   expandable?: boolean;
@@ -134,18 +134,20 @@ export function MobileCard({
       className={className}
       onClick={handleCardClick}
     >
-      <div style={styles.cardHeader}>
-        <div style={styles.headerLeft}>
-          {header}
-        </div>
-        {headerRight && (
-          <div style={styles.headerRight}>
-            {headerRight}
+      {(header || headerRight) && (
+        <div style={styles.cardHeader}>
+          <div style={styles.headerLeft}>
+            {header}
           </div>
-        )}
-      </div>
+          {headerRight && (
+            <div style={styles.headerRight}>
+              {headerRight}
+            </div>
+          )}
+        </div>
+      )}
 
-      <div style={styles.content}>
+      <div style={header || headerRight ? styles.content : undefined}>
         {children}
       </div>
 
@@ -181,6 +183,8 @@ export interface CardRowProps {
   label: string;
   value: ReactNode;
   valueColor?: string;
+  labelStyle?: CSSProperties;
+  valueStyle?: CSSProperties;
 }
 
 const cardRowStyles: Record<string, CSSProperties> = {
@@ -201,11 +205,11 @@ const cardRowStyles: Record<string, CSSProperties> = {
   },
 };
 
-export function CardRow({ label, value, valueColor }: CardRowProps) {
+export function CardRow({ label, value, valueColor, labelStyle, valueStyle }: CardRowProps) {
   return (
     <div style={cardRowStyles.row}>
-      <span style={cardRowStyles.label}>{label}</span>
-      <span style={{ ...cardRowStyles.value, color: valueColor || theme.colors.textPrimary }}>
+      <span style={{ ...cardRowStyles.label, ...labelStyle }}>{label}</span>
+      <span style={{ ...cardRowStyles.value, color: valueColor || theme.colors.textPrimary, ...valueStyle }}>
         {value}
       </span>
     </div>
