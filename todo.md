@@ -9,7 +9,7 @@ A comprehensive checklist combining the feature roadmap with implementation stat
 ### Immediate Priority (Phase 1)
 | # | Task | Section | Notes |
 |---|------|---------|-------|
-| 1 | Price Alerts & Notifications | §8 | High user value |
+| 1 | ~~Price Alerts & Notifications~~ | §8 | ✅ Done |
 | 2 | Short Equity Selling | §14 | Core trading feature |
 | 3 | Technical Indicators (RSI, MACD, BB) | §3 | Chart enhancement |
 | 4 | Chart Drawing Tools | §3 | Trend lines, S/R |
@@ -178,17 +178,17 @@ A comprehensive checklist combining the feature roadmap with implementation stat
 
 | Feature | Status | Notes |
 |---------|--------|-------|
-| Price Alerts | ⬜ Todo | 🔴 High priority |
-| Percent Change Alerts | ⬜ Todo | |
-| Volume Alerts | ⬜ Todo | |
-| Order Fill Notifications | ⬜ Todo | |
+| Price Alerts | ✅ Done | Real-time via streaming events |
+| Percent Change Alerts | ✅ Done | Real-time via streaming events |
+| Volume Alerts | ✅ Done | Real-time via streaming events |
+| Order Fill Notifications | ✅ Done | Via EventEmitter2 |
 | Earnings Alerts | ⬜ Todo | |
 | News Alerts | ⬜ Todo | |
-| In-App Toast Notifications | ⬜ Todo | |
+| In-App Toast Notifications | ✅ Done | Top-right toasts with Zustand |
 | Email Notifications | ⬜ Todo | |
 | Push Notifications | ⬜ Todo | |
-| Greeks Threshold Alerts | ⬜ Todo | |
-| Portfolio Value Alerts | ⬜ Todo | |
+| Greeks Threshold Alerts | ✅ Done | Cron job every minute |
+| Portfolio Value Alerts | ✅ Done | Cron job every minute |
 
 ---
 
@@ -741,7 +741,7 @@ This section tracks non-feature improvements to code quality, architecture, test
 | 5. Real-Time Data | 4 | 2 | 6 |
 | 6. Options: Basic | 7 | 0 | 7 |
 | 7. Options: Advanced | 11 | 0 | 11 |
-| 8. Alerts & Notifications | 0 | 11 | 11 |
+| 8. Alerts & Notifications | 7 | 4 | 11 |
 | 9. News & Research | 0 | 8 | 8 |
 | 10. Social & Community | 0 | 7 | 7 |
 | 11. User Experience | 0 | 8 | 8 |
@@ -751,7 +751,7 @@ This section tracks non-feature improvements to code quality, architecture, test
 | 15. Power User Features | 0 | 9 | 9 |
 | 16. Account & Security | 0 | 7 | 7 |
 | 17. Native Mobile Apps | 0 | 7 | 7 |
-| **Features Subtotal** | **60** | **122** | **182** |
+| **Features Subtotal** | **67** | **115** | **182** |
 | | | | |
 | **Technical Debt** | | | |
 | 18. DevOps & Tooling | 0 | 14 | 14 |
@@ -764,8 +764,8 @@ This section tracks non-feature improvements to code quality, architecture, test
 | 25. Documentation | 0 | 13 | 13 |
 | **Tech Debt Subtotal** | **0** | **114** | **114** |
 | | | | |
-| **GRAND TOTAL** | **60** | **236** | **296** |
+| **GRAND TOTAL** | **67** | **229** | **296** |
 
-**Feature Progress: 33% Complete**
+**Feature Progress: 37% Complete**
 **Tech Debt Progress: 0% Complete**
-**Overall Progress: 20% Complete**
+**Overall Progress: 23% Complete**
