@@ -1,7 +1,8 @@
-import type { CSSProperties } from 'react';
+import { useState, useRef, useEffect, type CSSProperties } from 'react';
 import { theme } from '../../theme/constants';
 import { useStreamingQuote } from '../../hooks';
 import { useDashboardStore } from '../../store/dashboardStore';
+import { useCreateAlert } from '../../hooks/useAlerts';
 import { Widget } from './Widget';
 import { SymbolSearch } from './SymbolSearch';
 
@@ -106,6 +107,97 @@ const styles: Record<string, CSSProperties> = {
     backgroundColor: 'rgba(255, 71, 87, 0.1)',
     borderRadius: theme.radius.md,
   },
+  alertButtonContainer: {
+    position: 'relative',
+    display: 'inline-block',
+  },
+  alertButton: {
+    background: 'none',
+    border: `1px solid ${theme.colors.border}`,
+    borderRadius: theme.radius.md,
+    padding: '6px 10px',
+    cursor: 'pointer',
+    color: theme.colors.textSecondary,
+    fontSize: theme.typography.sm,
+    display: 'flex',
+    alignItems: 'center',
+    gap: '4px',
+    transition: theme.transitions.fast,
+  },
+  alertDropdown: {
+    position: 'absolute',
+    top: '100%',
+    right: 0,
+    marginTop: '8px',
+    width: '280px',
+    backgroundColor: theme.colors.bgSecondary,
+    border: `1px solid ${theme.colors.border}`,
+    borderRadius: theme.radius.lg,
+    boxShadow: theme.shadows.lg,
+    padding: theme.spacing.md,
+    zIndex: 100,
+  },
+  alertDropdownTitle: {
+    fontSize: theme.typography.sm,
+    fontWeight: theme.typography.semibold,
+    color: theme.colors.textPrimary,
+    marginBottom: theme.spacing.md,
+  },
+  alertForm: {
+    display: 'flex',
+    flexDirection: 'column',
+    gap: theme.spacing.sm,
+  },
+  alertFormRow: {
+    display: 'flex',
+    gap: theme.spacing.sm,
+    alignItems: 'center',
+  },
+  alertSelect: {
+    flex: 1,
+    backgroundColor: theme.colors.bgInput,
+    border: `1px solid ${theme.colors.border}`,
+    borderRadius: theme.radius.md,
+    padding: theme.spacing.sm,
+    color: theme.colors.textPrimary,
+    fontSize: theme.typography.sm,
+  },
+  alertInput: {
+    flex: 1,
+    backgroundColor: theme.colors.bgInput,
+    border: `1px solid ${theme.colors.border}`,
+    borderRadius: theme.radius.md,
+    padding: theme.spacing.sm,
+    color: theme.colors.textPrimary,
+    fontSize: theme.typography.sm,
+  },
+  alertSubmitButton: {
+    backgroundColor: theme.colors.accent,
+    color: theme.colors.bgPrimary,
+    border: 'none',
+    borderRadius: theme.radius.md,
+    padding: theme.spacing.sm,
+    fontSize: theme.typography.sm,
+    fontWeight: theme.typography.semibold,
+    cursor: 'pointer',
+    width: '100%',
+    marginTop: theme.spacing.xs,
+  },
+  quickAlertButtons: {
+    display: 'flex',
+    gap: theme.spacing.xs,
+    marginTop: theme.spacing.sm,
+  },
+  quickAlertButton: {
+    flex: 1,
+    backgroundColor: theme.colors.bgTertiary,
+    border: `1px solid ${theme.colors.border}`,
+    borderRadius: theme.radius.sm,
+    padding: '4px 8px',
+    fontSize: theme.typography.xs,
+    color: theme.colors.textSecondary,
+    cursor: 'pointer',
+  },
 };
 
 const formatCurrency = (value: number) =>
@@ -125,10 +217,51 @@ export function QuotePanel() {
   const quote = useStreamingQuote(selectedSymbol ?? '', {
     enabled: !!selectedSymbol,
   });
+  const createAlert = useCreateAlert();
+
+  // Quick alert state
+  const [showAlertDropdown, setShowAlertDropdown] = useState(false);
+  const [alertCondition, setAlertCondition] = useState<'ABOVE' | 'BELOW'>('ABOVE');
+  const [alertTarget, setAlertTarget] = useState('');
+  const dropdownRef = useRef<HTMLDivElement>(null);
+
+  // Close dropdown when clicking outside
+  useEffect(() => {
+    function handleClickOutside(event: MouseEvent) {
+      if (dropdownRef.current && !dropdownRef.current.contains(event.target as Node)) {
+        setShowAlertDropdown(false);
+      }
+    }
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => document.removeEventListener('mousedown', handleClickOutside);
+  }, []);
 
   const hasData = quote.last !== null;
   const change = quote.change ?? 0;
   const changePercent = quote.changePercent ?? 0;
+
+  const handleCreateQuickAlert = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!selectedSymbol || !alertTarget) return;
+
+    await createAlert.mutateAsync({
+      type: 'PRICE',
+      symbol: selectedSymbol,
+      condition: alertCondition,
+      targetValue: parseFloat(alertTarget),
+    });
+
+    setShowAlertDropdown(false);
+    setAlertTarget('');
+  };
+
+  const setQuickTarget = (percent: number) => {
+    if (quote.last) {
+      const target = quote.last * (1 + percent / 100);
+      setAlertTarget(target.toFixed(2));
+      setAlertCondition(percent > 0 ? 'ABOVE' : 'BELOW');
+    }
+  };
 
   return (
     <Widget title="Quote">
@@ -180,6 +313,80 @@ export function QuotePanel() {
                 >
                   {change >= 0 ? '+' : ''}
                   {change.toFixed(2)} ({changePercent.toFixed(2)}%)
+                </div>
+                <div style={styles.alertButtonContainer} ref={dropdownRef}>
+                  <button
+                    style={styles.alertButton}
+                    onClick={() => setShowAlertDropdown(!showAlertDropdown)}
+                    title="Set price alert"
+                  >
+                    🔔 Alert
+                  </button>
+                  {showAlertDropdown && (
+                    <div style={styles.alertDropdown}>
+                      <div style={styles.alertDropdownTitle}>
+                        Quick Price Alert for {selectedSymbol}
+                      </div>
+                      <form onSubmit={handleCreateQuickAlert} style={styles.alertForm}>
+                        <div style={styles.alertFormRow}>
+                          <select
+                            style={styles.alertSelect}
+                            value={alertCondition}
+                            onChange={(e) => setAlertCondition(e.target.value as 'ABOVE' | 'BELOW')}
+                          >
+                            <option value="ABOVE">Above</option>
+                            <option value="BELOW">Below</option>
+                          </select>
+                          <input
+                            type="number"
+                            step="0.01"
+                            style={styles.alertInput}
+                            placeholder="Price target"
+                            value={alertTarget}
+                            onChange={(e) => setAlertTarget(e.target.value)}
+                            required
+                          />
+                        </div>
+                        <div style={styles.quickAlertButtons}>
+                          <button
+                            type="button"
+                            style={styles.quickAlertButton}
+                            onClick={() => setQuickTarget(-5)}
+                          >
+                            -5%
+                          </button>
+                          <button
+                            type="button"
+                            style={styles.quickAlertButton}
+                            onClick={() => setQuickTarget(-2)}
+                          >
+                            -2%
+                          </button>
+                          <button
+                            type="button"
+                            style={styles.quickAlertButton}
+                            onClick={() => setQuickTarget(2)}
+                          >
+                            +2%
+                          </button>
+                          <button
+                            type="button"
+                            style={styles.quickAlertButton}
+                            onClick={() => setQuickTarget(5)}
+                          >
+                            +5%
+                          </button>
+                        </div>
+                        <button
+                          type="submit"
+                          style={styles.alertSubmitButton}
+                          disabled={createAlert.isPending}
+                        >
+                          {createAlert.isPending ? 'Creating...' : 'Create Alert'}
+                        </button>
+                      </form>
+                    </div>
+                  )}
                 </div>
               </div>
             </div>

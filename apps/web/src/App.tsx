@@ -13,6 +13,7 @@ import { Watchlists } from './pages/Watchlists';
 import { Analytics } from './pages/Analytics';
 import { Greeks } from './pages/Greeks';
 import { Settings } from './pages/Settings';
+import { Alerts } from './pages/Alerts';
 import { Admin } from './pages/Admin';
 import { AdminRoute } from './components/AdminRoute';
 
@@ -120,6 +121,14 @@ function App() {
               element={
                 <ProtectedRoute>
                   <Settings />
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/alerts"
+              element={
+                <ProtectedRoute>
+                  <Alerts />
                 </ProtectedRoute>
               }
             />

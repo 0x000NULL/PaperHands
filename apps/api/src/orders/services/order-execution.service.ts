@@ -6,6 +6,7 @@ import {
 } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository, DataSource } from 'typeorm';
+import { EventEmitter2 } from '@nestjs/event-emitter';
 import { Order } from '../entities/order.entity';
 import { User } from '../../users/entities/user.entity';
 import { Position } from '../../portfolio/entities/position.entity';
@@ -15,6 +16,7 @@ import {
   OrderStatus,
   TimeInForce,
   AuditAction,
+  OrderCategory,
 } from '../enums/order.enums';
 import { OrderAuditService } from './order-audit.service';
 import { EquityPositionService } from './equity-position.service';
@@ -39,6 +41,7 @@ export class OrderExecutionService {
     private readonly orderAuditService: OrderAuditService,
     private readonly equityPositionService: EquityPositionService,
     private readonly finnhubService: FinnhubService,
+    private readonly eventEmitter: EventEmitter2,
   ) {}
 
   /**
@@ -164,6 +167,17 @@ export class OrderExecutionService {
         'Executed at market open',
         executionPrice,
       );
+
+      // Emit order filled event for notifications
+      this.eventEmitter.emit('order.filled', {
+        userId: order.userId,
+        orderId: order.id,
+        symbol: order.symbol,
+        side: order.side,
+        quantity: Number(order.quantity),
+        filledPrice: executionPrice,
+        orderCategory: order.orderCategory || OrderCategory.EQUITY,
+      });
 
       return updatedOrder!;
     } catch (error) {
@@ -328,6 +342,17 @@ export class OrderExecutionService {
         null,
         triggerPrice,
       );
+
+      // Emit order filled event for notifications (only on full or partial fills)
+      this.eventEmitter.emit('order.filled', {
+        userId: order.userId,
+        orderId: order.id,
+        symbol: order.symbol,
+        side: order.side,
+        quantity: quantityToFill,
+        filledPrice: executionPrice,
+        orderCategory: order.orderCategory || OrderCategory.EQUITY,
+      });
 
       return updatedOrder!;
     } catch (error) {

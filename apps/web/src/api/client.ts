@@ -518,6 +518,59 @@ export const api = {
       );
     },
   },
+
+  // Alerts
+  getAlerts: (params?: QueryAlertsParams) => {
+    const query = new URLSearchParams();
+    if (params?.type) query.set('type', params.type);
+    if (params?.symbol) query.set('symbol', params.symbol);
+    if (params?.isActive !== undefined)
+      query.set('isActive', String(params.isActive));
+    return request<Alert[]>(`/alerts?${query.toString()}`);
+  },
+
+  getAlert: (id: string) => request<Alert>(`/alerts/${id}`),
+
+  createAlert: (data: CreateAlertRequest) =>
+    request<Alert>('/alerts', {
+      method: 'POST',
+      body: JSON.stringify(data),
+    }),
+
+  updateAlert: (id: string, data: UpdateAlertRequest) =>
+    request<Alert>(`/alerts/${id}`, {
+      method: 'PATCH',
+      body: JSON.stringify(data),
+    }),
+
+  deleteAlert: (id: string) =>
+    request<void>(`/alerts/${id}`, { method: 'DELETE' }),
+
+  reactivateAlert: (id: string) =>
+    request<Alert>(`/alerts/${id}/reactivate`, { method: 'POST' }),
+
+  // Notifications
+  getNotifications: (params?: QueryNotificationsParams) => {
+    const query = new URLSearchParams();
+    if (params?.type) query.set('type', params.type);
+    if (params?.isRead !== undefined)
+      query.set('isRead', String(params.isRead));
+    if (params?.limit) query.set('limit', String(params.limit));
+    if (params?.offset) query.set('offset', String(params.offset));
+    return request<NotificationsResponse>(`/notifications?${query.toString()}`);
+  },
+
+  getUnreadCount: () =>
+    request<{ count: number }>('/notifications/unread-count'),
+
+  markNotificationAsRead: (id: string) =>
+    request<Notification>(`/notifications/${id}/read`, { method: 'PATCH' }),
+
+  markAllNotificationsAsRead: () =>
+    request<void>('/notifications/read-all', { method: 'POST' }),
+
+  deleteNotification: (id: string) =>
+    request<void>(`/notifications/${id}`, { method: 'DELETE' }),
 };
 
 // Analytics types
@@ -726,4 +779,90 @@ export interface UpdateThemeRequest {
 export interface ChangePasswordRequest {
   currentPassword: string;
   newPassword: string;
+}
+
+// Alert types
+export type AlertType =
+  | 'PRICE'
+  | 'PERCENT_CHANGE'
+  | 'VOLUME'
+  | 'GREEKS'
+  | 'PORTFOLIO_VALUE'
+  | 'EARNINGS';
+
+export type AlertCondition = 'ABOVE' | 'BELOW' | 'CROSSES';
+
+export interface Alert {
+  id: string;
+  userId: string;
+  type: AlertType;
+  symbol: string | null;
+  condition: AlertCondition;
+  targetValue: number;
+  greekType: string | null;
+  isActive: boolean;
+  triggeredAt: string | null;
+  lastCheckedValue: number | null;
+  name: string | null;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface CreateAlertRequest {
+  type: AlertType;
+  symbol?: string;
+  condition: AlertCondition;
+  targetValue: number;
+  greekType?: string;
+  name?: string;
+}
+
+export interface UpdateAlertRequest {
+  condition?: AlertCondition;
+  targetValue?: number;
+  greekType?: string;
+  isActive?: boolean;
+  name?: string;
+}
+
+export interface QueryAlertsParams {
+  type?: AlertType;
+  symbol?: string;
+  isActive?: boolean;
+}
+
+// Notification types
+export type NotificationType =
+  | 'ALERT_TRIGGERED'
+  | 'ORDER_FILLED'
+  | 'ORDER_CANCELLED'
+  | 'ORDER_REJECTED'
+  | 'OPTION_EXPIRED'
+  | 'OPTION_EXERCISED'
+  | 'OPTION_ASSIGNED'
+  | 'DIVIDEND_RECEIVED'
+  | 'SYSTEM';
+
+export interface Notification {
+  id: string;
+  userId: string;
+  type: NotificationType;
+  title: string;
+  message: string;
+  metadata: Record<string, unknown> | null;
+  isRead: boolean;
+  createdAt: string;
+}
+
+export interface NotificationsResponse {
+  notifications: Notification[];
+  total: number;
+  unreadCount: number;
+}
+
+export interface QueryNotificationsParams {
+  type?: NotificationType;
+  isRead?: boolean;
+  limit?: number;
+  offset?: number;
 }

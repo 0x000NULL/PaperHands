@@ -4,6 +4,9 @@ import { useAuthStore } from '../store/authStore';
 import { theme } from '../theme/constants';
 import { MarketStatusBadge } from './common/MarketStatusBadge';
 import { ConnectionStatusBadge } from './common/ConnectionStatus';
+import { NotificationBell } from './notifications/NotificationBell';
+import { ToastContainer } from './notifications/ToastContainer';
+import { useNotifications } from '../hooks/useNotifications';
 
 interface LayoutProps {
   children: React.ReactNode;
@@ -79,6 +82,9 @@ export function Layout({ children }: LayoutProps) {
   const { user, logout, isAuthenticated } = useAuthStore();
   const navigate = useNavigate();
 
+  // Initialize notifications WebSocket connection
+  useNotifications();
+
   const handleLogout = () => {
     logout();
     navigate('/login');
@@ -86,6 +92,7 @@ export function Layout({ children }: LayoutProps) {
 
   return (
     <div style={styles.container}>
+      <ToastContainer />
       <nav style={styles.nav}>
         <Link to="/" style={styles.logo}>
           PaperHands
@@ -112,7 +119,11 @@ export function Layout({ children }: LayoutProps) {
                 Admin
               </Link>
             )}
+            <Link to="/alerts" style={styles.navLink}>
+              Alerts
+            </Link>
             <span style={styles.userEmail}>{user?.email}</span>
+            <NotificationBell />
             <Link to="/settings" style={styles.settingsLink} title="Settings">
               &#9881;
             </Link>
