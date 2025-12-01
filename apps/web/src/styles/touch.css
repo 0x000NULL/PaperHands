@@ -93,3 +93,41 @@
     padding-top: env(safe-area-inset-top);
   }
 }
+
+/* ==========================================================================
+   Chart Touch Interactions
+   Enable native pinch-zoom and pan gestures on charts
+   ========================================================================== */
+
+.chart-container {
+  touch-action: pan-x pan-y pinch-zoom;
+  -webkit-overflow-scrolling: touch;
+  user-select: none;
+  -webkit-user-select: none;
+}
+
+/* ==========================================================================
+   Mobile Keyboard Handling
+   Ensure inputs stay visible when keyboard appears
+   ========================================================================== */
+
+.full-height {
+  min-height: 100vh;
+  min-height: 100dvh;
+}
+
+@media (max-width: 1023px) {
+  /* Scroll input into view when focused */
+  input:focus,
+  select:focus,
+  textarea:focus {
+    scroll-margin-bottom: 100px;
+    scroll-margin-top: 80px;
+  }
+}
+
+.scroll-container-keyboard {
+  overflow-y: auto;
+  overscroll-behavior-y: contain;
+  -webkit-overflow-scrolling: touch;
+}

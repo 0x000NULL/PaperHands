@@ -36,3 +36,5 @@ export {
   useIsTablet,
   useIsDesktop,
 } from './useMediaQuery';
+export { useSwipeNavigation } from './useSwipeNavigation';
+export { useMobileKeyboard } from './useMobileKeyboard';

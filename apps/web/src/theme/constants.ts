@@ -68,15 +68,15 @@ export const theme = {
     fontFamily: "'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif",
     fontMono: "'JetBrains Mono', 'Fira Code', 'Consolas', monospace",
 
-    // Font sizes
-    xs: '0.75rem',     // 12px
-    sm: '0.875rem',    // 14px
-    base: '1rem',      // 16px
-    lg: '1.125rem',    // 18px
-    xl: '1.25rem',     // 20px
-    '2xl': '1.5rem',   // 24px
-    '3xl': '2rem',     // 32px
-    '4xl': '2.5rem',   // 40px
+    // Font sizes - using CSS variables for fluid scaling
+    xs: 'var(--font-xs)',      // 11px - 12px fluid
+    sm: 'var(--font-sm)',      // 13px - 14px fluid
+    base: 'var(--font-base)',  // 15px - 16px fluid
+    lg: 'var(--font-lg)',      // 16px - 18px fluid
+    xl: 'var(--font-xl)',      // 18px - 20px fluid
+    '2xl': 'var(--font-2xl)',  // 20px - 24px fluid
+    '3xl': 'var(--font-3xl)',  // 24px - 32px fluid
+    '4xl': 'var(--font-4xl)',  // 28px - 40px fluid
 
     // Font weights
     normal: 400,

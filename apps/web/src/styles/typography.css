@@ -1,0 +1,27 @@
+/* ==========================================================================
+   Fluid Typography - Responsive Font Scaling
+   Using CSS clamp() for smooth scaling between breakpoints
+   ========================================================================== */
+
+:root {
+  /* Fluid typography scale
+     Format: clamp(min, preferred, max)
+     Preferred uses viewport width for smooth scaling between min/max */
+
+  --font-xs: clamp(0.6875rem, 0.65rem + 0.2vw, 0.75rem);     /* 11px - 12px */
+  --font-sm: clamp(0.8125rem, 0.75rem + 0.3vw, 0.875rem);    /* 13px - 14px */
+  --font-base: clamp(0.9375rem, 0.875rem + 0.3vw, 1rem);     /* 15px - 16px */
+  --font-lg: clamp(1rem, 0.9375rem + 0.3vw, 1.125rem);       /* 16px - 18px */
+  --font-xl: clamp(1.125rem, 1rem + 0.5vw, 1.25rem);         /* 18px - 20px */
+  --font-2xl: clamp(1.25rem, 1.125rem + 0.6vw, 1.5rem);      /* 20px - 24px */
+  --font-3xl: clamp(1.5rem, 1.25rem + 1vw, 2rem);            /* 24px - 32px */
+  --font-4xl: clamp(1.75rem, 1.5rem + 1.25vw, 2.5rem);       /* 28px - 40px */
+}
+
+/* Lock minimum sizes on very small screens (iPhone SE, etc.) */
+@media (max-width: 320px) {
+  :root {
+    --font-xs: 0.6875rem;
+    --font-sm: 0.8125rem;
+  }
+}

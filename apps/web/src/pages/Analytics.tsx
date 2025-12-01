@@ -12,7 +12,7 @@ import {
   type AllocationViewType,
 } from '../components/analytics';
 import { useIsDesktop } from '../hooks/useMediaQuery';
-import { MobileCard, CardRow, MobileCardList } from '../components/mobile';
+import { MobileCard, CardRow, MobileCardList, SwipeableTabs } from '../components/mobile';
 import '../styles/responsive.css';
 
 type AnalyticsPeriod = '1W' | '1M' | '3M' | 'YTD' | '1Y' | 'ALL';
@@ -617,60 +617,32 @@ export function Analytics() {
 
         {/* Bottom Tabbed Section */}
         <Widget title="Details">
-          <div style={styles.tabBar}>
-            <button
-              style={{
-                ...styles.tab,
-                ...(activeTab === 'lots' ? styles.tabActive : {}),
-              }}
-              onClick={() => setActiveTab('lots')}
-            >
-              Tax Lots
-            </button>
-            <button
-              style={{
-                ...styles.tab,
-                ...(activeTab === 'history' ? styles.tabActive : {}),
-              }}
-              onClick={() => setActiveTab('history')}
-            >
-              Trade History
-            </button>
-            <button
-              style={{
-                ...styles.tab,
-                ...(activeTab === 'dividends' ? styles.tabActive : {}),
-              }}
-              onClick={() => setActiveTab('dividends')}
-            >
-              Dividends
-            </button>
-            <button
-              style={{
-                ...styles.tab,
-                ...(activeTab === 'options' ? styles.tabActive : {}),
-              }}
-              onClick={() => setActiveTab('options')}
-            >
-              Options
-            </button>
-          </div>
-
-          {activeTab === 'lots' && (
-            <TaxLotsTable lots={taxLots ?? []} isMobile={isMobile} />
-          )}
-
-          {activeTab === 'history' && (
-            <TradeHistoryTable sales={lotSales ?? []} isMobile={isMobile} />
-          )}
-
-          {activeTab === 'dividends' && (
-            <DividendsTable dividends={dividends ?? []} isMobile={isMobile} />
-          )}
-
-          {activeTab === 'options' && (
-            <OptionClosuresTable closures={optionClosures ?? []} isMobile={isMobile} />
-          )}
+          <SwipeableTabs<TabType>
+            tabs={[
+              {
+                value: 'lots',
+                label: 'Tax Lots',
+                content: <TaxLotsTable lots={taxLots ?? []} isMobile={isMobile} />,
+              },
+              {
+                value: 'history',
+                label: 'History',
+                content: <TradeHistoryTable sales={lotSales ?? []} isMobile={isMobile} />,
+              },
+              {
+                value: 'dividends',
+                label: 'Dividends',
+                content: <DividendsTable dividends={dividends ?? []} isMobile={isMobile} />,
+              },
+              {
+                value: 'options',
+                label: 'Options',
+                content: <OptionClosuresTable closures={optionClosures ?? []} isMobile={isMobile} />,
+              },
+            ]}
+            activeTab={activeTab}
+            onTabChange={setActiveTab}
+          />
         </Widget>
       </div>
     </Layout>

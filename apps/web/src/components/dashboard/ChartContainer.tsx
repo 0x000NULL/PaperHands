@@ -214,6 +214,7 @@ export function ChartContainer({
   return (
     <div
       ref={containerRef}
+      className="chart-container"
       style={{
         width: '100%',
         height,

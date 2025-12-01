@@ -25,3 +25,9 @@ export {
   type StickyActionBarProps,
   type StickyTradeBarProps,
 } from './StickyActionBar';
+
+export {
+  SwipeableTabs,
+  type SwipeableTab,
+  type SwipeableTabsProps,
+} from './SwipeableTabs';
