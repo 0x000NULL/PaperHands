@@ -16,10 +16,7 @@ import type {
   NewsItem,
   EarningsRelease,
   EconomicEvent,
-  AnalystRatings as AnalystRatingsType,
   SecFiling,
-  InsiderSummary,
-  CompanyFundamentals,
 } from '../types';
 
 type TabType = 'news' | 'earnings' | 'economic' | 'analyst' | 'filings' | 'insider';
@@ -128,7 +125,7 @@ const styles: Record<string, CSSProperties> = {
   },
   badgeHigh: {
     backgroundColor: 'rgba(239, 68, 68, 0.2)',
-    color: theme.colors.loss,
+    color: theme.colors.negative,
   },
   badgeMedium: {
     backgroundColor: 'rgba(251, 191, 36, 0.2)',
@@ -136,13 +133,13 @@ const styles: Record<string, CSSProperties> = {
   },
   badgeLow: {
     backgroundColor: 'rgba(34, 197, 94, 0.2)',
-    color: theme.colors.profit,
+    color: theme.colors.positive,
   },
   positive: {
-    color: theme.colors.profit,
+    color: theme.colors.positive,
   },
   negative: {
-    color: theme.colors.loss,
+    color: theme.colors.negative,
   },
   statCard: {
     padding: theme.spacing.md,
@@ -200,14 +197,6 @@ const tabs: { id: TabType; label: string; requiresSymbol: boolean }[] = [
   { id: 'filings', label: 'SEC Filings', requiresSymbol: true },
   { id: 'insider', label: 'Insider', requiresSymbol: true },
 ];
-
-function formatDate(timestamp: number): string {
-  return new Date(timestamp * 1000).toLocaleDateString('en-US', {
-    month: 'short',
-    day: 'numeric',
-    year: 'numeric',
-  });
-}
 
 function formatDateTime(timestamp: number): string {
   return new Date(timestamp * 1000).toLocaleString('en-US', {
@@ -397,8 +386,8 @@ function AnalystTab({ symbol }: { symbol: string }) {
     : 0;
 
   const getConsensusColor = (rating: string) => {
-    if (rating.includes('Buy')) return theme.colors.profit;
-    if (rating.includes('Sell')) return theme.colors.loss;
+    if (rating.includes('Buy')) return theme.colors.positive;
+    if (rating.includes('Sell')) return theme.colors.negative;
     return theme.colors.textSecondary;
   };
 
@@ -560,17 +549,17 @@ function InsiderTab({ symbol }: { symbol: string }) {
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: theme.spacing.md, marginBottom: theme.spacing.lg }}>
         <div style={styles.statCard}>
           <div style={styles.statLabel}>Net Change (shares)</div>
-          <div style={{ ...styles.statValue, color: insider.netChange >= 0 ? theme.colors.profit : theme.colors.loss }}>
+          <div style={{ ...styles.statValue, color: insider.netChange >= 0 ? theme.colors.positive : theme.colors.negative }}>
             {insider.netChange >= 0 ? '+' : ''}{insider.netChange.toLocaleString()}
           </div>
         </div>
         <div style={styles.statCard}>
           <div style={styles.statLabel}>Total Buys</div>
-          <div style={{ ...styles.statValue, color: theme.colors.profit }}>{insider.totalBuys}</div>
+          <div style={{ ...styles.statValue, color: theme.colors.positive }}>{insider.totalBuys}</div>
         </div>
         <div style={styles.statCard}>
           <div style={styles.statLabel}>Total Sells</div>
-          <div style={{ ...styles.statValue, color: theme.colors.loss }}>{insider.totalSells}</div>
+          <div style={{ ...styles.statValue, color: theme.colors.negative }}>{insider.totalSells}</div>
         </div>
       </div>
       <Widget title="Recent Transactions">

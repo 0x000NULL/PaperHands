@@ -51,10 +51,10 @@ const styles: Record<string, CSSProperties> = {
     fontFamily: theme.typography.fontMono,
   },
   positive: {
-    color: theme.colors.profit,
+    color: theme.colors.positive,
   },
   negative: {
-    color: theme.colors.loss,
+    color: theme.colors.negative,
   },
   noData: {
     fontSize: theme.typography.sm,
@@ -104,8 +104,8 @@ export function SymbolResearchPanel({ symbol }: SymbolResearchPanelProps) {
   }
 
   const getConsensusColor = (rating: string) => {
-    if (rating.includes('Buy')) return theme.colors.profit;
-    if (rating.includes('Sell')) return theme.colors.loss;
+    if (rating.includes('Buy')) return theme.colors.positive;
+    if (rating.includes('Sell')) return theme.colors.negative;
     return theme.colors.textSecondary;
   };
 
@@ -184,7 +184,7 @@ export function SymbolResearchPanel({ symbol }: SymbolResearchPanelProps) {
                 <span
                   style={{
                     ...styles.statValue,
-                    color: insider.netChange >= 0 ? theme.colors.profit : theme.colors.loss,
+                    color: insider.netChange >= 0 ? theme.colors.positive : theme.colors.negative,
                   }}
                 >
                   {insider.netChange >= 0 ? '+' : ''}
