@@ -20,34 +20,34 @@ export const TOUR_STOPS: { id: TourStopId; title: string; description: string }[
       'Track your total value, daily P&L, cash balance, and open positions in real-time.',
   },
   {
+    id: 'quote-panel',
+    title: 'Search Any Stock',
+    description:
+      'Type a symbol to see live quotes, bid/ask, and key statistics. Click Search or press Enter to load the stock.',
+  },
+  {
+    id: 'trade-form',
+    title: 'Place Your First Trade',
+    description:
+      "After searching a symbol, select BUY or SELL, choose order type, enter quantity, and execute. It's paper money, so experiment freely!",
+  },
+  {
     id: 'positions-table',
     title: 'Track Your Holdings',
     description:
       'See all your stock and option positions with real-time P&L. Click any row to view details or quickly sell.',
   },
   {
-    id: 'quote-panel',
-    title: 'Search Any Stock',
+    id: 'layout-toolbar',
+    title: 'Customize Your Layout',
     description:
-      'Type a symbol to see live quotes, bid/ask, and key statistics. The LIVE badge shows real-time streaming data.',
-  },
-  {
-    id: 'trade-form',
-    title: 'Place Your First Trade',
-    description:
-      "Select BUY or SELL, choose your order type, enter quantity, and execute. It's paper money, so experiment freely!",
+      'Click "Edit Layout" to drag, resize, show, or hide widgets. Enable the Options Chain, Heat Map, and more. Changes sync automatically.',
   },
   {
     id: 'options-chain',
     title: 'Trade Options',
     description:
-      'Explore calls and puts across different expirations. View Greeks, open interest, and click to trade directly.',
-  },
-  {
-    id: 'layout-toolbar',
-    title: 'Customize Your Layout',
-    description:
-      'Click "Edit Layout" to drag, resize, show, or hide widgets. Choose from preset layouts or create your own. Changes sync automatically.',
+      'Enable "Options Chain" in Edit Layout to explore calls and puts. View Greeks, open interest, and click to trade directly.',
   },
   {
     id: 'keyboard-shortcuts',
