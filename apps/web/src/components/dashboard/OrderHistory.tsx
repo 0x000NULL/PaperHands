@@ -2,6 +2,7 @@ import { useState, type CSSProperties } from 'react';
 import { theme } from '../../theme/constants';
 import { useOrders } from '../../hooks';
 import { useDashboardStore } from '../../store/dashboardStore';
+import { formatOptionDisplay } from '../../utils/formatOption';
 import { Widget } from './Widget';
 import type { Order, OrderCategory } from '../../types';
 
@@ -254,12 +255,9 @@ export function OrderHistory() {
                       handleSymbolClick(order.underlyingSymbol || order.symbol)
                     }
                   >
-                    {order.underlyingSymbol || order.symbol}
-                    {order.orderCategory === 'option' && order.optionSymbol && (
-                      <span style={styles.optionSymbol}>
-                        {order.optionSymbol}
-                      </span>
-                    )}
+                    {order.orderCategory === 'option'
+                      ? formatOptionDisplay(order) || order.optionSymbol || order.symbol
+                      : order.symbol}
                   </span>
                 </td>
                 <td style={styles.tdCenter}>
