@@ -29,3 +29,10 @@ export {
   researchKeys,
 } from './useResearch';
 export { useChartTheme, getGaugeColor } from './useChartTheme';
+export {
+  useMediaQuery,
+  useBreakpoint,
+  useIsMobile,
+  useIsTablet,
+  useIsDesktop,
+} from './useMediaQuery';

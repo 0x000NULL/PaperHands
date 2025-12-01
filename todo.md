@@ -238,24 +238,24 @@ A comprehensive checklist combining the feature roadmap with implementation stat
 
 ## 12. Mobile Responsive Design
 
-**Current State: 4/10** - Desktop-only layouts, breakpoints defined but unused
+**Current State: 6/10** - Foundation complete, page layouts partially done
 
 ### Phase 1 - Foundation (Do First)
 
 | Task | Status | Priority | Notes |
 |------|--------|----------|-------|
-| Create useMediaQuery hook | ⬜ Todo | 🔴 Critical | Currently no way to detect screen size |
-| Implement responsive grid system | ⬜ Todo | 🔴 Critical | Replace fixed `gridTemplateColumns` throughout |
-| Add hamburger navigation menu | ⬜ Todo | 🔴 Critical | Current nav doesn't collapse on mobile |
-| Touch-friendly button sizing | ⬜ Todo | 🔴 Critical | 48px minimum tap targets |
+| Create useMediaQuery hook | ✅ Done | 🔴 Critical | `useSyncExternalStore` based hook |
+| Implement responsive grid system | ✅ Done | 🔴 Critical | CSS classes: `widget-grid`, `main-grid`, `summary-bar`, `stats-grid` |
+| Add hamburger navigation menu | ✅ Done | 🔴 Critical | Slide-out drawer with backdrop, closes on escape/route change |
+| Touch-friendly button sizing | ✅ Done | 🔴 Critical | 48px minimum tap targets via `touch.css` |
 
 ### Phase 2 - Page Layouts
 
 | Task | Status | Priority | Notes |
 |------|--------|----------|-------|
-| Dashboard responsive layout | ⬜ Todo | 🔴 Critical | Fixed 3-column grid: `1.5fr 1fr 1fr` |
-| Analytics responsive layout | ⬜ Todo | 🟡 Medium | Fixed `2fr 1fr` grid |
-| Greeks responsive layout | ⬜ Todo | 🟡 Medium | Fixed `2fr 1fr` grid |
+| Dashboard responsive layout | ✅ Done | 🔴 Critical | WidgetGrid + GridWidget responsive |
+| Analytics responsive layout | ✅ Done | 🟡 Medium | `main-grid`, `summary-bar`, `stats-grid` classes |
+| Greeks responsive layout | ✅ Done | 🟡 Medium | `main-grid`, `summary-bar` classes |
 | Portfolio responsive layout | ⬜ Todo | 🟡 Medium | |
 | Orders responsive layout | ⬜ Todo | 🟢 Low | |
 
@@ -745,13 +745,13 @@ This section tracks non-feature improvements to code quality, architecture, test
 | 9. News & Research | 8 | 0 | 8 |
 | 10. Social & Community | 0 | 7 | 7 |
 | 11. User Experience | 6 | 2 | 8 |
-| 12. Mobile Responsive | 0 | 20 | 20 |
+| 12. Mobile Responsive | 7 | 13 | 20 |
 | 13. Progressive Web App | 0 | 15 | 15 |
 | 14. Paper Trading Specific | 0 | 10 | 10 |
 | 15. Power User Features | 0 | 9 | 9 |
 | 16. Account & Security | 0 | 7 | 7 |
 | 17. Native Mobile Apps | 0 | 7 | 7 |
-| **Features Subtotal** | **81** | **101** | **182** |
+| **Features Subtotal** | **88** | **94** | **182** |
 | | | | |
 | **Technical Debt** | | | |
 | 18. DevOps & Tooling | 0 | 14 | 14 |
@@ -764,8 +764,8 @@ This section tracks non-feature improvements to code quality, architecture, test
 | 25. Documentation | 0 | 13 | 13 |
 | **Tech Debt Subtotal** | **0** | **114** | **114** |
 | | | | |
-| **GRAND TOTAL** | **81** | **215** | **296** |
+| **GRAND TOTAL** | **88** | **208** | **296** |
 
-**Feature Progress: 45% Complete**
+**Feature Progress: 48% Complete**
 **Tech Debt Progress: 0% Complete**
-**Overall Progress: 27% Complete**
+**Overall Progress: 30% Complete**

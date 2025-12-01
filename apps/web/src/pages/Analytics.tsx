@@ -11,6 +11,7 @@ import {
   AllocationViewTabs,
   type AllocationViewType,
 } from '../components/analytics';
+import '../styles/responsive.css';
 
 type AnalyticsPeriod = '1W' | '1M' | '3M' | 'YTD' | '1Y' | 'ALL';
 type TabType = 'lots' | 'history' | 'dividends' | 'options';
@@ -23,9 +24,6 @@ const styles: Record<string, CSSProperties> = {
     minHeight: 'calc(100vh - 80px)',
   },
   summaryBar: {
-    display: 'grid',
-    gridTemplateColumns: 'repeat(5, 1fr)',
-    gap: theme.spacing.md,
     padding: theme.spacing.lg,
     backgroundColor: theme.colors.bgSecondary,
     borderRadius: theme.radius.lg,
@@ -47,8 +45,6 @@ const styles: Record<string, CSSProperties> = {
     fontFamily: theme.typography.fontMono,
   },
   mainGrid: {
-    display: 'grid',
-    gridTemplateColumns: '2fr 1fr',
     gap: theme.spacing.lg,
   },
   leftColumn: {
@@ -81,8 +77,6 @@ const styles: Record<string, CSSProperties> = {
     color: theme.colors.bgPrimary,
   },
   statsGrid: {
-    display: 'grid',
-    gridTemplateColumns: 'repeat(3, 1fr)',
     gap: theme.spacing.md,
   },
   statCard: {
@@ -362,7 +356,7 @@ export function Analytics() {
     <Layout>
       <div style={styles.container}>
         {/* Summary Bar */}
-        <div style={styles.summaryBar}>
+        <div className="summary-bar" style={styles.summaryBar}>
           <div style={styles.summaryItem}>
             <span style={styles.summaryLabel}>Total Value</span>
             <span style={styles.summaryValue}>
@@ -406,7 +400,7 @@ export function Analytics() {
         </div>
 
         {/* Main Grid */}
-        <div style={styles.mainGrid}>
+        <div className="main-grid" style={styles.mainGrid}>
           {/* Left Column */}
           <div style={styles.leftColumn}>
             {/* Performance Chart */}
@@ -452,7 +446,7 @@ export function Analytics() {
               {loadingStats ? (
                 <div style={styles.loading}>Loading statistics...</div>
               ) : statistics ? (
-                <div style={styles.statsGrid}>
+                <div className="stats-grid" style={styles.statsGrid}>
                   <div style={styles.statCard}>
                     <div style={styles.statLabel}>Win Rate</div>
                     <div

@@ -10,6 +10,7 @@ import type {
   ThetaProjection,
   DeltaExposure,
 } from '../types';
+import '../styles/responsive.css';
 
 type TabType = 'overview' | 'byUnderlying' | 'theta' | 'sensitivity';
 
@@ -21,9 +22,6 @@ const styles: Record<string, CSSProperties> = {
     minHeight: 'calc(100vh - 80px)',
   },
   summaryBar: {
-    display: 'grid',
-    gridTemplateColumns: 'repeat(5, 1fr)',
-    gap: theme.spacing.md,
     padding: theme.spacing.lg,
     backgroundColor: theme.colors.bgSecondary,
     borderRadius: theme.radius.lg,
@@ -45,8 +43,6 @@ const styles: Record<string, CSSProperties> = {
     fontFamily: theme.typography.fontMono,
   },
   mainGrid: {
-    display: 'grid',
-    gridTemplateColumns: '2fr 1fr',
     gap: theme.spacing.lg,
   },
   fullWidth: {
@@ -175,7 +171,7 @@ function formatCurrency(value: number): string {
 
 function GreeksSummaryBar({ summary }: { summary: PortfolioGreeksSummary }) {
   return (
-    <div style={styles.summaryBar}>
+    <div className="summary-bar" style={styles.summaryBar}>
       <div style={styles.summaryItem}>
         <span style={styles.summaryLabel}>Net Delta</span>
         <span
@@ -580,7 +576,7 @@ export function Greeks() {
 
         {/* Main Content */}
         {activeTab === 'overview' && (
-          <div style={styles.mainGrid}>
+          <div className="main-grid" style={styles.mainGrid}>
             <div style={styles.leftColumn}>
               <Widget title="Greeks by Underlying">
                 {isLoading ? (

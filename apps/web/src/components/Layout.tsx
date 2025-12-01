@@ -1,5 +1,5 @@
 import { Link, useNavigate } from 'react-router-dom';
-import { useRef, type CSSProperties } from 'react';
+import { useRef, useState, type CSSProperties } from 'react';
 import { useAuthStore } from '../store/authStore';
 import { theme } from '../theme/constants';
 import { MarketStatusBadge } from './common/MarketStatusBadge';
@@ -10,6 +10,9 @@ import { useNotifications } from '../hooks/useNotifications';
 import { useKeyboardShortcuts } from '../hooks/useKeyboardShortcuts';
 import { useQuickTradePanel } from '../store/quickTradePanelStore';
 import { useShortcutsStore } from '../store/shortcutsStore';
+import { useIsDesktop } from '../hooks/useMediaQuery';
+import { HamburgerButton, MobileNav } from './navigation';
+import '../styles/navigation.css';
 
 interface LayoutProps {
   children: React.ReactNode;
@@ -87,6 +90,8 @@ export function Layout({ children }: LayoutProps) {
   const searchInputRef = useRef<HTMLInputElement>(null);
   const { open: openQuickTrade } = useQuickTradePanel();
   const { openShortcutsModal } = useShortcutsStore();
+  const isDesktop = useIsDesktop();
+  const [isMobileNavOpen, setIsMobileNavOpen] = useState(false);
 
   // Initialize notifications WebSocket connection
   useNotifications();
@@ -116,49 +121,69 @@ export function Layout({ children }: LayoutProps) {
         </Link>
 
         {isAuthenticated() && (
-          <div style={styles.navLinks} data-tour-id="tour-navigation">
-            <ConnectionStatusBadge />
-            <MarketStatusBadge />
-            <Link to="/" style={styles.navLink}>
-              Dashboard
-            </Link>
-            <Link to="/watchlists" style={styles.navLink}>
-              Watchlists
-            </Link>
-            <Link to="/analytics" style={styles.navLink}>
-              Analytics
-            </Link>
-            <Link to="/greeks" style={styles.navLink}>
-              Greeks
-            </Link>
-            {(user?.role === 'admin' || user?.role === 'super_admin') && (
-              <Link to="/admin" style={styles.navLink}>
-                Admin
+          <>
+            {/* Desktop Navigation */}
+            <div className="nav-desktop" style={styles.navLinks} data-tour-id="tour-navigation">
+              <ConnectionStatusBadge />
+              <MarketStatusBadge />
+              <Link to="/" style={styles.navLink}>
+                Dashboard
               </Link>
+              <Link to="/watchlists" style={styles.navLink}>
+                Watchlists
+              </Link>
+              <Link to="/analytics" style={styles.navLink}>
+                Analytics
+              </Link>
+              <Link to="/greeks" style={styles.navLink}>
+                Greeks
+              </Link>
+              {(user?.role === 'admin' || user?.role === 'super_admin') && (
+                <Link to="/admin" style={styles.navLink}>
+                  Admin
+                </Link>
+              )}
+              <Link to="/alerts" style={styles.navLink}>
+                Alerts
+              </Link>
+              <Link to="/research" style={styles.navLink}>
+                Research
+              </Link>
+              <span style={styles.userEmail}>{user?.email}</span>
+              <NotificationBell />
+              <button
+                onClick={openShortcutsModal}
+                style={styles.settingsLink}
+                title="Keyboard Shortcuts (Ctrl+/)"
+                data-tour-id="tour-keyboard-shortcuts"
+              >
+                &#8984;
+              </button>
+              <Link to="/settings" style={styles.settingsLink} title="Settings">
+                &#9881;
+              </Link>
+              <button onClick={handleLogout} style={styles.logoutButton}>
+                Logout
+              </button>
+            </div>
+
+            {/* Mobile/Tablet Navigation */}
+            {!isDesktop && (
+              <>
+                <div className="nav-mobile-actions">
+                  <NotificationBell />
+                  <HamburgerButton
+                    isOpen={isMobileNavOpen}
+                    onClick={() => setIsMobileNavOpen(!isMobileNavOpen)}
+                  />
+                </div>
+                <MobileNav
+                  isOpen={isMobileNavOpen}
+                  onClose={() => setIsMobileNavOpen(false)}
+                />
+              </>
             )}
-            <Link to="/alerts" style={styles.navLink}>
-              Alerts
-            </Link>
-            <Link to="/research" style={styles.navLink}>
-              Research
-            </Link>
-            <span style={styles.userEmail}>{user?.email}</span>
-            <NotificationBell />
-            <button
-              onClick={openShortcutsModal}
-              style={styles.settingsLink}
-              title="Keyboard Shortcuts (Ctrl+/)"
-              data-tour-id="tour-keyboard-shortcuts"
-            >
-              &#8984;
-            </button>
-            <Link to="/settings" style={styles.settingsLink} title="Settings">
-              &#9881;
-            </Link>
-            <button onClick={handleLogout} style={styles.logoutButton}>
-              Logout
-            </button>
-          </div>
+          </>
         )}
       </nav>
 

@@ -1,0 +1,95 @@
+/* ==========================================================================
+   Touch-Friendly Sizing
+   48px minimum tap targets (Google/Apple accessibility guidelines)
+   ========================================================================== */
+
+/* Base touch target - 48px minimum */
+.touch-target {
+  min-height: 48px;
+  min-width: 48px;
+}
+
+/* Touch-friendly buttons */
+.btn-touch {
+  min-height: 48px;
+  padding: 12px 16px;
+  font-size: 1rem;
+}
+
+/* Touch-friendly inputs */
+.input-touch {
+  min-height: 48px;
+  padding: 12px 16px;
+  font-size: 16px; /* Prevents zoom on iOS */
+}
+
+/* Touch-friendly select */
+.select-touch {
+  min-height: 48px;
+  padding: 12px 16px;
+  font-size: 16px;
+}
+
+/* Touch-friendly nav links */
+.nav-link-touch {
+  min-height: 48px;
+  display: flex;
+  align-items: center;
+  padding: 12px 16px;
+}
+
+/* Touch-friendly icon buttons */
+.icon-btn-touch {
+  min-height: 48px;
+  min-width: 48px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 12px;
+}
+
+/* Touch spacing - increases gap between interactive elements */
+.touch-spacing > * + * {
+  margin-top: 12px;
+}
+
+/* ==========================================================================
+   Mobile-specific adjustments (below 1024px)
+   Apply minimum touch targets automatically on touch devices
+   ========================================================================== */
+@media (max-width: 1023px) {
+  /* Make all buttons touch-friendly on mobile/tablet */
+  button,
+  [role="button"],
+  input[type="submit"],
+  input[type="button"] {
+    min-height: 44px; /* Apple HIG minimum */
+  }
+
+  /* Larger tap areas for form inputs */
+  input[type="text"],
+  input[type="email"],
+  input[type="password"],
+  input[type="number"],
+  input[type="tel"],
+  input[type="url"],
+  input[type="search"],
+  textarea,
+  select {
+    min-height: 48px;
+    font-size: 16px; /* Prevents iOS zoom on focus */
+  }
+}
+
+/* ==========================================================================
+   Safe area insets for notched devices (iPhone X+, etc.)
+   ========================================================================== */
+@supports (padding: env(safe-area-inset-bottom)) {
+  .safe-area-bottom {
+    padding-bottom: env(safe-area-inset-bottom);
+  }
+
+  .safe-area-top {
+    padding-top: env(safe-area-inset-top);
+  }
+}

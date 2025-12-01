@@ -22,6 +22,8 @@ import {
   type WidgetId,
   type WidgetPosition,
 } from '../../store/layoutStore';
+import { useIsDesktop, useIsTablet } from '../../hooks/useMediaQuery';
+import '../../styles/responsive.css';
 
 const styles: Record<string, CSSProperties> = {
   container: {
@@ -91,9 +93,6 @@ const styles: Record<string, CSSProperties> = {
     color: theme.colors.textPrimary,
   },
   grid: {
-    display: 'grid',
-    gridTemplateColumns: 'repeat(6, 1fr)',
-    gap: theme.spacing.md,
     flex: 1,
     overflow: 'auto',
     padding: theme.spacing.xs,
@@ -252,7 +251,7 @@ export function WidgetGrid({ children }: WidgetGridProps) {
           items={visibleWidgets.map((w) => w.id)}
           strategy={rectSortingStrategy}
         >
-          <div style={styles.grid}>
+          <div className="widget-grid" style={styles.grid}>
             {children(visibleWidgets)}
           </div>
         </SortableContext>
@@ -268,11 +267,28 @@ interface GridWidgetProps {
 }
 
 export function GridWidget({ widget, children }: GridWidgetProps) {
-  const style: CSSProperties = {
-    gridColumn: `${widget.x + 1} / span ${widget.width}`,
-    gridRow: `${widget.y + 1} / span ${widget.height}`,
-    minHeight: `${widget.height * 100}px`,
-  };
+  const isDesktop = useIsDesktop();
+  const isTablet = useIsTablet();
+
+  // On mobile/tablet, widgets span full width and stack vertically
+  // On desktop (xl+), use the configured grid positioning
+  const style: CSSProperties = isDesktop
+    ? {
+        gridColumn: `${widget.x + 1} / span ${widget.width}`,
+        gridRow: `${widget.y + 1} / span ${widget.height}`,
+        minHeight: `${widget.height * 100}px`,
+      }
+    : isTablet
+      ? {
+          // On tablet, span half width (2-column grid) or full if widget is wide
+          gridColumn: widget.width > 3 ? '1 / -1' : 'span 1',
+          minHeight: '200px',
+        }
+      : {
+          // On mobile, all widgets span full width (single column)
+          gridColumn: '1 / -1',
+          minHeight: '200px',
+        };
 
   return <div style={style}>{children}</div>;
 }

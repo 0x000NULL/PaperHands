@@ -1,3 +1,8 @@
+/* Responsive utilities - must be first */
+@import './styles/responsive.css';
+@import './styles/navigation.css';
+@import './styles/touch.css';
+
 * {
   box-sizing: border-box;
 }

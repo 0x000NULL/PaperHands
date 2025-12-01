@@ -1,0 +1,144 @@
+/* ==========================================================================
+   Responsive Grid System - Mobile First
+   Breakpoints: sm(640), md(768), lg(1024), xl(1280), 2xl(1536)
+   ========================================================================== */
+
+/* Base utilities */
+.grid { display: grid; }
+.flex { display: flex; }
+.hidden { display: none; }
+.block { display: block; }
+
+/* Gap utilities */
+.gap-xs { gap: 4px; }
+.gap-sm { gap: 8px; }
+.gap-md { gap: 16px; }
+.gap-lg { gap: 24px; }
+.gap-xl { gap: 32px; }
+
+/* Flex utilities */
+.flex-col { flex-direction: column; }
+.flex-row { flex-direction: row; }
+.flex-wrap { flex-wrap: wrap; }
+.items-center { align-items: center; }
+.justify-between { justify-content: space-between; }
+
+/* Full width utility */
+.full-width { grid-column: 1 / -1; }
+
+/* ==========================================================================
+   Responsive Grid Classes
+   ========================================================================== */
+
+/* Widget grid - 1 col mobile, 2 col tablet, 4 col small desktop, 6 col large */
+.widget-grid {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 16px;
+}
+
+/* Main layout grid (2fr 1fr pattern on desktop) - stacks on mobile/tablet */
+.main-grid {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 24px;
+}
+
+/* Summary bar (5 columns on desktop) - 2 cols mobile, 3 cols tablet */
+.summary-bar {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 16px;
+}
+
+/* Stats grid (3 columns on desktop) - 1 col mobile, 2 cols tablet */
+.stats-grid {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 16px;
+}
+
+/* Quote stats (4 columns on desktop) - 2 cols mobile */
+.quote-stats {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 8px;
+}
+
+/* Price inputs (2 columns) - stack on mobile */
+.price-inputs {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 16px;
+}
+
+/* Generic column classes - mobile (default: 1 column) */
+.grid-cols-1 { grid-template-columns: repeat(1, 1fr); }
+.grid-cols-2 { grid-template-columns: repeat(2, 1fr); }
+
+/* ==========================================================================
+   SM Breakpoint (640px+)
+   ========================================================================== */
+@media (min-width: 640px) {
+  .sm\:grid-cols-2 { grid-template-columns: repeat(2, 1fr); }
+  .sm\:grid-cols-3 { grid-template-columns: repeat(3, 1fr); }
+  .sm\:hidden { display: none; }
+  .sm\:block { display: block; }
+  .sm\:flex { display: flex; }
+
+  .price-inputs { grid-template-columns: repeat(2, 1fr); }
+  .stats-grid { grid-template-columns: repeat(2, 1fr); }
+}
+
+/* ==========================================================================
+   MD Breakpoint (768px+) - Tablet
+   ========================================================================== */
+@media (min-width: 768px) {
+  .md\:grid-cols-2 { grid-template-columns: repeat(2, 1fr); }
+  .md\:grid-cols-3 { grid-template-columns: repeat(3, 1fr); }
+  .md\:grid-cols-4 { grid-template-columns: repeat(4, 1fr); }
+  .md\:hidden { display: none; }
+  .md\:block { display: block; }
+  .md\:flex { display: flex; }
+
+  .widget-grid { grid-template-columns: repeat(2, 1fr); }
+  .summary-bar { grid-template-columns: repeat(3, 1fr); }
+  .stats-grid { grid-template-columns: repeat(3, 1fr); }
+  .quote-stats { grid-template-columns: repeat(4, 1fr); }
+}
+
+/* ==========================================================================
+   LG Breakpoint (1024px+) - Desktop
+   ========================================================================== */
+@media (min-width: 1024px) {
+  .lg\:grid-cols-3 { grid-template-columns: repeat(3, 1fr); }
+  .lg\:grid-cols-4 { grid-template-columns: repeat(4, 1fr); }
+  .lg\:grid-cols-5 { grid-template-columns: repeat(5, 1fr); }
+  .lg\:grid-cols-6 { grid-template-columns: repeat(6, 1fr); }
+  .lg\:hidden { display: none; }
+  .lg\:block { display: block; }
+  .lg\:flex { display: flex; }
+
+  /* 2fr 1fr layout for sidebar pages */
+  .main-grid { grid-template-columns: 2fr 1fr; }
+
+  .widget-grid { grid-template-columns: repeat(4, 1fr); }
+  .summary-bar { grid-template-columns: repeat(5, 1fr); }
+}
+
+/* ==========================================================================
+   XL Breakpoint (1280px+)
+   ========================================================================== */
+@media (min-width: 1280px) {
+  .xl\:grid-cols-5 { grid-template-columns: repeat(5, 1fr); }
+  .xl\:grid-cols-6 { grid-template-columns: repeat(6, 1fr); }
+
+  .widget-grid { grid-template-columns: repeat(6, 1fr); }
+}
+
+/* ==========================================================================
+   2XL Breakpoint (1536px+)
+   ========================================================================== */
+@media (min-width: 1536px) {
+  .\32xl\:grid-cols-6 { grid-template-columns: repeat(6, 1fr); }
+}
