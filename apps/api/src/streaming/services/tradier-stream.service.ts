@@ -85,6 +85,12 @@ export class TradierStreamService implements OnModuleInit, OnModuleDestroy {
    * Subscribe to symbols
    */
   async subscribe(symbols: string[]): Promise<void> {
+    // Don't attempt to connect if no API token is configured
+    if (!this.tradierApiToken) {
+      this.logger.debug('Tradier streaming disabled - no API token configured');
+      return;
+    }
+
     const upperSymbols = symbols.map((s) => s.toUpperCase());
     let hasNewSymbols = false;
 
@@ -165,7 +171,18 @@ export class TradierStreamService implements OnModuleInit, OnModuleDestroy {
     );
 
     if (!response.ok) {
+      // Check for auth errors (401/403) - don't retry these
+      if (response.status === 401 || response.status === 403) {
+        this.reconnectAttempts = this.maxReconnectAttempts; // Stop retrying
+        throw new Error(`Authentication failed: ${response.status} - check TRADIER_API_TOKEN`);
+      }
       throw new Error(`Failed to create session: ${response.status}`);
+    }
+
+    const contentType = response.headers.get('content-type');
+    if (!contentType || !contentType.includes('application/json')) {
+      this.reconnectAttempts = this.maxReconnectAttempts; // Stop retrying
+      throw new Error('Invalid response from Tradier - not JSON (check API token)');
     }
 
     const data = (await response.json()) as TradierSessionResponse;
