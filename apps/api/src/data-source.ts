@@ -11,10 +11,17 @@ import { WashSale } from './portfolio/entities/wash-sale.entity';
 import { Dividend } from './portfolio/entities/dividend.entity';
 import { Order } from './orders/entities/order.entity';
 import { OrderAudit } from './orders/entities/order-audit.entity';
+import { MultiLegOrder } from './orders/entities/multi-leg-order.entity';
+import { MultiLegOrderLeg } from './orders/entities/multi-leg-order-leg.entity';
+import { RolloverOrder } from './orders/entities/rollover-order.entity';
 import { Watchlist } from './watchlists/entities/watchlist.entity';
 import { WatchlistItem } from './watchlists/entities/watchlist-item.entity';
 import { PortfolioSnapshot } from './analytics/entities/portfolio-snapshot.entity';
 import { AdminAudit } from './admin/entities/admin-audit.entity';
+import { Alert } from './alerts/entities/alert.entity';
+import { Notification } from './alerts/entities/notification.entity';
+import { RefreshToken } from './auth/entities/refresh-token.entity';
+import { VolatilitySnapshot } from './market-data/entities/volatility-snapshot.entity';
 
 // eslint-disable-next-line @typescript-eslint/no-require-imports, @typescript-eslint/no-unsafe-call, @typescript-eslint/no-unsafe-member-access
 require('dotenv').config();
@@ -35,10 +42,17 @@ export const AppDataSource = new DataSource({
     Dividend,
     Order,
     OrderAudit,
+    MultiLegOrder,
+    MultiLegOrderLeg,
+    RolloverOrder,
     Watchlist,
     WatchlistItem,
     PortfolioSnapshot,
     AdminAudit,
+    Alert,
+    Notification,
+    RefreshToken,
+    VolatilitySnapshot,
   ],
   migrations: [__dirname + '/migrations/*{.ts,.js}'],
   synchronize: false,
