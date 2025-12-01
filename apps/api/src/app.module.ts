@@ -43,7 +43,7 @@ import { validate } from './config/env.validation';
         type: 'postgres',
         url: configService.get('DATABASE_URL'),
         autoLoadEntities: true,
-        synchronize: true, // Temporarily enabled to create missing tables (alerts, notifications, etc.)
+        synchronize: process.env.NODE_ENV !== 'production',
         migrationsRun: process.env.NODE_ENV === 'production',
         migrations: [__dirname + '/migrations/*{.ts,.js}'],
         ssl:
