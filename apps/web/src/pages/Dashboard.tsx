@@ -91,18 +91,16 @@ export function Dashboard() {
     <Layout>
       <div style={styles.container}>
         <WidgetGrid>
-          {(visibleWidgetIds: WidgetId[]) => (
-            <>
-              {visibleWidgetIds.map((widgetId) => (
-                // react-grid-layout requires a div wrapper with key matching layout.i
-                <div key={widgetId}>
-                  <DraggableWidget id={widgetId}>
-                    {renderWidgetContent(widgetId, selectedSymbol)}
-                  </DraggableWidget>
-                </div>
-              ))}
-            </>
-          )}
+          {(visibleWidgetIds: WidgetId[]) =>
+            visibleWidgetIds.map((widgetId) => (
+              // react-grid-layout requires a div wrapper with key matching layout.i
+              <div key={widgetId}>
+                <DraggableWidget id={widgetId}>
+                  {renderWidgetContent(widgetId, selectedSymbol)}
+                </DraggableWidget>
+              </div>
+            ))
+          }
         </WidgetGrid>
       </div>
 

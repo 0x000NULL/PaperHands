@@ -92,12 +92,17 @@ export function useLayoutSync() {
 
   // Apply default layout from server on initial load
   useEffect(() => {
-    if (defaultLayout && !isLoadingDefault) {
+    if (defaultLayout && !isLoadingDefault && defaultLayout.widgets?.length > 0) {
       const serverWidgetsHash = JSON.stringify(defaultLayout.widgets);
       if (lastSyncedRef.current !== serverWidgetsHash) {
-        const { layouts: newLayouts } = fromApiFormat(defaultLayout.widgets);
-        setLayouts(newLayouts);
-        lastSyncedRef.current = serverWidgetsHash;
+        const { layouts: newLayouts, hiddenWidgets: serverHiddenWidgets } = fromApiFormat(defaultLayout.widgets);
+        // Only apply if we have valid layouts
+        if (newLayouts.lg && newLayouts.lg.length > 0) {
+          setLayouts(newLayouts);
+          // Also update hidden widgets from server
+          useLayoutStore.setState({ hiddenWidgets: serverHiddenWidgets });
+          lastSyncedRef.current = serverWidgetsHash;
+        }
       }
     }
   }, [defaultLayout, isLoadingDefault, setLayouts]);

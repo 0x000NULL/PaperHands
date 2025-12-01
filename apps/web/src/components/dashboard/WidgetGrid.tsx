@@ -1,4 +1,4 @@
-import { type CSSProperties, type ReactNode, useCallback } from 'react';
+import { type CSSProperties, type ReactElement, useCallback } from 'react';
 import { Responsive, WidthProvider } from 'react-grid-layout';
 import type { Layout, Layouts } from 'react-grid-layout';
 import 'react-grid-layout/css/styles.css';
@@ -113,7 +113,7 @@ const styles: Record<string, CSSProperties> = {
 };
 
 interface WidgetGridProps {
-  children: (visibleWidgetIds: WidgetId[]) => ReactNode;
+  children: (visibleWidgetIds: WidgetId[]) => ReactElement[];
 }
 
 export function WidgetGrid({ children }: WidgetGridProps) {
