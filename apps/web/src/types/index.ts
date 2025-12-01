@@ -479,3 +479,119 @@ export interface PaginatedResponse<T> {
   offset: number;
   hasMore: boolean;
 }
+
+// Research types
+export interface NewsItem {
+  id: number;
+  headline: string;
+  summary: string;
+  source: string;
+  url: string;
+  image: string | null;
+  category: string;
+  datetime: number;
+  related: string[];
+}
+
+export interface EarningsRelease {
+  symbol: string;
+  date: string;
+  hour: string;
+  epsActual: number | null;
+  epsEstimate: number | null;
+  revenueActual: number | null;
+  revenueEstimate: number | null;
+  quarter: number;
+  year: number;
+}
+
+export interface EconomicEvent {
+  country: string;
+  event: string;
+  time: string;
+  impact: string;
+  actual: number | null;
+  estimate: number | null;
+  previous: number | null;
+  unit: string;
+}
+
+export interface AnalystRecommendation {
+  period: string;
+  strongBuy: number;
+  buy: number;
+  hold: number;
+  sell: number;
+  strongSell: number;
+}
+
+export interface PriceTarget {
+  symbol: string;
+  targetHigh: number;
+  targetLow: number;
+  targetMean: number;
+  targetMedian: number;
+  lastUpdated: string;
+}
+
+export interface AnalystRatings {
+  symbol: string;
+  recommendations: AnalystRecommendation[];
+  priceTarget: PriceTarget | null;
+  consensusRating: string;
+  totalAnalysts: number;
+}
+
+export interface SecFiling {
+  accessNumber: string;
+  symbol: string;
+  cik: string;
+  form: string;
+  filedDate: string;
+  acceptedDate: string;
+  reportUrl: string;
+  filingUrl: string;
+}
+
+export interface InsiderTransaction {
+  symbol: string;
+  name: string;
+  share: number;
+  change: number;
+  filingDate: string;
+  transactionDate: string;
+  transactionPrice: number | null;
+  transactionCode: string;
+}
+
+export interface InsiderSummary {
+  transactions: InsiderTransaction[];
+  netChange: number;
+  totalBuys: number;
+  totalSells: number;
+}
+
+export interface CompanyFundamentals {
+  symbol: string;
+  name: string;
+  industry: string;
+  country: string;
+  exchange: string;
+  marketCap: number;
+  logo: string;
+  weburl: string;
+  peRatio: number | null;
+  pegRatio: number | null;
+  eps: number | null;
+  beta: number | null;
+  dividendYield: number | null;
+  profitMargin: number | null;
+  operatingMargin: number | null;
+  returnOnEquity: number | null;
+  revenueGrowth: number | null;
+  earningsGrowth: number | null;
+  currentRatio: number | null;
+  debtToEquity: number | null;
+  week52High: number | null;
+  week52Low: number | null;
+}

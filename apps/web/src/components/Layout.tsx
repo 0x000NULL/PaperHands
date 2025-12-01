@@ -122,6 +122,9 @@ export function Layout({ children }: LayoutProps) {
             <Link to="/alerts" style={styles.navLink}>
               Alerts
             </Link>
+            <Link to="/research" style={styles.navLink}>
+              Research
+            </Link>
             <span style={styles.userEmail}>{user?.email}</span>
             <NotificationBell />
             <Link to="/settings" style={styles.settingsLink} title="Settings">

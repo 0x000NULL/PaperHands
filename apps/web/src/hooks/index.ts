@@ -17,3 +17,14 @@ export {
   optionsKeys,
 } from './useOptionsChain';
 export { useVolatilityMetrics, volatilityKeys } from './useVolatility';
+export {
+  useMarketNews,
+  useCompanyNews,
+  useEarningsCalendar,
+  useEconomicCalendar,
+  useAnalystRatings,
+  useSecFilings,
+  useInsiderTransactions,
+  useCompanyFundamentals,
+  researchKeys,
+} from './useResearch';

@@ -23,6 +23,7 @@ import { OnboardingModule } from './onboarding/onboarding.module';
 import { SettingsModule } from './settings/settings.module';
 import { AdminModule } from './admin/admin.module';
 import { AlertsModule } from './alerts/alerts.module';
+import { ResearchModule } from './research/research.module';
 import { CommonModule } from './common/common.module';
 import { validate } from './config/env.validation';
 
@@ -131,6 +132,7 @@ import { validate } from './config/env.validation';
     SettingsModule,
     AdminModule,
     AlertsModule,
+    ResearchModule,
   ],
   controllers: [AppController],
   providers: [

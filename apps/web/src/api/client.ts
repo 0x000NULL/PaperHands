@@ -36,6 +36,13 @@ import type {
   PaginatedResponse,
   OrderStatus,
   VolatilityMetrics,
+  NewsItem,
+  EarningsRelease,
+  EconomicEvent,
+  AnalystRatings,
+  SecFiling,
+  InsiderSummary,
+  CompanyFundamentals,
 } from '../types';
 
 // API base URL from build-time environment variable
@@ -571,6 +578,55 @@ export const api = {
 
   deleteNotification: (id: string) =>
     request<void>(`/notifications/${id}`, { method: 'DELETE' }),
+
+  // Research
+  getMarketNews: (category?: string, limit?: number) => {
+    const params = new URLSearchParams();
+    if (category) params.set('category', category);
+    if (limit) params.set('limit', String(limit));
+    return request<NewsItem[]>(`/research/news/market?${params.toString()}`);
+  },
+
+  getCompanyNews: (symbol: string, from?: string, to?: string) => {
+    const params = new URLSearchParams();
+    if (from) params.set('from', from);
+    if (to) params.set('to', to);
+    return request<NewsItem[]>(`/research/news/${symbol}?${params.toString()}`);
+  },
+
+  getEarningsCalendar: (from?: string, to?: string, symbol?: string) => {
+    const params = new URLSearchParams();
+    if (from) params.set('from', from);
+    if (to) params.set('to', to);
+    if (symbol) params.set('symbol', symbol);
+    return request<EarningsRelease[]>(`/research/earnings?${params.toString()}`);
+  },
+
+  getEconomicCalendar: (from?: string, to?: string) => {
+    const params = new URLSearchParams();
+    if (from) params.set('from', from);
+    if (to) params.set('to', to);
+    return request<EconomicEvent[]>(
+      `/research/economic-calendar?${params.toString()}`,
+    );
+  },
+
+  getAnalystRatings: (symbol: string) =>
+    request<AnalystRatings>(`/research/analyst/${symbol}`),
+
+  getSecFilings: (symbol: string, form?: string, from?: string, to?: string) => {
+    const params = new URLSearchParams();
+    if (form) params.set('form', form);
+    if (from) params.set('from', from);
+    if (to) params.set('to', to);
+    return request<SecFiling[]>(`/research/filings/${symbol}?${params.toString()}`);
+  },
+
+  getInsiderTransactions: (symbol: string) =>
+    request<InsiderSummary>(`/research/insider/${symbol}`),
+
+  getCompanyFundamentals: (symbol: string) =>
+    request<CompanyFundamentals>(`/research/fundamentals/${symbol}`),
 };
 
 // Analytics types

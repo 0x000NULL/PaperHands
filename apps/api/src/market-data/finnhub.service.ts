@@ -55,8 +55,106 @@ interface FinnhubMetricsResponse {
     dividendYieldIndicatedAnnual?: number;
     dividendPerShareAnnual?: number;
     dividendPayoutRatioTTM?: number;
+    '52WeekHigh'?: number;
+    '52WeekLow'?: number;
+    peBasicExclExtraTTM?: number;
+    pegRatioTTM?: number;
+    epsBasicExclExtraItemsTTM?: number;
+    beta?: number;
+    roeTTM?: number;
+    roaTTM?: number;
+    profitMarginTTM?: number;
+    operatingMarginTTM?: number;
+    currentRatioQuarterly?: number;
+    debtEquityQuarterly?: number;
+    revenueGrowthTTMYoy?: number;
+    epsGrowthTTMYoy?: number;
     [key: string]: number | undefined;
   };
+}
+
+// Research API Response Types
+interface FinnhubNewsItem {
+  id: number;
+  category: string;
+  datetime: number;
+  headline: string;
+  image: string;
+  related: string;
+  source: string;
+  summary: string;
+  url: string;
+}
+
+interface FinnhubEarningsCalendarResponse {
+  earningsCalendar: Array<{
+    date: string;
+    epsActual: number | null;
+    epsEstimate: number | null;
+    hour: string;
+    quarter: number;
+    revenueActual: number | null;
+    revenueEstimate: number | null;
+    symbol: string;
+    year: number;
+  }>;
+}
+
+interface FinnhubEconomicCalendarResponse {
+  economicCalendar: Array<{
+    actual: number | null;
+    country: string;
+    estimate: number | null;
+    event: string;
+    impact: string;
+    prev: number | null;
+    time: string;
+    unit: string;
+  }>;
+}
+
+interface FinnhubRecommendationItem {
+  buy: number;
+  hold: number;
+  period: string;
+  sell: number;
+  strongBuy: number;
+  strongSell: number;
+  symbol: string;
+}
+
+interface FinnhubPriceTargetResponse {
+  lastUpdated: string;
+  symbol: string;
+  targetHigh: number;
+  targetLow: number;
+  targetMean: number;
+  targetMedian: number;
+}
+
+interface FinnhubFilingItem {
+  acceptedDate: string;
+  accessNumber: string;
+  cik: string;
+  filedDate: string;
+  filingUrl: string;
+  form: string;
+  reportUrl: string;
+  symbol: string;
+}
+
+interface FinnhubInsiderTransactionResponse {
+  data: Array<{
+    change: number;
+    filingDate: string;
+    name: string;
+    share: number;
+    symbol: string;
+    transactionCode: string;
+    transactionDate: string;
+    transactionPrice: number;
+  }>;
+  symbol: string;
 }
 
 export interface CompanyProfile {
@@ -73,6 +171,107 @@ export interface StockMetrics {
   dividendYield: number | null;
   dividendPerShare: number | null;
   dividendPayoutRatio: number | null;
+}
+
+// Research Data Types (exported for use by research module)
+export interface NewsItem {
+  id: number;
+  headline: string;
+  summary: string;
+  source: string;
+  url: string;
+  image: string | null;
+  category: string;
+  datetime: number;
+  related: string[];
+}
+
+export interface EarningsRelease {
+  symbol: string;
+  date: string;
+  hour: string;
+  epsActual: number | null;
+  epsEstimate: number | null;
+  revenueActual: number | null;
+  revenueEstimate: number | null;
+  quarter: number;
+  year: number;
+}
+
+export interface EconomicEvent {
+  country: string;
+  event: string;
+  time: string;
+  impact: string;
+  actual: number | null;
+  estimate: number | null;
+  previous: number | null;
+  unit: string;
+}
+
+export interface AnalystRecommendation {
+  period: string;
+  strongBuy: number;
+  buy: number;
+  hold: number;
+  sell: number;
+  strongSell: number;
+}
+
+export interface PriceTarget {
+  symbol: string;
+  targetHigh: number;
+  targetLow: number;
+  targetMean: number;
+  targetMedian: number;
+  lastUpdated: string;
+}
+
+export interface SecFiling {
+  accessNumber: string;
+  symbol: string;
+  cik: string;
+  form: string;
+  filedDate: string;
+  acceptedDate: string;
+  reportUrl: string;
+  filingUrl: string;
+}
+
+export interface InsiderTransaction {
+  symbol: string;
+  name: string;
+  share: number;
+  change: number;
+  filingDate: string;
+  transactionDate: string;
+  transactionPrice: number | null;
+  transactionCode: string;
+}
+
+export interface CompanyFundamentals {
+  symbol: string;
+  name: string;
+  industry: string;
+  country: string;
+  exchange: string;
+  marketCap: number;
+  logo: string;
+  weburl: string;
+  peRatio: number | null;
+  pegRatio: number | null;
+  eps: number | null;
+  beta: number | null;
+  dividendYield: number | null;
+  profitMargin: number | null;
+  operatingMargin: number | null;
+  returnOnEquity: number | null;
+  revenueGrowth: number | null;
+  earningsGrowth: number | null;
+  currentRatio: number | null;
+  debtToEquity: number | null;
+  week52High: number | null;
+  week52Low: number | null;
 }
 
 interface FinnhubCandleResponse {
@@ -567,5 +766,517 @@ export class FinnhubService {
     }
 
     return results;
+  }
+
+  // ==================== RESEARCH API METHODS ====================
+
+  /**
+   * Get market news
+   * Cache: 5 minutes
+   */
+  async getMarketNews(
+    category: string = 'general',
+    minId?: number,
+  ): Promise<NewsItem[]> {
+    const cacheKey = `market-news:${category}:${minId || 0}`;
+
+    const cached = await this.cacheManager.get<NewsItem[]>(cacheKey);
+    if (cached) {
+      return cached;
+    }
+
+    const params = new URLSearchParams({
+      category,
+      token: this.apiKey,
+    });
+    if (minId) {
+      params.set('minId', minId.toString());
+    }
+
+    const response = await this.fetchWithRetry(
+      `${this.baseUrl}/news?${params.toString()}`,
+      { headers: { Accept: 'application/json' } },
+    );
+
+    if (!response.ok) {
+      throw new HttpException('Failed to fetch market news', response.status);
+    }
+
+    const data = (await response.json()) as FinnhubNewsItem[];
+
+    const news: NewsItem[] = data.map((item) => ({
+      id: item.id,
+      headline: item.headline,
+      summary: item.summary,
+      source: item.source,
+      url: item.url,
+      image: item.image || null,
+      category: item.category,
+      datetime: item.datetime,
+      related: item.related ? item.related.split(',').map((s) => s.trim()) : [],
+    }));
+
+    await this.cacheManager.set(cacheKey, news, 300_000); // 5 minutes
+    return news;
+  }
+
+  /**
+   * Get company-specific news
+   * Cache: 5 minutes
+   */
+  async getCompanyNews(
+    symbol: string,
+    from?: string,
+    to?: string,
+  ): Promise<NewsItem[]> {
+    const upperSymbol = symbol.toUpperCase();
+    const today = new Date().toISOString().split('T')[0];
+    const weekAgo = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000)
+      .toISOString()
+      .split('T')[0];
+
+    const fromDate = from || weekAgo;
+    const toDate = to || today;
+    const cacheKey = `company-news:${upperSymbol}:${fromDate}:${toDate}`;
+
+    const cached = await this.cacheManager.get<NewsItem[]>(cacheKey);
+    if (cached) {
+      return cached;
+    }
+
+    const params = new URLSearchParams({
+      symbol: upperSymbol,
+      from: fromDate,
+      to: toDate,
+      token: this.apiKey,
+    });
+
+    const response = await this.fetchWithRetry(
+      `${this.baseUrl}/company-news?${params.toString()}`,
+      { headers: { Accept: 'application/json' } },
+    );
+
+    if (!response.ok) {
+      throw new HttpException(
+        `Failed to fetch news for ${upperSymbol}`,
+        response.status,
+      );
+    }
+
+    const data = (await response.json()) as FinnhubNewsItem[];
+
+    const news: NewsItem[] = data.map((item) => ({
+      id: item.id,
+      headline: item.headline,
+      summary: item.summary,
+      source: item.source,
+      url: item.url,
+      image: item.image || null,
+      category: item.category,
+      datetime: item.datetime,
+      related: item.related ? item.related.split(',').map((s) => s.trim()) : [],
+    }));
+
+    await this.cacheManager.set(cacheKey, news, 300_000); // 5 minutes
+    return news;
+  }
+
+  /**
+   * Get earnings calendar
+   * Cache: 1 hour
+   */
+  async getEarningsCalendar(
+    from?: string,
+    to?: string,
+    symbol?: string,
+  ): Promise<EarningsRelease[]> {
+    const today = new Date().toISOString().split('T')[0];
+    const weekLater = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000)
+      .toISOString()
+      .split('T')[0];
+
+    const fromDate = from || today;
+    const toDate = to || weekLater;
+    const cacheKey = `earnings-calendar:${fromDate}:${toDate}:${symbol || 'all'}`;
+
+    const cached = await this.cacheManager.get<EarningsRelease[]>(cacheKey);
+    if (cached) {
+      return cached;
+    }
+
+    const params = new URLSearchParams({
+      from: fromDate,
+      to: toDate,
+      token: this.apiKey,
+    });
+    if (symbol) {
+      params.set('symbol', symbol.toUpperCase());
+    }
+
+    const response = await this.fetchWithRetry(
+      `${this.baseUrl}/calendar/earnings?${params.toString()}`,
+      { headers: { Accept: 'application/json' } },
+    );
+
+    if (!response.ok) {
+      throw new HttpException(
+        'Failed to fetch earnings calendar',
+        response.status,
+      );
+    }
+
+    const data = (await response.json()) as FinnhubEarningsCalendarResponse;
+
+    const earnings: EarningsRelease[] = (data.earningsCalendar || []).map(
+      (item) => ({
+        symbol: item.symbol,
+        date: item.date,
+        hour: item.hour,
+        epsActual: item.epsActual,
+        epsEstimate: item.epsEstimate,
+        revenueActual: item.revenueActual,
+        revenueEstimate: item.revenueEstimate,
+        quarter: item.quarter,
+        year: item.year,
+      }),
+    );
+
+    await this.cacheManager.set(cacheKey, earnings, 3_600_000); // 1 hour
+    return earnings;
+  }
+
+  /**
+   * Get economic calendar
+   * Cache: 1 hour
+   */
+  async getEconomicCalendar(
+    from?: string,
+    to?: string,
+  ): Promise<EconomicEvent[]> {
+    const today = new Date().toISOString().split('T')[0];
+    const weekLater = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000)
+      .toISOString()
+      .split('T')[0];
+
+    const fromDate = from || today;
+    const toDate = to || weekLater;
+    const cacheKey = `economic-calendar:${fromDate}:${toDate}`;
+
+    const cached = await this.cacheManager.get<EconomicEvent[]>(cacheKey);
+    if (cached) {
+      return cached;
+    }
+
+    const params = new URLSearchParams({
+      from: fromDate,
+      to: toDate,
+      token: this.apiKey,
+    });
+
+    const response = await this.fetchWithRetry(
+      `${this.baseUrl}/calendar/economic?${params.toString()}`,
+      { headers: { Accept: 'application/json' } },
+    );
+
+    if (!response.ok) {
+      throw new HttpException(
+        'Failed to fetch economic calendar',
+        response.status,
+      );
+    }
+
+    const data = (await response.json()) as FinnhubEconomicCalendarResponse;
+
+    const events: EconomicEvent[] = (data.economicCalendar || []).map(
+      (item) => ({
+        country: item.country,
+        event: item.event,
+        time: item.time,
+        impact: item.impact,
+        actual: item.actual,
+        estimate: item.estimate,
+        previous: item.prev,
+        unit: item.unit,
+      }),
+    );
+
+    await this.cacheManager.set(cacheKey, events, 3_600_000); // 1 hour
+    return events;
+  }
+
+  /**
+   * Get analyst recommendation trends
+   * Cache: 1 hour
+   */
+  async getRecommendationTrends(
+    symbol: string,
+  ): Promise<AnalystRecommendation[]> {
+    const upperSymbol = symbol.toUpperCase();
+    const cacheKey = `recommendations:${upperSymbol}`;
+
+    const cached =
+      await this.cacheManager.get<AnalystRecommendation[]>(cacheKey);
+    if (cached) {
+      return cached;
+    }
+
+    const response = await this.fetchWithRetry(
+      `${this.baseUrl}/stock/recommendation?symbol=${upperSymbol}&token=${this.apiKey}`,
+      { headers: { Accept: 'application/json' } },
+    );
+
+    if (!response.ok) {
+      throw new HttpException(
+        `Failed to fetch recommendations for ${upperSymbol}`,
+        response.status,
+      );
+    }
+
+    const data = (await response.json()) as FinnhubRecommendationItem[];
+
+    const recommendations: AnalystRecommendation[] = data.map((item) => ({
+      period: item.period,
+      strongBuy: item.strongBuy,
+      buy: item.buy,
+      hold: item.hold,
+      sell: item.sell,
+      strongSell: item.strongSell,
+    }));
+
+    await this.cacheManager.set(cacheKey, recommendations, 3_600_000); // 1 hour
+    return recommendations;
+  }
+
+  /**
+   * Get price target consensus
+   * Cache: 1 hour
+   */
+  async getPriceTarget(symbol: string): Promise<PriceTarget | null> {
+    const upperSymbol = symbol.toUpperCase();
+    const cacheKey = `price-target:${upperSymbol}`;
+
+    const cached = await this.cacheManager.get<PriceTarget | null>(cacheKey);
+    if (cached !== undefined) {
+      return cached;
+    }
+
+    try {
+      const response = await this.fetchWithRetry(
+        `${this.baseUrl}/stock/price-target?symbol=${upperSymbol}&token=${this.apiKey}`,
+        { headers: { Accept: 'application/json' } },
+      );
+
+      if (!response.ok) {
+        await this.cacheManager.set(cacheKey, null, 3_600_000);
+        return null;
+      }
+
+      const data = (await response.json()) as FinnhubPriceTargetResponse;
+
+      if (!data.symbol) {
+        await this.cacheManager.set(cacheKey, null, 3_600_000);
+        return null;
+      }
+
+      const priceTarget: PriceTarget = {
+        symbol: data.symbol,
+        targetHigh: data.targetHigh,
+        targetLow: data.targetLow,
+        targetMean: data.targetMean,
+        targetMedian: data.targetMedian,
+        lastUpdated: data.lastUpdated,
+      };
+
+      await this.cacheManager.set(cacheKey, priceTarget, 3_600_000); // 1 hour
+      return priceTarget;
+    } catch {
+      await this.cacheManager.set(cacheKey, null, 3_600_000);
+      return null;
+    }
+  }
+
+  /**
+   * Get SEC filings
+   * Cache: 1 hour
+   */
+  async getSecFilings(
+    symbol: string,
+    from?: string,
+    to?: string,
+  ): Promise<SecFiling[]> {
+    const upperSymbol = symbol.toUpperCase();
+    const today = new Date().toISOString().split('T')[0];
+    const yearAgo = new Date(Date.now() - 365 * 24 * 60 * 60 * 1000)
+      .toISOString()
+      .split('T')[0];
+
+    const fromDate = from || yearAgo;
+    const toDate = to || today;
+    const cacheKey = `filings:${upperSymbol}:${fromDate}:${toDate}`;
+
+    const cached = await this.cacheManager.get<SecFiling[]>(cacheKey);
+    if (cached) {
+      return cached;
+    }
+
+    const params = new URLSearchParams({
+      symbol: upperSymbol,
+      from: fromDate,
+      to: toDate,
+      token: this.apiKey,
+    });
+
+    const response = await this.fetchWithRetry(
+      `${this.baseUrl}/stock/filings?${params.toString()}`,
+      { headers: { Accept: 'application/json' } },
+    );
+
+    if (!response.ok) {
+      throw new HttpException(
+        `Failed to fetch filings for ${upperSymbol}`,
+        response.status,
+      );
+    }
+
+    const data = (await response.json()) as FinnhubFilingItem[];
+
+    const filings: SecFiling[] = data.map((item) => ({
+      accessNumber: item.accessNumber,
+      symbol: item.symbol,
+      cik: item.cik,
+      form: item.form,
+      filedDate: item.filedDate,
+      acceptedDate: item.acceptedDate,
+      reportUrl: item.reportUrl,
+      filingUrl: item.filingUrl,
+    }));
+
+    await this.cacheManager.set(cacheKey, filings, 3_600_000); // 1 hour
+    return filings;
+  }
+
+  /**
+   * Get insider transactions
+   * Cache: 1 hour
+   */
+  async getInsiderTransactions(symbol: string): Promise<InsiderTransaction[]> {
+    const upperSymbol = symbol.toUpperCase();
+    const cacheKey = `insider:${upperSymbol}`;
+
+    const cached = await this.cacheManager.get<InsiderTransaction[]>(cacheKey);
+    if (cached) {
+      return cached;
+    }
+
+    const response = await this.fetchWithRetry(
+      `${this.baseUrl}/stock/insider-transactions?symbol=${upperSymbol}&token=${this.apiKey}`,
+      { headers: { Accept: 'application/json' } },
+    );
+
+    if (!response.ok) {
+      throw new HttpException(
+        `Failed to fetch insider transactions for ${upperSymbol}`,
+        response.status,
+      );
+    }
+
+    const data = (await response.json()) as FinnhubInsiderTransactionResponse;
+
+    const transactions: InsiderTransaction[] = (data.data || []).map(
+      (item) => ({
+        symbol: item.symbol,
+        name: item.name,
+        share: item.share,
+        change: item.change,
+        filingDate: item.filingDate,
+        transactionDate: item.transactionDate,
+        transactionPrice: item.transactionPrice || null,
+        transactionCode: item.transactionCode,
+      }),
+    );
+
+    await this.cacheManager.set(cacheKey, transactions, 3_600_000); // 1 hour
+    return transactions;
+  }
+
+  /**
+   * Get comprehensive company fundamentals
+   * Combines profile and metrics data
+   * Cache: 1 hour
+   */
+  async getBasicFinancials(
+    symbol: string,
+  ): Promise<CompanyFundamentals | null> {
+    const upperSymbol = symbol.toUpperCase();
+    const cacheKey = `fundamentals:${upperSymbol}`;
+
+    const cached = await this.cacheManager.get<CompanyFundamentals | null>(
+      cacheKey,
+    );
+    if (cached !== undefined) {
+      return cached;
+    }
+
+    try {
+      // Fetch profile and metrics in parallel
+      const [profileResponse, metricsResponse] = await Promise.all([
+        this.fetchWithRetry(
+          `${this.baseUrl}/stock/profile2?symbol=${upperSymbol}&token=${this.apiKey}`,
+          { headers: { Accept: 'application/json' } },
+        ),
+        this.fetchWithRetry(
+          `${this.baseUrl}/stock/metric?symbol=${upperSymbol}&metric=all&token=${this.apiKey}`,
+          { headers: { Accept: 'application/json' } },
+        ),
+      ]);
+
+      if (!profileResponse.ok) {
+        await this.cacheManager.set(cacheKey, null, 3_600_000);
+        return null;
+      }
+
+      const profile = (await profileResponse.json()) as FinnhubProfileResponse;
+      const metricsData = metricsResponse.ok
+        ? ((await metricsResponse.json()) as FinnhubMetricsResponse)
+        : { metric: {} };
+
+      if (!profile.name) {
+        await this.cacheManager.set(cacheKey, null, 3_600_000);
+        return null;
+      }
+
+      const m = metricsData.metric || {};
+
+      const fundamentals: CompanyFundamentals = {
+        symbol: upperSymbol,
+        name: profile.name,
+        industry: profile.finnhubIndustry || '',
+        country: profile.country || '',
+        exchange: profile.exchange || '',
+        marketCap: profile.marketCapitalization || 0,
+        logo: profile.logo || '',
+        weburl: profile.weburl || '',
+        peRatio: m.peBasicExclExtraTTM ?? null,
+        pegRatio: m.pegRatioTTM ?? null,
+        eps: m.epsBasicExclExtraItemsTTM ?? null,
+        beta: m.beta ?? null,
+        dividendYield: m.dividendYieldIndicatedAnnual ?? null,
+        profitMargin: m.profitMarginTTM ?? null,
+        operatingMargin: m.operatingMarginTTM ?? null,
+        returnOnEquity: m.roeTTM ?? null,
+        revenueGrowth: m.revenueGrowthTTMYoy ?? null,
+        earningsGrowth: m.epsGrowthTTMYoy ?? null,
+        currentRatio: m.currentRatioQuarterly ?? null,
+        debtToEquity: m.debtEquityQuarterly ?? null,
+        week52High: m['52WeekHigh'] ?? null,
+        week52Low: m['52WeekLow'] ?? null,
+      };
+
+      await this.cacheManager.set(cacheKey, fundamentals, 3_600_000); // 1 hour
+      return fundamentals;
+    } catch {
+      await this.cacheManager.set(cacheKey, null, 3_600_000);
+      return null;
+    }
   }
 }

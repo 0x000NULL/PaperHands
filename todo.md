@@ -23,7 +23,7 @@ A comprehensive checklist combining the feature roadmap with implementation stat
 | 8 | CSV/PDF Export | §15 | Data portability |
 | 9 | Mobile Responsive Foundation | §12 | useMediaQuery, grids, nav |
 | 10 | Account Reset Feature | §14 | Start fresh |
-| 11 | News Feed Integration | §9 | Market context |
+| 11 | ~~News Feed Integration~~ | §9 | ✅ Done |
 
 ### Mobile & PWA (Phase 3)
 | # | Task | Section | Notes |
@@ -39,7 +39,7 @@ A comprehensive checklist combining the feature roadmap with implementation stat
 | 16 | Leaderboards | §10 | Competition |
 | 17 | Trading Journal | §15 | Notes, screenshots |
 | 18 | Keyboard Shortcuts | §11 | Power users |
-| 19 | Earnings Calendar | §9 | Market events |
+| 19 | ~~Earnings Calendar~~ | §9 | ✅ Done |
 | 20 | Public Profiles | §10 | Opt-in sharing |
 
 ### Advanced (Phase 5)
@@ -196,14 +196,14 @@ A comprehensive checklist combining the feature roadmap with implementation stat
 
 | Feature | Status | Notes |
 |---------|--------|-------|
-| News Feed | ⬜ Todo | |
-| Symbol-Specific News | ⬜ Todo | |
-| Earnings Calendar | ⬜ Todo | |
-| Economic Calendar | ⬜ Todo | |
-| Analyst Ratings | ⬜ Todo | |
-| SEC Filings | ⬜ Todo | |
-| Insider Trading Data | ⬜ Todo | |
-| Company Fundamentals | ⬜ Todo | Revenue, EPS, P/E, etc. |
+| News Feed | ✅ Done | Market news via Finnhub |
+| Symbol-Specific News | ✅ Done | Company news via Finnhub |
+| Earnings Calendar | ✅ Done | Upcoming earnings via Finnhub |
+| Economic Calendar | ✅ Done | Economic events via Finnhub |
+| Analyst Ratings | ✅ Done | Recommendations + price targets |
+| SEC Filings | ✅ Done | 10-K, 10-Q, 8-K filings |
+| Insider Trading Data | ✅ Done | Insider transactions summary |
+| Company Fundamentals | ✅ Done | Revenue, EPS, P/E via Finnhub |
 
 ---
 
@@ -742,7 +742,7 @@ This section tracks non-feature improvements to code quality, architecture, test
 | 6. Options: Basic | 7 | 0 | 7 |
 | 7. Options: Advanced | 11 | 0 | 11 |
 | 8. Alerts & Notifications | 7 | 4 | 11 |
-| 9. News & Research | 0 | 8 | 8 |
+| 9. News & Research | 8 | 0 | 8 |
 | 10. Social & Community | 0 | 7 | 7 |
 | 11. User Experience | 0 | 8 | 8 |
 | 12. Mobile Responsive | 0 | 20 | 20 |
@@ -751,7 +751,7 @@ This section tracks non-feature improvements to code quality, architecture, test
 | 15. Power User Features | 0 | 9 | 9 |
 | 16. Account & Security | 0 | 7 | 7 |
 | 17. Native Mobile Apps | 0 | 7 | 7 |
-| **Features Subtotal** | **67** | **115** | **182** |
+| **Features Subtotal** | **75** | **107** | **182** |
 | | | | |
 | **Technical Debt** | | | |
 | 18. DevOps & Tooling | 0 | 14 | 14 |
@@ -764,8 +764,8 @@ This section tracks non-feature improvements to code quality, architecture, test
 | 25. Documentation | 0 | 13 | 13 |
 | **Tech Debt Subtotal** | **0** | **114** | **114** |
 | | | | |
-| **GRAND TOTAL** | **67** | **229** | **296** |
+| **GRAND TOTAL** | **75** | **221** | **296** |
 
-**Feature Progress: 37% Complete**
+**Feature Progress: 41% Complete**
 **Tech Debt Progress: 0% Complete**
-**Overall Progress: 23% Complete**
+**Overall Progress: 25% Complete**

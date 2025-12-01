@@ -14,6 +14,7 @@ import { Analytics } from './pages/Analytics';
 import { Greeks } from './pages/Greeks';
 import { Settings } from './pages/Settings';
 import { Alerts } from './pages/Alerts';
+import { Research } from './pages/Research';
 import { Admin } from './pages/Admin';
 import { AdminRoute } from './components/AdminRoute';
 
@@ -129,6 +130,14 @@ function App() {
               element={
                 <ProtectedRoute>
                   <Alerts />
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/research"
+              element={
+                <ProtectedRoute>
+                  <Research />
                 </ProtectedRoute>
               }
             />
