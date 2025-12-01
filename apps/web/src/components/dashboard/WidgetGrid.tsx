@@ -1,7 +1,7 @@
 import { type CSSProperties, type ReactNode, useCallback } from 'react';
 import {
   DndContext,
-  DragEndEvent,
+  type DragEndEvent,
   closestCenter,
   KeyboardSensor,
   PointerSensor,
@@ -72,9 +72,9 @@ const styles: Record<string, CSSProperties> = {
     transition: theme.transitions.fast,
   },
   editButtonActive: {
-    backgroundColor: theme.colors.primary,
+    backgroundColor: theme.colors.accent,
     color: '#fff',
-    borderColor: theme.colors.primary,
+    borderColor: theme.colors.accent,
   },
   widgetToggleButton: {
     padding: `${theme.spacing.xs} ${theme.spacing.sm}`,
@@ -114,7 +114,7 @@ const styles: Record<string, CSSProperties> = {
     width: '12px',
     height: '12px',
     border: `2px solid ${theme.colors.border}`,
-    borderTop: `2px solid ${theme.colors.primary}`,
+    borderTop: `2px solid ${theme.colors.accent}`,
     borderRadius: '50%',
     animation: 'spin 1s linear infinite',
   },

@@ -130,29 +130,6 @@ export function WatchlistWidget() {
               onClick={() => handleSymbolClick(item.symbol)}
             >
               <span style={styles.symbol}>{item.symbol}</span>
-              <div>
-                <span
-                  style={{
-                    ...styles.price,
-                    color: theme.colors.textPrimary,
-                  }}
-                >
-                  ${item.lastPrice?.toFixed(2) || '--'}
-                </span>
-                <span
-                  style={{
-                    ...styles.change,
-                    color:
-                      (item.changePercent || 0) >= 0
-                        ? theme.colors.positive
-                        : theme.colors.negative,
-                    marginLeft: theme.spacing.sm,
-                  }}
-                >
-                  {(item.changePercent || 0) >= 0 ? '+' : ''}
-                  {item.changePercent?.toFixed(2) || '0.00'}%
-                </span>
-              </div>
             </div>
           ))
         )}

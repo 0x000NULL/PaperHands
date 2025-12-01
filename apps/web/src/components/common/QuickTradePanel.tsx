@@ -214,7 +214,7 @@ export function QuickTradePanel() {
   if (!isOpen) return null;
 
   const estimatedCost = quote ? quote.last * quantity : 0;
-  const isMarketOpen = marketStatus?.status === 'open';
+  const isMarketOpen = marketStatus?.isOpen;
 
   return (
     <div style={styles.overlay} onClick={close}>

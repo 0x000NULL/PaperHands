@@ -1,7 +1,7 @@
 import { useEffect, useCallback, useRef } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { api, UserLayout, WidgetPositionDto } from '../api/client';
-import { useLayoutStore, WidgetPosition } from '../store/layoutStore';
+import { api, type UserLayout, type WidgetPositionDto } from '../api/client';
+import { useLayoutStore, type WidgetPosition } from '../store/layoutStore';
 import { useAuthStore } from '../store/authStore';
 
 // Convert between store format and API format
@@ -30,13 +30,13 @@ export function useLayoutSync() {
   const { setWidgets, setSyncing } = useLayoutStore();
   const isAuthenticated = useAuthStore((state) => state.isAuthenticated);
   const lastSyncedRef = useRef<string | null>(null);
-  const debounceRef = useRef<NodeJS.Timeout | null>(null);
+  const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   // Fetch saved layouts from server
   const { data: layouts } = useQuery({
     queryKey: ['layouts'],
     queryFn: api.getLayouts,
-    enabled: isAuthenticated,
+    enabled: isAuthenticated(),
     staleTime: 60000, // 1 minute
   });
 
@@ -44,7 +44,7 @@ export function useLayoutSync() {
   const { data: defaultLayout, isLoading: isLoadingDefault } = useQuery({
     queryKey: ['layouts', 'default'],
     queryFn: api.getDefaultLayout,
-    enabled: isAuthenticated,
+    enabled: isAuthenticated(),
   });
 
   // Apply default layout from server on initial load
@@ -81,7 +81,7 @@ export function useLayoutSync() {
 
   // Debounced save function
   const saveLayout = useCallback(() => {
-    if (!isAuthenticated) return;
+    if (!isAuthenticated()) return;
 
     // Clear any existing debounce timer
     if (debounceRef.current) {
@@ -108,7 +108,7 @@ export function useLayoutSync() {
   // Watch for local widget changes and sync
   useEffect(() => {
     const unsubscribe = useLayoutStore.subscribe((state, prevState) => {
-      if (state.widgets !== prevState.widgets && isAuthenticated) {
+      if (state.widgets !== prevState.widgets && isAuthenticated()) {
         saveLayout();
       }
     });
