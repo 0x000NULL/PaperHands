@@ -1,6 +1,7 @@
 import type { CSSProperties } from 'react';
 import { theme } from '../../theme/constants';
 import { useRealtimePnL } from '../../hooks/useRealtimePnL';
+import { useIsDesktop } from '../../hooks/useMediaQuery';
 
 const styles: Record<string, CSSProperties> = {
   container: {
@@ -69,6 +70,61 @@ const styles: Record<string, CSSProperties> = {
     padding: theme.spacing.lg,
     textAlign: 'center',
   },
+  // Mobile styles
+  containerMobile: {
+    display: 'grid',
+    gridTemplateColumns: '1fr 1fr',
+    gap: theme.spacing.sm,
+    padding: theme.spacing.md,
+    backgroundColor: theme.colors.bgSecondary,
+    borderRadius: theme.radius.lg,
+    border: `1px solid ${theme.colors.border}`,
+  },
+  statMobile: {
+    textAlign: 'center',
+    padding: theme.spacing.sm,
+    backgroundColor: theme.colors.bgTertiary,
+    borderRadius: theme.radius.md,
+  },
+  labelMobile: {
+    color: theme.colors.textSecondary,
+    fontSize: theme.typography.xs,
+    textTransform: 'uppercase',
+    letterSpacing: '0.05em',
+    marginBottom: theme.spacing.xs,
+    display: 'flex',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: '4px',
+  },
+  valueMobile: {
+    color: theme.colors.textPrimary,
+    fontSize: theme.typography.lg,
+    fontWeight: theme.typography.bold,
+    fontFamily: theme.typography.fontMono,
+  },
+  valueAccentMobile: {
+    color: theme.colors.accent,
+    fontSize: theme.typography.lg,
+    fontWeight: theme.typography.bold,
+    fontFamily: theme.typography.fontMono,
+  },
+  pnlPositiveMobile: {
+    color: theme.colors.positive,
+    fontSize: theme.typography.lg,
+    fontWeight: theme.typography.bold,
+    fontFamily: theme.typography.fontMono,
+  },
+  pnlNegativeMobile: {
+    color: theme.colors.negative,
+    fontSize: theme.typography.lg,
+    fontWeight: theme.typography.bold,
+    fontFamily: theme.typography.fontMono,
+  },
+  pnlPercentMobile: {
+    fontSize: theme.typography.xs,
+    marginTop: '2px',
+  },
 };
 
 const formatCurrency = (value: number) =>
@@ -80,19 +136,69 @@ const formatCurrency = (value: number) =>
   }).format(value);
 
 export function PortfolioSummary() {
+  const isDesktop = useIsDesktop();
   const portfolio = useRealtimePnL();
 
   if (portfolio.isLoading) {
     return (
-      <div style={styles.container}>
+      <div style={isDesktop ? styles.container : styles.containerMobile}>
         <div style={styles.loading}>Loading portfolio...</div>
       </div>
     );
   }
 
+  const pnlSign = portfolio.totalGainLoss >= 0 ? '+' : '';
+
+  // Mobile layout: 2x2 grid
+  if (!isDesktop) {
+    const pnlStyleMobile =
+      portfolio.totalGainLoss >= 0 ? styles.pnlPositiveMobile : styles.pnlNegativeMobile;
+
+    return (
+      <div style={styles.containerMobile}>
+        <div style={styles.statMobile}>
+          <div style={styles.labelMobile}>
+            Portfolio Value
+            {portfolio.hasStreamingData && <span style={styles.streamingDot} />}
+          </div>
+          <div style={styles.valueAccentMobile}>
+            {formatCurrency(portfolio.totalValue)}
+          </div>
+        </div>
+        <div style={styles.statMobile}>
+          <div style={styles.labelMobile}>Day P&L</div>
+          <div style={pnlStyleMobile}>
+            {pnlSign}
+            {formatCurrency(portfolio.totalGainLoss)}
+          </div>
+          <div
+            style={{
+              ...styles.pnlPercentMobile,
+              color:
+                portfolio.totalGainLoss >= 0
+                  ? theme.colors.positive
+                  : theme.colors.negative,
+            }}
+          >
+            ({pnlSign}
+            {portfolio.totalGainLossPercent.toFixed(2)}%)
+          </div>
+        </div>
+        <div style={styles.statMobile}>
+          <div style={styles.labelMobile}>Cash Balance</div>
+          <div style={styles.valueMobile}>{formatCurrency(portfolio.cashBalance)}</div>
+        </div>
+        <div style={styles.statMobile}>
+          <div style={styles.labelMobile}>Positions</div>
+          <div style={styles.valueMobile}>{portfolio.positions.length}</div>
+        </div>
+      </div>
+    );
+  }
+
+  // Desktop layout: flex row with dividers
   const pnlStyle =
     portfolio.totalGainLoss >= 0 ? styles.pnlPositive : styles.pnlNegative;
-  const pnlSign = portfolio.totalGainLoss >= 0 ? '+' : '';
 
   return (
     <div style={styles.container}>

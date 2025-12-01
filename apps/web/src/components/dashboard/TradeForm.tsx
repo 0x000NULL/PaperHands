@@ -1,9 +1,11 @@
 import { useState } from 'react';
 import type { CSSProperties } from 'react';
 import { theme } from '../../theme/constants';
-import { useQuote, usePlaceOrder, useMarketStatus } from '../../hooks';
+import { useQuote, usePlaceOrder, useMarketStatus, usePortfolio } from '../../hooks';
+import { useIsDesktop } from '../../hooks/useMediaQuery';
 import { useDashboardStore } from '../../store/dashboardStore';
 import { Widget } from './Widget';
+import { QuickQuantityButtons } from '../mobile';
 import type { OrderType, TimeInForce } from '../../types';
 
 const styles: Record<string, CSSProperties> = {
@@ -136,6 +138,40 @@ const styles: Record<string, CSSProperties> = {
     gridTemplateColumns: '1fr 1fr',
     gap: theme.spacing.md,
   },
+  // Mobile styles
+  tifRowMobile: {
+    display: 'flex',
+    flexDirection: 'column',
+    gap: theme.spacing.md,
+  },
+  quickButtons: {
+    marginTop: theme.spacing.sm,
+  },
+  stickyFooter: {
+    position: 'sticky',
+    bottom: 0,
+    left: 0,
+    right: 0,
+    padding: theme.spacing.md,
+    paddingBottom: `calc(${theme.spacing.md} + env(safe-area-inset-bottom, 0px))`,
+    backgroundColor: theme.colors.bgSecondary,
+    borderTop: `1px solid ${theme.colors.border}`,
+    marginTop: theme.spacing.md,
+    marginLeft: `-${theme.spacing.md}`,
+    marginRight: `-${theme.spacing.md}`,
+    marginBottom: `-${theme.spacing.md}`,
+  },
+  submitButtonMobile: {
+    padding: theme.spacing.md,
+    border: 'none',
+    borderRadius: theme.radius.md,
+    fontSize: theme.typography.base,
+    fontWeight: theme.typography.bold,
+    cursor: 'pointer',
+    transition: theme.transitions.fast,
+    width: '100%',
+    minHeight: '56px', // Larger touch target
+  },
 };
 
 const formatCurrency = (value: number) =>
@@ -167,6 +203,7 @@ const timeInForceDescriptions: Record<TimeInForce, string> = {
 };
 
 export function TradeForm() {
+  const isDesktop = useIsDesktop();
   const {
     selectedSymbol,
     tradeSide,
@@ -191,7 +228,23 @@ export function TradeForm() {
   const [success, setSuccess] = useState('');
   const { data: quote } = useQuote(selectedSymbol ?? '', !!selectedSymbol);
   const { data: marketStatus } = useMarketStatus();
+  const { data: portfolio } = usePortfolio();
   const placeOrderMutation = usePlaceOrder();
+
+  // Calculate max quantity based on buying power
+  const cashBalance = portfolio?.cashBalance ?? 0;
+  const currentPrice = quote?.last ?? quote?.ask ?? 0;
+  const maxQuantity = currentPrice > 0 ? Math.floor(cashBalance / currentPrice) : 0;
+
+  const handleQuickAdd = (amount: number) => {
+    const currentQty = parseFloat(quantity) || 0;
+    const newQty = Math.max(1, currentQty + amount);
+    setQuantity(newQty.toString());
+  };
+
+  const handleSetMax = (max: number) => {
+    setQuantity(max.toString());
+  };
 
   // Determine if we're in extended hours session
   const isExtendedSession =
@@ -337,7 +390,7 @@ export function TradeForm() {
         </div>
 
         {/* Order Type & Time in Force Row */}
-        <div style={styles.tifRow}>
+        <div style={isDesktop ? styles.tifRow : styles.tifRowMobile}>
           <div style={styles.fieldGroup}>
             <label style={styles.label}>Order Type</label>
             <select
@@ -427,7 +480,19 @@ export function TradeForm() {
             min="0.0001"
             step="any"
             style={styles.input}
+            inputMode="decimal"
           />
+          {/* Quick quantity buttons on mobile */}
+          {!isDesktop && tradeSide === 'buy' && (
+            <div style={styles.quickButtons}>
+              <QuickQuantityButtons
+                onAdd={handleQuickAdd}
+                onSet={handleSetMax}
+                maxQuantity={maxQuantity}
+                showMax={maxQuantity > 0}
+              />
+            </div>
+          )}
         </div>
 
         {/* Price Inputs */}
@@ -479,32 +544,69 @@ export function TradeForm() {
           </div>
         )}
 
-        {/* Estimate */}
-        {qty > 0 && estimatedTotal > 0 && (
-          <div style={styles.estimate}>
-            <span style={styles.estimateLabel}>
-              Est. {tradeSide === 'buy' ? 'Cost' : 'Proceeds'}
-            </span>
-            <span style={styles.estimateValue}>{formatCurrency(estimatedTotal)}</span>
-          </div>
+        {/* Desktop: Inline estimate and submit */}
+        {isDesktop && (
+          <>
+            {/* Estimate */}
+            {qty > 0 && estimatedTotal > 0 && (
+              <div style={styles.estimate}>
+                <span style={styles.estimateLabel}>
+                  Est. {tradeSide === 'buy' ? 'Cost' : 'Proceeds'}
+                </span>
+                <span style={styles.estimateValue}>{formatCurrency(estimatedTotal)}</span>
+              </div>
+            )}
+
+            {/* Submit */}
+            <button
+              type="submit"
+              disabled={!isValid || placeOrderMutation.isPending}
+              style={{
+                ...styles.submitButton,
+                backgroundColor:
+                  tradeSide === 'buy' ? theme.colors.positive : theme.colors.negative,
+                color: tradeSide === 'buy' ? theme.colors.bgPrimary : theme.colors.textPrimary,
+                ...(!isValid || placeOrderMutation.isPending ? styles.disabled : {}),
+              }}
+            >
+              {placeOrderMutation.isPending
+                ? 'Placing Order...'
+                : `${tradeSide.toUpperCase()} ${selectedSymbol}`}
+            </button>
+          </>
         )}
 
-        {/* Submit */}
-        <button
-          type="submit"
-          disabled={!isValid || placeOrderMutation.isPending}
-          style={{
-            ...styles.submitButton,
-            backgroundColor:
-              tradeSide === 'buy' ? theme.colors.positive : theme.colors.negative,
-            color: tradeSide === 'buy' ? theme.colors.bgPrimary : theme.colors.textPrimary,
-            ...(!isValid || placeOrderMutation.isPending ? styles.disabled : {}),
-          }}
-        >
-          {placeOrderMutation.isPending
-            ? 'Placing Order...'
-            : `${tradeSide.toUpperCase()} ${selectedSymbol}`}
-        </button>
+        {/* Mobile: Sticky footer with estimate and submit */}
+        {!isDesktop && (
+          <div style={styles.stickyFooter}>
+            {/* Estimate */}
+            {qty > 0 && estimatedTotal > 0 && (
+              <div style={{ ...styles.estimate, marginBottom: theme.spacing.sm }}>
+                <span style={styles.estimateLabel}>
+                  Est. {tradeSide === 'buy' ? 'Cost' : 'Proceeds'}
+                </span>
+                <span style={styles.estimateValue}>{formatCurrency(estimatedTotal)}</span>
+              </div>
+            )}
+
+            {/* Submit - larger button on mobile */}
+            <button
+              type="submit"
+              disabled={!isValid || placeOrderMutation.isPending}
+              style={{
+                ...styles.submitButtonMobile,
+                backgroundColor:
+                  tradeSide === 'buy' ? theme.colors.positive : theme.colors.negative,
+                color: tradeSide === 'buy' ? theme.colors.bgPrimary : theme.colors.textPrimary,
+                ...(!isValid || placeOrderMutation.isPending ? styles.disabled : {}),
+              }}
+            >
+              {placeOrderMutation.isPending
+                ? 'Placing Order...'
+                : `${tradeSide.toUpperCase()} ${selectedSymbol}`}
+            </button>
+          </div>
+        )}
       </form>
     </Widget>
   );

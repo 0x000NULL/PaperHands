@@ -16,6 +16,8 @@ import { Settings } from './pages/Settings';
 import { Alerts } from './pages/Alerts';
 import { Research } from './pages/Research';
 import { Admin } from './pages/Admin';
+import { Portfolio } from './pages/Portfolio';
+import { Orders } from './pages/Orders';
 import { AdminRoute } from './components/AdminRoute';
 
 const queryClient = new QueryClient({
@@ -98,6 +100,22 @@ function App() {
               element={
                 <ProtectedRoute>
                   <Watchlists />
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/portfolio"
+              element={
+                <ProtectedRoute>
+                  <Portfolio />
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/orders"
+              element={
+                <ProtectedRoute>
+                  <Orders />
                 </ProtectedRoute>
               }
             />

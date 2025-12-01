@@ -238,7 +238,7 @@ A comprehensive checklist combining the feature roadmap with implementation stat
 
 ## 12. Mobile Responsive Design
 
-**Current State: 6/10** - Foundation complete, page layouts partially done
+**Current State: 9/10** - Foundation complete, page layouts complete, component layouts complete
 
 ### Phase 1 - Foundation (Do First)
 
@@ -256,20 +256,20 @@ A comprehensive checklist combining the feature roadmap with implementation stat
 | Dashboard responsive layout | ✅ Done | 🔴 Critical | WidgetGrid + GridWidget responsive |
 | Analytics responsive layout | ✅ Done | 🟡 Medium | `main-grid`, `summary-bar`, `stats-grid` classes |
 | Greeks responsive layout | ✅ Done | 🟡 Medium | `main-grid`, `summary-bar` classes |
-| Portfolio responsive layout | ⬜ Todo | 🟡 Medium | |
-| Orders responsive layout | ⬜ Todo | 🟢 Low | |
+| Portfolio responsive layout | ✅ Done | 🟡 Medium | `/portfolio` page with mobile card layout |
+| Orders responsive layout | ✅ Done | 🟢 Low | `/orders` page with mobile card layout |
 
 ### Phase 3 - Component Mobile Layouts
 
 | Task | Status | Priority | Notes |
 |------|--------|----------|-------|
-| OptionsChainTable card layout | ⬜ Todo | 🔴 Critical | 9 columns impossible on mobile, need card alternative |
-| PositionsTable mobile view | ⬜ Todo | 🟡 Medium | Stackable card layout |
-| Greeks sensitivity table mobile | ⬜ Todo | 🟡 Medium | Needs pagination/cards |
-| Tax lots table mobile view | ⬜ Todo | 🟡 Medium | Complex data, card layout |
-| TradeForm mobile optimization | ⬜ Todo | 🟢 Low | Already decent, minor tweaks |
-| QuotePanel mobile layout | ⬜ Todo | 🟢 Low | |
-| PortfolioSummary mobile (5-col grid) | ⬜ Todo | 🟡 Medium | `repeat(5, 1fr)` unreadable on mobile |
+| OptionsChainTable card layout | ✅ Done | 🔴 Critical | Swipeable cards with Calls/Puts tabs, expandable Greeks |
+| PositionsTable mobile view | ✅ Done | 🟡 Medium | Card layout in Portfolio page |
+| Greeks sensitivity table mobile | ✅ Done | 🟡 Medium | Card layouts for all sensitivity tables |
+| Tax lots table mobile view | ✅ Done | 🟡 Medium | Card layout with term badges |
+| TradeForm mobile optimization | ✅ Done | 🟢 Low | Quick quantity buttons, sticky footer |
+| QuotePanel mobile layout | ✅ Done | 🟢 Low | Responsive CSS class for stats grid |
+| PortfolioSummary mobile (5-col grid) | ✅ Done | 🟡 Medium | 2x2 grid on mobile |
 
 ### Phase 4 - Polish
 
@@ -745,13 +745,13 @@ This section tracks non-feature improvements to code quality, architecture, test
 | 9. News & Research | 8 | 0 | 8 |
 | 10. Social & Community | 0 | 7 | 7 |
 | 11. User Experience | 6 | 2 | 8 |
-| 12. Mobile Responsive | 7 | 13 | 20 |
+| 12. Mobile Responsive | 16 | 4 | 20 |
 | 13. Progressive Web App | 0 | 15 | 15 |
 | 14. Paper Trading Specific | 0 | 10 | 10 |
 | 15. Power User Features | 0 | 9 | 9 |
 | 16. Account & Security | 0 | 7 | 7 |
 | 17. Native Mobile Apps | 0 | 7 | 7 |
-| **Features Subtotal** | **88** | **94** | **182** |
+| **Features Subtotal** | **97** | **85** | **182** |
 | | | | |
 | **Technical Debt** | | | |
 | 18. DevOps & Tooling | 0 | 14 | 14 |
@@ -764,8 +764,8 @@ This section tracks non-feature improvements to code quality, architecture, test
 | 25. Documentation | 0 | 13 | 13 |
 | **Tech Debt Subtotal** | **0** | **114** | **114** |
 | | | | |
-| **GRAND TOTAL** | **88** | **208** | **296** |
+| **GRAND TOTAL** | **97** | **199** | **296** |
 
-**Feature Progress: 48% Complete**
+**Feature Progress: 53% Complete**
 **Tech Debt Progress: 0% Complete**
-**Overall Progress: 30% Complete**
+**Overall Progress: 33% Complete**

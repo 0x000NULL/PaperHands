@@ -48,6 +48,8 @@ export function MobileNav({ isOpen, onClose }: MobileNavProps) {
   const navLinks = [
     { to: '/', label: 'Dashboard' },
     { to: '/watchlists', label: 'Watchlists' },
+    { to: '/portfolio', label: 'Portfolio' },
+    { to: '/orders', label: 'Orders' },
     { to: '/analytics', label: 'Analytics' },
     { to: '/greeks', label: 'Greeks' },
     { to: '/alerts', label: 'Alerts' },

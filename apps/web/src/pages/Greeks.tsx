@@ -4,6 +4,8 @@ import { Layout } from '../components/Layout';
 import { Widget } from '../components/dashboard/Widget';
 import { theme } from '../theme/constants';
 import { api } from '../api/client';
+import { useIsDesktop } from '../hooks/useMediaQuery';
+import { MobileCard, CardRow, MobileCardList } from '../components/mobile';
 import type {
   PortfolioGreeksSummary,
   UnderlyingGreeks,
@@ -225,8 +227,10 @@ function GreeksSummaryBar({ summary }: { summary: PortfolioGreeksSummary }) {
 
 function GreeksByUnderlyingTable({
   underlyings,
+  isMobile,
 }: {
   underlyings: UnderlyingGreeks[];
+  isMobile?: boolean;
 }) {
   if (underlyings.length === 0) {
     return (
@@ -236,6 +240,74 @@ function GreeksByUnderlyingTable({
     );
   }
 
+  // Mobile card layout
+  if (isMobile) {
+    return (
+      <MobileCardList>
+        {underlyings.map((u) => (
+          <MobileCard key={u.underlyingSymbol}>
+            <CardRow
+              label={u.underlyingSymbol}
+              value={`$${u.underlyingPrice.toFixed(2)}`}
+              labelStyle={{ fontWeight: theme.typography.bold, fontSize: theme.typography.base }}
+            />
+            {u.stockPosition && (
+              <CardRow
+                label="Shares"
+                value={`${u.stockPosition.quantity}`}
+                valueStyle={{ color: theme.colors.textSecondary }}
+              />
+            )}
+            <CardRow
+              label="Positions"
+              value={`${u.positions.length}`}
+            />
+            <div style={{
+              display: 'grid',
+              gridTemplateColumns: '1fr 1fr',
+              gap: theme.spacing.xs,
+              marginTop: theme.spacing.sm,
+              paddingTop: theme.spacing.sm,
+              borderTop: `1px solid ${theme.colors.border}`,
+            }}>
+              <div style={{ textAlign: 'center' }}>
+                <div style={{ fontSize: theme.typography.xs, color: theme.colors.textSecondary }}>Delta</div>
+                <div style={{
+                  fontFamily: theme.typography.fontMono,
+                  color: u.totalDelta >= 0 ? theme.colors.success : theme.colors.error,
+                }}>
+                  {formatGreek(u.totalDelta)}
+                </div>
+              </div>
+              <div style={{ textAlign: 'center' }}>
+                <div style={{ fontSize: theme.typography.xs, color: theme.colors.textSecondary }}>Gamma</div>
+                <div style={{ fontFamily: theme.typography.fontMono }}>
+                  {formatGreek(u.totalGamma)}
+                </div>
+              </div>
+              <div style={{ textAlign: 'center' }}>
+                <div style={{ fontSize: theme.typography.xs, color: theme.colors.textSecondary }}>Theta</div>
+                <div style={{
+                  fontFamily: theme.typography.fontMono,
+                  color: u.totalTheta >= 0 ? theme.colors.success : theme.colors.error,
+                }}>
+                  {formatCurrency(u.totalTheta)}
+                </div>
+              </div>
+              <div style={{ textAlign: 'center' }}>
+                <div style={{ fontSize: theme.typography.xs, color: theme.colors.textSecondary }}>Vega</div>
+                <div style={{ fontFamily: theme.typography.fontMono }}>
+                  {formatGreek(u.totalVega)}
+                </div>
+              </div>
+            </div>
+          </MobileCard>
+        ))}
+      </MobileCardList>
+    );
+  }
+
+  // Desktop table layout
   return (
     <table style={styles.table}>
       <thead>
@@ -353,8 +425,10 @@ function ExpirationBuckets({
 
 function ThetaProjectionChart({
   projections,
+  isMobile,
 }: {
   projections: ThetaProjection[];
+  isMobile?: boolean;
 }) {
   if (projections.length === 0) {
     return (
@@ -368,6 +442,76 @@ function ThetaProjectionChart({
   const maxDecay = Math.max(...projections.map((p) => p.cumulativeDecay));
   const total30Day = projections[projections.length - 1]?.cumulativeDecay || 0;
 
+  // Mobile card layout
+  if (isMobile) {
+    return (
+      <div>
+        <div style={{
+          marginBottom: theme.spacing.md,
+          padding: theme.spacing.md,
+          backgroundColor: theme.colors.bgTertiary,
+          borderRadius: theme.radius.md,
+          textAlign: 'center',
+        }}>
+          <span style={{ fontSize: theme.typography.sm, color: theme.colors.textSecondary }}>30-Day Projected Decay</span>
+          <div style={{
+            fontSize: theme.typography['2xl'],
+            fontWeight: theme.typography.bold,
+            color: theme.colors.error,
+            fontFamily: theme.typography.fontMono,
+          }}>
+            {formatCurrency(total30Day)}
+          </div>
+        </div>
+        <MobileCardList>
+          {projections.slice(0, 7).map((p) => (
+            <MobileCard key={p.date}>
+              <div style={{
+                display: 'flex',
+                justifyContent: 'space-between',
+                alignItems: 'center',
+                marginBottom: theme.spacing.xs,
+              }}>
+                <span style={{ fontWeight: theme.typography.semibold }}>{p.date}</span>
+                <span style={{
+                  fontSize: theme.typography.xs,
+                  color: theme.colors.textSecondary,
+                  backgroundColor: theme.colors.bgTertiary,
+                  padding: '2px 6px',
+                  borderRadius: theme.radius.sm,
+                }}>
+                  {p.remainingPositions} pos
+                </span>
+              </div>
+              <div style={{
+                display: 'grid',
+                gridTemplateColumns: '1fr 1fr',
+                gap: theme.spacing.sm,
+              }}>
+                <div>
+                  <div style={{ fontSize: theme.typography.xs, color: theme.colors.textSecondary }}>Daily</div>
+                  <div style={{ fontFamily: theme.typography.fontMono, color: theme.colors.error }}>
+                    -{formatCurrency(p.dailyDecay)}
+                  </div>
+                </div>
+                <div>
+                  <div style={{ fontSize: theme.typography.xs, color: theme.colors.textSecondary }}>Cumulative</div>
+                  <div style={{ fontFamily: theme.typography.fontMono }}>
+                    -{formatCurrency(p.cumulativeDecay)}
+                    <span style={{ fontSize: theme.typography.xs, color: theme.colors.textSecondary, marginLeft: '4px' }}>
+                      ({maxDecay > 0 ? ((p.cumulativeDecay / maxDecay) * 100).toFixed(0) : 0}%)
+                    </span>
+                  </div>
+                </div>
+              </div>
+            </MobileCard>
+          ))}
+        </MobileCardList>
+      </div>
+    );
+  }
+
+  // Desktop table layout
   return (
     <div>
       <div style={{ marginBottom: theme.spacing.md }}>
@@ -419,7 +563,7 @@ function ThetaProjectionChart({
   );
 }
 
-function DeltaExposureTable({ exposures }: { exposures: DeltaExposure[] }) {
+function DeltaExposureTable({ exposures, isMobile }: { exposures: DeltaExposure[]; isMobile?: boolean }) {
   if (exposures.length === 0) {
     return (
       <div style={styles.emptyState}>
@@ -428,6 +572,60 @@ function DeltaExposureTable({ exposures }: { exposures: DeltaExposure[] }) {
     );
   }
 
+  // Mobile card layout - more compact grid showing all scenarios
+  if (isMobile) {
+    return (
+      <div style={{ display: 'flex', flexDirection: 'column', gap: theme.spacing.xs }}>
+        {exposures.map((e, i) => (
+          <div
+            key={i}
+            style={{
+              display: 'grid',
+              gridTemplateColumns: '1fr 1fr 1fr',
+              gap: theme.spacing.sm,
+              padding: theme.spacing.sm,
+              backgroundColor: e.percentChange === 0 ? theme.colors.bgTertiary : theme.colors.bgSecondary,
+              borderRadius: theme.radius.md,
+              border: e.percentChange === 0 ? `1px solid ${theme.colors.accent}` : `1px solid ${theme.colors.border}`,
+            }}
+          >
+            <div style={{ textAlign: 'center' }}>
+              <div style={{ fontSize: theme.typography.xs, color: theme.colors.textSecondary }}>Change</div>
+              <div style={{
+                fontFamily: theme.typography.fontMono,
+                fontWeight: theme.typography.semibold,
+                color: e.percentChange > 0
+                  ? theme.colors.success
+                  : e.percentChange < 0
+                    ? theme.colors.error
+                    : theme.colors.textPrimary,
+              }}>
+                {e.percentChange > 0 ? '+' : ''}{e.percentChange}%
+              </div>
+            </div>
+            <div style={{ textAlign: 'center' }}>
+              <div style={{ fontSize: theme.typography.xs, color: theme.colors.textSecondary }}>P&L</div>
+              <div style={{
+                fontFamily: theme.typography.fontMono,
+                fontWeight: theme.typography.semibold,
+                color: e.portfolioPnL >= 0 ? theme.colors.success : theme.colors.error,
+              }}>
+                {e.portfolioPnL >= 0 ? '+' : ''}{formatCurrency(e.portfolioPnL)}
+              </div>
+            </div>
+            <div style={{ textAlign: 'center' }}>
+              <div style={{ fontSize: theme.typography.xs, color: theme.colors.textSecondary }}>Delta $</div>
+              <div style={{ fontFamily: theme.typography.fontMono }}>
+                {formatCurrency(e.deltaDollars)}
+              </div>
+            </div>
+          </div>
+        ))}
+      </div>
+    );
+  }
+
+  // Desktop table layout
   return (
     <table style={styles.table}>
       <thead>
@@ -484,6 +682,8 @@ function DeltaExposureTable({ exposures }: { exposures: DeltaExposure[] }) {
 
 export function Greeks() {
   const [activeTab, setActiveTab] = useState<TabType>('overview');
+  const isDesktop = useIsDesktop();
+  const isMobile = !isDesktop;
 
   const {
     data: summary,
@@ -582,7 +782,7 @@ export function Greeks() {
                 {isLoading ? (
                   <div style={styles.emptyState}>Loading...</div>
                 ) : (
-                  <GreeksByUnderlyingTable underlyings={underlyings || []} />
+                  <GreeksByUnderlyingTable underlyings={underlyings || []} isMobile={isMobile} />
                 )}
               </Widget>
 
@@ -590,7 +790,7 @@ export function Greeks() {
                 {isLoading ? (
                   <div style={styles.emptyState}>Loading...</div>
                 ) : (
-                  <DeltaExposureTable exposures={deltaExposure || []} />
+                  <DeltaExposureTable exposures={deltaExposure || []} isMobile={isMobile} />
                 )}
               </Widget>
             </div>
@@ -608,7 +808,7 @@ export function Greeks() {
                 {isLoading ? (
                   <div style={styles.emptyState}>Loading...</div>
                 ) : (
-                  <ThetaProjectionChart projections={thetaProjection || []} />
+                  <ThetaProjectionChart projections={thetaProjection || []} isMobile={isMobile} />
                 )}
               </Widget>
             </div>
@@ -620,7 +820,7 @@ export function Greeks() {
             {isLoading ? (
               <div style={styles.emptyState}>Loading...</div>
             ) : (
-              <GreeksByUnderlyingTable underlyings={underlyings || []} />
+              <GreeksByUnderlyingTable underlyings={underlyings || []} isMobile={isMobile} />
             )}
           </Widget>
         )}
@@ -630,7 +830,7 @@ export function Greeks() {
             {isLoading ? (
               <div style={styles.emptyState}>Loading...</div>
             ) : (
-              <ThetaProjectionChart projections={thetaProjection || []} />
+              <ThetaProjectionChart projections={thetaProjection || []} isMobile={isMobile} />
             )}
           </Widget>
         )}
@@ -640,7 +840,7 @@ export function Greeks() {
             {isLoading ? (
               <div style={styles.emptyState}>Loading...</div>
             ) : (
-              <DeltaExposureTable exposures={deltaExposure || []} />
+              <DeltaExposureTable exposures={deltaExposure || []} isMobile={isMobile} />
             )}
           </Widget>
         )}

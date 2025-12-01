@@ -132,6 +132,12 @@ export function Layout({ children }: LayoutProps) {
               <Link to="/watchlists" style={styles.navLink}>
                 Watchlists
               </Link>
+              <Link to="/portfolio" style={styles.navLink}>
+                Portfolio
+              </Link>
+              <Link to="/orders" style={styles.navLink}>
+                Orders
+              </Link>
               <Link to="/analytics" style={styles.navLink}>
                 Analytics
               </Link>

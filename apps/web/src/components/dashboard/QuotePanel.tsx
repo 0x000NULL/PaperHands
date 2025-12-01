@@ -68,9 +68,8 @@ const styles: Record<string, CSSProperties> = {
     marginTop: theme.spacing.xs,
   },
   statsGrid: {
-    display: 'grid',
-    gridTemplateColumns: 'repeat(4, 1fr)',
-    gap: theme.spacing.md,
+    // Note: gridTemplateColumns is handled by .quote-stats CSS class
+    // 2 columns on mobile, 4 columns on md+
     padding: theme.spacing.md,
     backgroundColor: theme.colors.bgTertiary,
     borderRadius: theme.radius.md,
@@ -391,7 +390,7 @@ export function QuotePanel() {
               </div>
             </div>
 
-            <div style={styles.statsGrid}>
+            <div className="quote-stats" style={styles.statsGrid}>
               <div style={styles.stat}>
                 <div style={styles.statLabel}>Bid</div>
                 <div style={styles.statValue}>
@@ -420,7 +419,7 @@ export function QuotePanel() {
               </div>
             </div>
 
-            <div style={styles.statsGrid}>
+            <div className="quote-stats" style={styles.statsGrid}>
               <div style={styles.stat}>
                 <div style={styles.statLabel}>Open</div>
                 <div style={styles.statValue}>

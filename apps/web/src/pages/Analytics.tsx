@@ -11,6 +11,8 @@ import {
   AllocationViewTabs,
   type AllocationViewType,
 } from '../components/analytics';
+import { useIsDesktop } from '../hooks/useMediaQuery';
+import { MobileCard, CardRow, MobileCardList } from '../components/mobile';
 import '../styles/responsive.css';
 
 type AnalyticsPeriod = '1W' | '1M' | '3M' | 'YTD' | '1Y' | 'ALL';
@@ -269,6 +271,8 @@ export function Analytics() {
   const [activeTab, setActiveTab] = useState<TabType>('lots');
   const [allocationView, setAllocationView] = useState<AllocationViewType>('position');
   const [benchmarkSymbol, setBenchmarkSymbol] = useState<BenchmarkSymbol>('SPY');
+  const isDesktop = useIsDesktop();
+  const isMobile = !isDesktop;
 
   // Fetch settings to get default benchmark
   const { data: settings } = useQuery({
@@ -653,19 +657,19 @@ export function Analytics() {
           </div>
 
           {activeTab === 'lots' && (
-            <TaxLotsTable lots={taxLots ?? []} />
+            <TaxLotsTable lots={taxLots ?? []} isMobile={isMobile} />
           )}
 
           {activeTab === 'history' && (
-            <TradeHistoryTable sales={lotSales ?? []} />
+            <TradeHistoryTable sales={lotSales ?? []} isMobile={isMobile} />
           )}
 
           {activeTab === 'dividends' && (
-            <DividendsTable dividends={dividends ?? []} />
+            <DividendsTable dividends={dividends ?? []} isMobile={isMobile} />
           )}
 
           {activeTab === 'options' && (
-            <OptionClosuresTable closures={optionClosures ?? []} />
+            <OptionClosuresTable closures={optionClosures ?? []} isMobile={isMobile} />
           )}
         </Widget>
       </div>
@@ -673,11 +677,62 @@ export function Analytics() {
   );
 }
 
-function TaxLotsTable({ lots }: { lots: OpenTaxLot[] }) {
+function TaxLotsTable({ lots, isMobile }: { lots: OpenTaxLot[]; isMobile?: boolean }) {
   if (lots.length === 0) {
     return <div style={styles.noData}>No open tax lots</div>;
   }
 
+  // Mobile card layout
+  if (isMobile) {
+    return (
+      <MobileCardList>
+        {lots.map((lot) => (
+          <MobileCard key={lot.id}>
+            <div style={{
+              display: 'flex',
+              justifyContent: 'space-between',
+              alignItems: 'center',
+              marginBottom: theme.spacing.sm,
+            }}>
+              <span style={{
+                fontWeight: theme.typography.bold,
+                fontSize: theme.typography.base,
+              }}>
+                {lot.symbol}
+              </span>
+              <span style={{
+                padding: '2px 8px',
+                borderRadius: theme.radius.sm,
+                fontSize: theme.typography.xs,
+                fontWeight: theme.typography.semibold,
+                backgroundColor: lot.isLongTerm
+                  ? 'rgba(46, 204, 113, 0.15)'
+                  : 'rgba(241, 196, 15, 0.15)',
+                color: lot.isLongTerm ? theme.colors.positive : theme.colors.warning,
+              }}>
+                {lot.isLongTerm ? 'Long Term' : 'Short Term'}
+              </span>
+            </div>
+            <div style={{
+              display: 'grid',
+              gridTemplateColumns: '1fr 1fr',
+              gap: theme.spacing.xs,
+            }}>
+              <CardRow label="Quantity" value={lot.remainingQuantity.toFixed(4)} />
+              <CardRow label="Cost Basis" value={formatCurrency(lot.costBasisPerShare)} />
+              <CardRow
+                label="Acquired"
+                value={new Date(lot.acquiredAt).toLocaleDateString()}
+              />
+              <CardRow label="Holding" value={`${lot.holdingDays} days`} />
+            </div>
+          </MobileCard>
+        ))}
+      </MobileCardList>
+    );
+  }
+
+  // Desktop table layout
   return (
     <table style={styles.table}>
       <thead>
@@ -719,11 +774,72 @@ function TaxLotsTable({ lots }: { lots: OpenTaxLot[] }) {
   );
 }
 
-function TradeHistoryTable({ sales }: { sales: LotSale[] }) {
+function TradeHistoryTable({ sales, isMobile }: { sales: LotSale[]; isMobile?: boolean }) {
   if (sales.length === 0) {
     return <div style={styles.noData}>No trade history</div>;
   }
 
+  // Mobile card layout
+  if (isMobile) {
+    return (
+      <MobileCardList>
+        {sales.map((sale) => (
+          <MobileCard key={sale.id}>
+            <div style={{
+              display: 'flex',
+              justifyContent: 'space-between',
+              alignItems: 'center',
+              marginBottom: theme.spacing.sm,
+            }}>
+              <div>
+                <span style={{
+                  fontWeight: theme.typography.bold,
+                  fontSize: theme.typography.base,
+                }}>
+                  {sale.symbol}
+                </span>
+                <span style={{
+                  marginLeft: theme.spacing.sm,
+                  fontSize: theme.typography.xs,
+                  color: theme.colors.textSecondary,
+                }}>
+                  {new Date(sale.soldAt).toLocaleDateString()}
+                </span>
+              </div>
+              <span style={{
+                padding: '2px 8px',
+                borderRadius: theme.radius.sm,
+                fontSize: theme.typography.xs,
+                fontWeight: theme.typography.semibold,
+                backgroundColor: sale.gainType === 'long_term'
+                  ? 'rgba(46, 204, 113, 0.15)'
+                  : 'rgba(241, 196, 15, 0.15)',
+                color: sale.gainType === 'long_term' ? theme.colors.positive : theme.colors.warning,
+              }}>
+                {sale.gainType === 'long_term' ? 'Long' : 'Short'}
+              </span>
+            </div>
+            <div style={{
+              display: 'grid',
+              gridTemplateColumns: '1fr 1fr',
+              gap: theme.spacing.xs,
+            }}>
+              <CardRow label="Qty" value={sale.quantitySold.toFixed(4)} />
+              <CardRow label="Cost" value={formatCurrency(sale.costBasis)} />
+              <CardRow label="Proceeds" value={formatCurrency(sale.proceeds)} />
+              <CardRow
+                label="Gain/Loss"
+                value={formatCurrency(sale.realizedGain)}
+                valueStyle={{ color: getValueColor(sale.realizedGain), fontWeight: theme.typography.semibold }}
+              />
+            </div>
+          </MobileCard>
+        ))}
+      </MobileCardList>
+    );
+  }
+
+  // Desktop table layout
   return (
     <table style={styles.table}>
       <thead>
@@ -775,11 +891,71 @@ function TradeHistoryTable({ sales }: { sales: LotSale[] }) {
   );
 }
 
-function DividendsTable({ dividends }: { dividends: Dividend[] }) {
+function DividendsTable({ dividends, isMobile }: { dividends: Dividend[]; isMobile?: boolean }) {
   if (dividends.length === 0) {
     return <div style={styles.noData}>No dividend history</div>;
   }
 
+  // Mobile card layout
+  if (isMobile) {
+    return (
+      <MobileCardList>
+        {dividends.map((div) => (
+          <MobileCard key={div.id}>
+            <div style={{
+              display: 'flex',
+              justifyContent: 'space-between',
+              alignItems: 'center',
+              marginBottom: theme.spacing.sm,
+            }}>
+              <div>
+                <span style={{
+                  fontWeight: theme.typography.bold,
+                  fontSize: theme.typography.base,
+                }}>
+                  {div.symbol}
+                </span>
+                <span style={{
+                  marginLeft: theme.spacing.sm,
+                  fontSize: theme.typography.xs,
+                  color: theme.colors.textSecondary,
+                }}>
+                  {new Date(div.payDate).toLocaleDateString()}
+                </span>
+              </div>
+              <span style={{
+                padding: '2px 8px',
+                borderRadius: theme.radius.sm,
+                fontSize: theme.typography.xs,
+                fontWeight: theme.typography.semibold,
+                backgroundColor: div.status === 'paid'
+                  ? 'rgba(46, 204, 113, 0.15)'
+                  : 'rgba(241, 196, 15, 0.15)',
+                color: div.status === 'paid' ? theme.colors.positive : theme.colors.warning,
+              }}>
+                {div.status === 'paid' ? 'Paid' : 'Pending'}
+              </span>
+            </div>
+            <div style={{
+              display: 'grid',
+              gridTemplateColumns: '1fr 1fr',
+              gap: theme.spacing.xs,
+            }}>
+              <CardRow label="Per Share" value={`$${div.amount.toFixed(4)}`} />
+              <CardRow label="Shares" value={div.quantity.toFixed(4)} />
+              <CardRow
+                label="Total"
+                value={formatCurrency(div.totalAmount)}
+                valueStyle={{ color: theme.colors.positive, fontWeight: theme.typography.semibold }}
+              />
+            </div>
+          </MobileCard>
+        ))}
+      </MobileCardList>
+    );
+  }
+
+  // Desktop table layout
   return (
     <table style={styles.table}>
       <thead>
@@ -824,7 +1000,7 @@ function DividendsTable({ dividends }: { dividends: Dividend[] }) {
   );
 }
 
-function OptionClosuresTable({ closures }: { closures: OptionClosure[] }) {
+function OptionClosuresTable({ closures, isMobile }: { closures: OptionClosure[]; isMobile?: boolean }) {
   if (closures.length === 0) {
     return <div style={styles.noData}>No option closures</div>;
   }
@@ -863,6 +1039,84 @@ function OptionClosuresTable({ closures }: { closures: OptionClosure[] }) {
     }
   };
 
+  // Mobile card layout
+  if (isMobile) {
+    return (
+      <MobileCardList>
+        {closures.map((closure) => (
+          <MobileCard
+            key={closure.id}
+            variant={closure.optionType === 'call' ? 'call' : 'put'}
+          >
+            <div style={{
+              display: 'flex',
+              justifyContent: 'space-between',
+              alignItems: 'flex-start',
+              marginBottom: theme.spacing.sm,
+            }}>
+              <div>
+                <div style={{
+                  fontWeight: theme.typography.bold,
+                  fontSize: theme.typography.base,
+                }}>
+                  {closure.underlyingSymbol}
+                </div>
+                <div style={{
+                  fontSize: theme.typography.xs,
+                  color: theme.colors.textSecondary,
+                }}>
+                  {closure.optionType.toUpperCase()} ${closure.strikePrice} • {new Date(closure.closedAt).toLocaleDateString()}
+                </div>
+              </div>
+              <div style={{ display: 'flex', gap: theme.spacing.xs }}>
+                <span style={{
+                  padding: '2px 8px',
+                  borderRadius: theme.radius.sm,
+                  fontSize: theme.typography.xs,
+                  fontWeight: theme.typography.semibold,
+                  backgroundColor: closure.optionType === 'call'
+                    ? 'rgba(46, 204, 113, 0.15)'
+                    : 'rgba(255, 71, 87, 0.15)',
+                  color: closure.optionType === 'call' ? theme.colors.positive : theme.colors.negative,
+                }}>
+                  {closure.optionType.toUpperCase()}
+                </span>
+                <span style={{
+                  padding: '2px 8px',
+                  borderRadius: theme.radius.sm,
+                  fontSize: theme.typography.xs,
+                  fontWeight: theme.typography.semibold,
+                  backgroundColor: 'rgba(255, 255, 255, 0.1)',
+                  color: getClosureTypeColor(closure.closureType),
+                }}>
+                  {formatClosureType(closure.closureType)}
+                </span>
+              </div>
+            </div>
+            <div style={{
+              display: 'grid',
+              gridTemplateColumns: '1fr 1fr 1fr',
+              gap: theme.spacing.xs,
+            }}>
+              <CardRow label="Contracts" value={`${closure.quantityClosed}`} />
+              <CardRow
+                label="P&L"
+                value={formatCurrency(closure.realizedGain)}
+                valueStyle={{ color: getValueColor(closure.realizedGain), fontWeight: theme.typography.semibold }}
+              />
+              <CardRow
+                label="Term"
+                value={closure.gainType === 'long_term' ? 'Long' : 'Short'}
+                valueStyle={{ color: closure.gainType === 'long_term' ? theme.colors.positive : theme.colors.warning }}
+              />
+            </div>
+          </MobileCard>
+        ))}
+      </MobileCardList>
+    );
+  }
+
+  // Desktop table layout
   return (
     <table style={styles.table}>
       <thead>
