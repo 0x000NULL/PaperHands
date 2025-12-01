@@ -2,6 +2,7 @@ import { DataSource } from 'typeorm';
 import { User } from './users/entities/user.entity';
 import { UserPreferences } from './users/entities/user-preferences.entity';
 import { UserCostBasisPreference } from './users/entities/user-cost-basis-preference.entity';
+import { UserLayout } from './users/entities/user-layout.entity';
 import { Position } from './portfolio/entities/position.entity';
 import { OptionPosition } from './portfolio/entities/option-position.entity';
 import { OptionClosure } from './portfolio/entities/option-closure.entity';
@@ -33,6 +34,7 @@ export const AppDataSource = new DataSource({
     User,
     UserPreferences,
     UserCostBasisPreference,
+    UserLayout,
     Position,
     OptionPosition,
     OptionClosure,
