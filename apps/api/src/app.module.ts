@@ -50,6 +50,13 @@ import { validate } from './config/env.validation';
           configService.get('NODE_ENV') === 'production'
             ? { rejectUnauthorized: false }
             : false,
+        // Connection pool settings for production stability
+        extra: {
+          max: 10, // Maximum connections in pool
+          min: 2, // Minimum connections in pool
+          idleTimeoutMillis: 30000, // Close idle connections after 30s
+          connectionTimeoutMillis: 5000, // Timeout for acquiring connection
+        },
       }),
       inject: [ConfigService],
     }),

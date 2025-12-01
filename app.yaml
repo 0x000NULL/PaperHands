@@ -13,7 +13,7 @@ services:
     run_command: node apps/api/dist/main.js
     environment_slug: node-js
     instance_count: 1
-    instance_size_slug: apps-s-1vcpu-0.5gb
+    instance_size_slug: apps-d-1vcpu-2gb
     http_port: 3000
     health_check:
       http_path: /health
