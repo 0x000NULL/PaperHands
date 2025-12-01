@@ -215,7 +215,7 @@ const getValueColor = (value: number): string => {
 const getUrgencyColor = (daysToExpiration: number): string => {
   if (daysToExpiration <= 3) return theme.colors.negative;
   if (daysToExpiration <= 7) return theme.colors.warning;
-  if (daysToExpiration <= 14) return '#FFA500';
+  if (daysToExpiration <= 14) return theme.colors.warning;
   return theme.colors.accent;
 };
 

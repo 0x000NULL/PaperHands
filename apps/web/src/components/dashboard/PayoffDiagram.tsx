@@ -1,5 +1,6 @@
 import { useMemo, type CSSProperties } from 'react';
 import { theme } from '../../theme/constants';
+import { useChartTheme } from '../../hooks/useChartTheme';
 
 interface PayoffDiagramProps {
   optionType: 'call' | 'put';
@@ -46,18 +47,6 @@ const styles: Record<string, CSSProperties> = {
   },
 };
 
-// Colors for the diagram
-const COLORS = {
-  profit: '#10B981', // green
-  loss: '#EF4444', // red
-  strike: '#F59E0B', // yellow/orange
-  breakEven: '#3B82F6', // blue
-  currentPrice: '#8B5CF6', // purple
-  grid: '#374151', // gray
-  axis: '#6B7280', // gray
-  text: '#9CA3AF', // light gray
-};
-
 export function PayoffDiagram({
   optionType,
   side,
@@ -68,6 +57,7 @@ export function PayoffDiagram({
   width = 400,
   height = 250,
 }: PayoffDiagramProps) {
+  const chartColors = useChartTheme();
   const margin = { top: 20, right: 30, bottom: 40, left: 60 };
   const innerWidth = width - margin.left - margin.right;
   const innerHeight = height - margin.top - margin.bottom;
@@ -258,7 +248,7 @@ export function PayoffDiagram({
               y1={yScale(tick)}
               x2={innerWidth}
               y2={yScale(tick)}
-              stroke={COLORS.grid}
+              stroke={chartColors.grid}
               strokeDasharray="2,2"
               strokeWidth={0.5}
             />
@@ -270,25 +260,25 @@ export function PayoffDiagram({
             y1={yScale(0)}
             x2={innerWidth}
             y2={yScale(0)}
-            stroke={COLORS.axis}
+            stroke={chartColors.text}
             strokeWidth={1}
           />
 
           {/* Profit area */}
           {profitPath && (
-            <path d={profitPath} fill={COLORS.profit} fillOpacity={0.15} />
+            <path d={profitPath} fill={chartColors.positive} fillOpacity={0.15} />
           )}
 
           {/* Loss area */}
           {lossPath && (
-            <path d={lossPath} fill={COLORS.loss} fillOpacity={0.15} />
+            <path d={lossPath} fill={chartColors.negative} fillOpacity={0.15} />
           )}
 
           {/* Payoff line */}
           <path
             d={pathD}
             fill="none"
-            stroke={COLORS.profit}
+            stroke={chartColors.positive}
             strokeWidth={2}
           />
 
@@ -298,7 +288,7 @@ export function PayoffDiagram({
             y1={0}
             x2={xScale(strike)}
             y2={innerHeight}
-            stroke={COLORS.strike}
+            stroke={chartColors.accent}
             strokeDasharray="4,4"
             strokeWidth={1}
           />
@@ -306,7 +296,7 @@ export function PayoffDiagram({
             x={xScale(strike)}
             y={-5}
             textAnchor="middle"
-            fill={COLORS.strike}
+            fill={chartColors.accent}
             fontSize={10}
           >
             Strike
@@ -318,7 +308,7 @@ export function PayoffDiagram({
             y1={0}
             x2={xScale(data.breakEven)}
             y2={innerHeight}
-            stroke={COLORS.breakEven}
+            stroke={chartColors.palette[2]}
             strokeDasharray="4,4"
             strokeWidth={1}
           />
@@ -326,7 +316,7 @@ export function PayoffDiagram({
             x={xScale(data.breakEven)}
             y={innerHeight + 25}
             textAnchor="middle"
-            fill={COLORS.breakEven}
+            fill={chartColors.palette[2]}
             fontSize={10}
           >
             B/E: {formatPrice(data.breakEven)}
@@ -340,7 +330,7 @@ export function PayoffDiagram({
                 y1={0}
                 x2={xScale(currentPrice)}
                 y2={innerHeight}
-                stroke={COLORS.currentPrice}
+                stroke={chartColors.palette[0]}
                 strokeWidth={2}
               />
               <circle
@@ -351,13 +341,13 @@ export function PayoffDiagram({
                   )?.pnl || 0
                 )}
                 r={5}
-                fill={COLORS.currentPrice}
+                fill={chartColors.palette[0]}
               />
               <text
                 x={xScale(currentPrice)}
                 y={-5}
                 textAnchor="middle"
-                fill={COLORS.currentPrice}
+                fill={chartColors.palette[0]}
                 fontSize={10}
                 fontWeight="bold"
               >
@@ -372,7 +362,7 @@ export function PayoffDiagram({
             y1={innerHeight}
             x2={innerWidth}
             y2={innerHeight}
-            stroke={COLORS.axis}
+            stroke={chartColors.text}
             strokeWidth={1}
           />
           {xTicks.map((tick) => (
@@ -382,13 +372,13 @@ export function PayoffDiagram({
                 y1={innerHeight}
                 x2={xScale(tick)}
                 y2={innerHeight + 5}
-                stroke={COLORS.axis}
+                stroke={chartColors.text}
               />
               <text
                 x={xScale(tick)}
                 y={innerHeight + 15}
                 textAnchor="middle"
-                fill={COLORS.text}
+                fill={chartColors.text}
                 fontSize={9}
               >
                 {formatPrice(tick)}
@@ -399,7 +389,7 @@ export function PayoffDiagram({
             x={innerWidth / 2}
             y={innerHeight + 30}
             textAnchor="middle"
-            fill={COLORS.text}
+            fill={chartColors.text}
             fontSize={10}
           >
             Underlying Price
@@ -411,7 +401,7 @@ export function PayoffDiagram({
             y1={0}
             x2={0}
             y2={innerHeight}
-            stroke={COLORS.axis}
+            stroke={chartColors.text}
             strokeWidth={1}
           />
           {yTicks.map((tick) => (
@@ -421,13 +411,13 @@ export function PayoffDiagram({
                 y1={yScale(tick)}
                 x2={0}
                 y2={yScale(tick)}
-                stroke={COLORS.axis}
+                stroke={chartColors.text}
               />
               <text
                 x={-10}
                 y={yScale(tick) + 3}
                 textAnchor="end"
-                fill={COLORS.text}
+                fill={chartColors.text}
                 fontSize={9}
               >
                 {formatPnL(tick)}
@@ -438,7 +428,7 @@ export function PayoffDiagram({
             x={-45}
             y={innerHeight / 2}
             textAnchor="middle"
-            fill={COLORS.text}
+            fill={chartColors.text}
             fontSize={10}
             transform={`rotate(-90, -45, ${innerHeight / 2})`}
           >
@@ -450,16 +440,16 @@ export function PayoffDiagram({
       {/* Legend */}
       <div style={styles.legend}>
         <div style={styles.legendItem}>
-          <span style={{ ...styles.legendDot, backgroundColor: COLORS.strike }} />
+          <span style={{ ...styles.legendDot, backgroundColor: chartColors.accent }} />
           <span>Strike: {formatPrice(strike)}</span>
         </div>
         <div style={styles.legendItem}>
-          <span style={{ ...styles.legendDot, backgroundColor: COLORS.breakEven }} />
+          <span style={{ ...styles.legendDot, backgroundColor: chartColors.palette[2] }} />
           <span>Break-even</span>
         </div>
         {currentPrice && (
           <div style={styles.legendItem}>
-            <span style={{ ...styles.legendDot, backgroundColor: COLORS.currentPrice }} />
+            <span style={{ ...styles.legendDot, backgroundColor: chartColors.palette[0] }} />
             <span>Current: {formatPrice(currentPrice)}</span>
           </div>
         )}

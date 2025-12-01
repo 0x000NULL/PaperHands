@@ -15,3 +15,6 @@ export { ExpirationCalendar } from './ExpirationCalendar';
 export { IVGauge } from './IVGauge';
 export { OptionsPnLCalculator } from './OptionsPnLCalculator';
 export { PayoffDiagram } from './PayoffDiagram';
+export { WatchlistWidget } from './WatchlistWidget';
+export { DraggableWidget, WidgetWrapper } from './DraggableWidget';
+export { WidgetGrid, GridWidget } from './WidgetGrid';

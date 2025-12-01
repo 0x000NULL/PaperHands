@@ -68,7 +68,11 @@ export class AlertsService {
     return this.alertRepository.save(alert);
   }
 
-  async update(userId: string, id: string, dto: UpdateAlertDto): Promise<Alert> {
+  async update(
+    userId: string,
+    id: string,
+    dto: UpdateAlertDto,
+  ): Promise<Alert> {
     const alert = await this.findOne(userId, id);
 
     if (dto.condition !== undefined) {

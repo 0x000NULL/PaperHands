@@ -1,4 +1,8 @@
-import { Injectable, NotFoundException, ForbiddenException } from '@nestjs/common';
+import {
+  Injectable,
+  NotFoundException,
+  ForbiddenException,
+} from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository, FindOptionsWhere, LessThan } from 'typeorm';
 import { OnEvent } from '@nestjs/event-emitter';
@@ -41,7 +45,10 @@ export class NotificationsService {
     private alertsGateway: AlertsGateway,
   ) {}
 
-  async findAll(userId: string, query: QueryNotificationsDto): Promise<{
+  async findAll(
+    userId: string,
+    query: QueryNotificationsDto,
+  ): Promise<{
     notifications: Notification[];
     total: number;
     unreadCount: number;
@@ -55,12 +62,13 @@ export class NotificationsService {
       where.isRead = query.isRead;
     }
 
-    const [notifications, total] = await this.notificationRepository.findAndCount({
-      where,
-      order: { createdAt: 'DESC' },
-      take: query.limit,
-      skip: query.offset,
-    });
+    const [notifications, total] =
+      await this.notificationRepository.findAndCount({
+        where,
+        order: { createdAt: 'DESC' },
+        take: query.limit,
+        skip: query.offset,
+      });
 
     const unreadCount = await this.notificationRepository.count({
       where: { userId, isRead: false },
@@ -169,9 +177,10 @@ export class NotificationsService {
   @OnEvent('option.expired')
   async handleOptionExpired(payload: OptionExpiredEvent): Promise<void> {
     const closureText = this.getClosureTypeText(payload.closureType);
-    const gainText = payload.realizedGain !== undefined
-      ? ` (${payload.realizedGain >= 0 ? '+' : ''}$${payload.realizedGain.toFixed(2)})`
-      : '';
+    const gainText =
+      payload.realizedGain !== undefined
+        ? ` (${payload.realizedGain >= 0 ? '+' : ''}$${payload.realizedGain.toFixed(2)})`
+        : '';
 
     await this.create({
       userId: payload.userId,

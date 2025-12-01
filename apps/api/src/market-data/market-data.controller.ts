@@ -40,6 +40,14 @@ export class MarketDataController {
     return this.finnhubService.getQuotes(symbolList);
   }
 
+  @Get('search')
+  async searchSymbols(@Query('q') query: string) {
+    if (!query || query.trim().length < 1) {
+      return [];
+    }
+    return this.tradierService.searchSymbols(query);
+  }
+
   @Get('market-status')
   getMarketStatus() {
     return this.marketHoursService.getMarketHoursInfo();

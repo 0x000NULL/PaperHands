@@ -1,6 +1,7 @@
 import { useMemo, type CSSProperties } from 'react';
 import { Treemap, ResponsiveContainer, Tooltip } from 'recharts';
 import { theme } from '../../theme/constants';
+import { useChartTheme } from '../../hooks/useChartTheme';
 import { Widget } from '../dashboard/Widget';
 import { useWatchlist, useWatchlistQuotes } from '../../hooks/useWatchlists';
 import { useWatchlistStore } from '../../store/watchlistStore';
@@ -38,26 +39,24 @@ const styles: Record<string, CSSProperties> = {
 };
 
 // Color scale from red (-5%) to gray (0%) to green (+5%)
-function getColorForChange(change: number): string {
-  if (change >= 5) return '#22c55e'; // bright green
-  if (change <= -5) return '#ef4444'; // bright red
-  if (change === 0) return '#6b7280'; // gray
+function getColorForChange(
+  change: number,
+  colors: { positive: string; negative: string; neutral: string }
+): string {
+  if (change >= 5) return colors.positive;
+  if (change <= -5) return colors.negative;
+  if (change === 0) return colors.neutral;
 
-  // Interpolate
+  // For interpolation, we'll use the colors at boundaries
+  // Since the theme provides hex colors, we'll use CSS for interpolation
   if (change > 0) {
-    // Green scale (0 to 5%)
+    // More intense green as change increases
     const intensity = Math.min(change / 5, 1);
-    const r = Math.round(107 - 73 * intensity); // 107 -> 34
-    const g = Math.round(114 + 83 * intensity); // 114 -> 197
-    const b = Math.round(128 - 34 * intensity); // 128 -> 94
-    return `rgb(${r}, ${g}, ${b})`;
+    return intensity > 0.5 ? colors.positive : colors.neutral;
   } else {
-    // Red scale (-5% to 0)
+    // More intense red as change decreases
     const intensity = Math.min(Math.abs(change) / 5, 1);
-    const r = Math.round(107 + 132 * intensity); // 107 -> 239
-    const g = Math.round(114 - 46 * intensity); // 114 -> 68
-    const b = Math.round(128 - 60 * intensity); // 128 -> 68
-    return `rgb(${r}, ${g}, ${b})`;
+    return intensity > 0.5 ? colors.negative : colors.neutral;
   }
 }
 
@@ -68,11 +67,18 @@ interface TreemapCellProps {
   height: number;
   name: string;
   change: number;
+  heatmapColors?: { positive: string; negative: string; neutral: string };
 }
 
-function CustomCell({ x, y, width, height, name, change }: TreemapCellProps) {
+function CustomCell({ x, y, width, height, name, change, heatmapColors }: TreemapCellProps) {
   const showLabel = width > 40 && height > 30;
   const showChange = width > 50 && height > 45;
+
+  const colors = heatmapColors ?? {
+    positive: '#22c55e',
+    negative: '#ef4444',
+    neutral: '#6b7280',
+  };
 
   return (
     <g>
@@ -81,7 +87,7 @@ function CustomCell({ x, y, width, height, name, change }: TreemapCellProps) {
         y={y}
         width={width}
         height={height}
-        fill={getColorForChange(change)}
+        fill={getColorForChange(change, colors)}
         stroke={theme.colors.bgPrimary}
         strokeWidth={2}
         rx={4}
@@ -93,7 +99,7 @@ function CustomCell({ x, y, width, height, name, change }: TreemapCellProps) {
             y={y + height / 2 - (showChange ? 6 : 0)}
             textAnchor="middle"
             dominantBaseline="middle"
-            fill="#ffffff"
+            fill={theme.colors.textPrimary}
             fontSize={11}
             fontWeight={600}
           >
@@ -105,7 +111,7 @@ function CustomCell({ x, y, width, height, name, change }: TreemapCellProps) {
               y={y + height / 2 + 10}
               textAnchor="middle"
               dominantBaseline="middle"
-              fill="rgba(255,255,255,0.8)"
+              fill={theme.colors.textSecondary}
               fontSize={10}
             >
               {change > 0 ? '+' : ''}
@@ -173,6 +179,16 @@ function CustomTooltip({
 export function PerformanceHeatMap() {
   const { activeWatchlistId } = useWatchlistStore();
   const { data: watchlist } = useWatchlist(activeWatchlistId);
+  const chartColors = useChartTheme();
+
+  const heatmapColors = useMemo(
+    () => ({
+      positive: chartColors.heatmapPositive,
+      negative: chartColors.heatmapNegative,
+      neutral: chartColors.heatmapNeutral,
+    }),
+    [chartColors]
+  );
 
   const symbols = useMemo(
     () => watchlist?.items.map((item) => item.symbol) ?? [],
@@ -206,7 +222,7 @@ export function PerformanceHeatMap() {
               dataKey="size"
               nameKey="name"
               stroke={theme.colors.bgPrimary}
-              content={<CustomCell x={0} y={0} width={0} height={0} name="" change={0} />}
+              content={<CustomCell x={0} y={0} width={0} height={0} name="" change={0} heatmapColors={heatmapColors} />}
             >
               <Tooltip content={<CustomTooltip />} />
             </Treemap>
@@ -215,15 +231,15 @@ export function PerformanceHeatMap() {
       </div>
       <div style={styles.legend}>
         <div style={styles.legendItem}>
-          <div style={{ ...styles.legendColor, backgroundColor: '#ef4444' }} />
+          <div style={{ ...styles.legendColor, backgroundColor: heatmapColors.negative }} />
           <span>-5%+</span>
         </div>
         <div style={styles.legendItem}>
-          <div style={{ ...styles.legendColor, backgroundColor: '#6b7280' }} />
+          <div style={{ ...styles.legendColor, backgroundColor: heatmapColors.neutral }} />
           <span>0%</span>
         </div>
         <div style={styles.legendItem}>
-          <div style={{ ...styles.legendColor, backgroundColor: '#22c55e' }} />
+          <div style={{ ...styles.legendColor, backgroundColor: heatmapColors.positive }} />
           <span>+5%+</span>
         </div>
       </div>

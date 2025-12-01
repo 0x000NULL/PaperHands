@@ -1,4 +1,4 @@
-import { useRef, useEffect } from 'react';
+import { useRef, useEffect, useMemo } from 'react';
 import {
   createChart,
   ColorType,
@@ -16,6 +16,7 @@ import {
   type SeriesType,
 } from 'lightweight-charts';
 import type { Candle } from '../../types';
+import { useChartTheme } from '../../hooks/useChartTheme';
 
 export type ChartType = 'candlestick' | 'line';
 
@@ -25,66 +26,8 @@ interface ChartContainerProps {
   height?: number;
 }
 
-// Chart colors - must use actual hex values, not CSS variables
-// (lightweight-charts can't interpret CSS variables)
-const CHART_COLORS = {
-  positive: '#00FF88',      // green for up
-  negative: '#FF4757',      // red for down
-  accent: '#00D4FF',        // blue accent
-  bgSecondary: '#1a1a2e',   // dark background
-  textSecondary: '#888888', // muted text
-  border: '#2d2d44',        // border color
-  textTertiary: '#666666',  // crosshair
-};
-
-const chartThemeConfig = {
-  layout: {
-    background: { type: ColorType.Solid, color: CHART_COLORS.bgSecondary },
-    textColor: CHART_COLORS.textSecondary,
-  },
-  grid: {
-    vertLines: { color: CHART_COLORS.border },
-    horzLines: { color: CHART_COLORS.border },
-  },
-  crosshair: {
-    mode: CrosshairMode.Normal,
-    vertLine: {
-      color: CHART_COLORS.textTertiary,
-      width: 1 as const,
-      style: LineStyle.Dashed,
-    },
-    horzLine: {
-      color: CHART_COLORS.textTertiary,
-      width: 1 as const,
-      style: LineStyle.Dashed,
-    },
-  },
-  rightPriceScale: {
-    borderColor: CHART_COLORS.border,
-  },
-  timeScale: {
-    borderColor: CHART_COLORS.border,
-    timeVisible: true,
-    secondsVisible: false,
-  },
-};
-
-const candlestickColors = {
-  upColor: CHART_COLORS.positive,
-  downColor: CHART_COLORS.negative,
-  borderUpColor: CHART_COLORS.positive,
-  borderDownColor: CHART_COLORS.negative,
-  wickUpColor: CHART_COLORS.positive,
-  wickDownColor: CHART_COLORS.negative,
-};
-
-const lineColors = {
-  color: CHART_COLORS.accent,
-  lineWidth: 2 as const,
-};
-
 function transformToCandlestickData(
-  candles: Candle[],
+  candles: Candle[]
 ): CandlestickData<UTCTimestamp>[] {
   return candles.map((candle) => ({
     time: candle.timestamp as UTCTimestamp,
@@ -102,17 +45,6 @@ function transformToLineData(candles: Candle[]): LineData<UTCTimestamp>[] {
   }));
 }
 
-function transformToVolumeData(candles: Candle[]): HistogramData<UTCTimestamp>[] {
-  return candles.map((candle, index) => ({
-    time: candle.timestamp as UTCTimestamp,
-    value: candle.volume,
-    color:
-      index > 0 && candle.close >= candles[index - 1].close
-        ? 'rgba(0, 255, 136, 0.3)'
-        : 'rgba(255, 71, 87, 0.3)',
-  }));
-}
-
 export function ChartContainer({
   candles,
   chartType,
@@ -122,6 +54,82 @@ export function ChartContainer({
   const chartRef = useRef<IChartApi | null>(null);
   const seriesRef = useRef<ISeriesApi<SeriesType> | null>(null);
   const volumeSeriesRef = useRef<ISeriesApi<SeriesType> | null>(null);
+
+  // Get theme colors (re-renders when theme changes)
+  const chartColors = useChartTheme();
+
+  // Memoize chart theme config based on theme colors
+  const chartThemeConfig = useMemo(
+    () => ({
+      layout: {
+        background: { type: ColorType.Solid, color: chartColors.background },
+        textColor: chartColors.text,
+      },
+      grid: {
+        vertLines: { color: chartColors.grid },
+        horzLines: { color: chartColors.grid },
+      },
+      crosshair: {
+        mode: CrosshairMode.Normal,
+        vertLine: {
+          color: chartColors.crosshair,
+          width: 1 as const,
+          style: LineStyle.Dashed,
+        },
+        horzLine: {
+          color: chartColors.crosshair,
+          width: 1 as const,
+          style: LineStyle.Dashed,
+        },
+      },
+      rightPriceScale: {
+        borderColor: chartColors.grid,
+      },
+      timeScale: {
+        borderColor: chartColors.grid,
+        timeVisible: true,
+        secondsVisible: false,
+      },
+    }),
+    [chartColors]
+  );
+
+  // Memoize series colors
+  const candlestickColors = useMemo(
+    () => ({
+      upColor: chartColors.positive,
+      downColor: chartColors.negative,
+      borderUpColor: chartColors.positive,
+      borderDownColor: chartColors.negative,
+      wickUpColor: chartColors.positive,
+      wickDownColor: chartColors.negative,
+    }),
+    [chartColors]
+  );
+
+  const lineColors = useMemo(
+    () => ({
+      color: chartColors.accent,
+      lineWidth: 2 as const,
+    }),
+    [chartColors]
+  );
+
+  // Transform volume data with theme colors
+  const transformToVolumeData = useMemo(
+    () =>
+      (data: Candle[]): HistogramData<UTCTimestamp>[] => {
+        return data.map((candle, index) => ({
+          time: candle.timestamp as UTCTimestamp,
+          value: candle.volume,
+          color:
+            index > 0 && candle.close >= data[index - 1].close
+              ? chartColors.volumePositive
+              : chartColors.volumeNegative,
+        }));
+      },
+    [chartColors]
+  );
 
   // Initialize chart
   useEffect(() => {
@@ -149,23 +157,19 @@ export function ChartContainer({
       seriesRef.current = null;
       volumeSeriesRef.current = null;
     };
-  }, [height]);
+  }, [height, chartThemeConfig]);
+
+  // Update chart theme when colors change
+  useEffect(() => {
+    if (!chartRef.current) return;
+    chartRef.current.applyOptions(chartThemeConfig);
+  }, [chartThemeConfig]);
 
   // Update series when chart type or data changes
   useEffect(() => {
-    console.log('[ChartContainer] Effect triggered', {
-      hasChart: !!chartRef.current,
-      candlesLength: candles.length,
-      chartType,
-    });
-
     if (!chartRef.current || candles.length === 0) return;
 
     const chart = chartRef.current;
-
-    // Debug: log sample candle data with full details
-    console.log('[ChartContainer] Sample candle (first):', JSON.stringify(candles[0]));
-    console.log('[ChartContainer] Sample candle (last):', JSON.stringify(candles[candles.length - 1]));
 
     // Remove existing price series
     if (seriesRef.current) {
@@ -182,13 +186,11 @@ export function ChartContainer({
     // Create price series FIRST (default right scale)
     if (chartType === 'candlestick') {
       const candleData = transformToCandlestickData(candles);
-      console.log('[ChartContainer] Transformed candlestick (first):', JSON.stringify(candleData[0]));
       const series = chart.addSeries(CandlestickSeries, candlestickColors);
       series.setData(candleData);
       seriesRef.current = series;
     } else {
       const lineData = transformToLineData(candles);
-      console.log('[ChartContainer] Transformed line (first):', JSON.stringify(lineData[0]));
       const series = chart.addSeries(LineSeries, lineColors);
       series.setData(lineData);
       seriesRef.current = series;
@@ -207,7 +209,7 @@ export function ChartContainer({
 
     // Fit content
     chart.timeScale().fitContent();
-  }, [chartType, candles]);
+  }, [chartType, candles, candlestickColors, lineColors, transformToVolumeData]);
 
   return (
     <div
@@ -215,7 +217,7 @@ export function ChartContainer({
       style={{
         width: '100%',
         height,
-        backgroundColor: CHART_COLORS.bgSecondary,
+        backgroundColor: chartColors.background,
       }}
     />
   );

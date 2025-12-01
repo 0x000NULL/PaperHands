@@ -1,4 +1,10 @@
-import { IsOptional, IsEnum, IsBoolean, IsString, Matches } from 'class-validator';
+import {
+  IsOptional,
+  IsEnum,
+  IsBoolean,
+  IsString,
+  Matches,
+} from 'class-validator';
 import { Transform } from 'class-transformer';
 import { AlertType } from '../enums/alert-type.enum';
 

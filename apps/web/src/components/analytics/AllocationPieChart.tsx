@@ -1,21 +1,8 @@
 import { useMemo, type CSSProperties } from 'react';
 import { PieChart, Pie, Cell, ResponsiveContainer, Tooltip } from 'recharts';
 import { theme } from '../../theme/constants';
+import { useChartTheme } from '../../hooks/useChartTheme';
 import type { AllocationItem, SectorAllocation } from '../../api/client';
-
-// Color palette for pie slices (theme-compatible)
-const COLORS = [
-  '#00ff88', // accent green
-  '#3b82f6', // blue
-  '#f59e0b', // amber
-  '#ef4444', // red
-  '#8b5cf6', // purple
-  '#ec4899', // pink
-  '#14b8a6', // teal
-  '#f97316', // orange
-  '#6366f1', // indigo
-  '#84cc16', // lime
-];
 
 const styles: Record<string, CSSProperties> = {
   container: {
@@ -119,6 +106,8 @@ export function AllocationPieChart({
   type,
   maxItems = 8,
 }: AllocationPieChartProps) {
+  const chartColors = useChartTheme();
+
   const chartData = useMemo(() => {
     if (!data || data.length === 0) return [];
 
@@ -139,7 +128,7 @@ export function AllocationPieChart({
         name,
         value: item.allocation,
         marketValue,
-        color: COLORS[index % COLORS.length],
+        color: chartColors.palette[index % chartColors.palette.length],
       };
     });
 
@@ -156,7 +145,7 @@ export function AllocationPieChart({
     }
 
     return result;
-  }, [data, type, maxItems]);
+  }, [data, type, maxItems, chartColors.palette]);
 
   if (!data || data.length === 0) {
     return <div style={styles.emptyState}>No positions</div>;

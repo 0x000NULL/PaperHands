@@ -134,7 +134,7 @@ const styles: Record<string, CSSProperties> = {
 };
 
 const STATUS_COLORS: Record<string, CSSProperties> = {
-  pending: { backgroundColor: 'rgba(255, 193, 7, 0.2)', color: '#ffc107' },
+  pending: { backgroundColor: 'rgba(255, 193, 7, 0.2)', color: theme.colors.warning },
   queued: { backgroundColor: 'rgba(59, 130, 246, 0.2)', color: theme.colors.accent },
   filled: { backgroundColor: 'rgba(34, 197, 94, 0.2)', color: theme.colors.positive },
   cancelled: { backgroundColor: 'rgba(156, 163, 175, 0.2)', color: theme.colors.textSecondary },

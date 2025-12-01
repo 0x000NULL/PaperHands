@@ -1,6 +1,5 @@
 import type { CSSProperties } from 'react';
 import { Layout } from '../components/Layout';
-import { theme } from '../theme/constants';
 import {
   PortfolioSummary,
   PositionsTable,
@@ -11,116 +10,105 @@ import {
   OptionsChainPanel,
   ExpirationCalendar,
   IVGauge,
+  WatchlistWidget,
+  WidgetGrid,
+  GridWidget,
+  DraggableWidget,
 } from '../components/dashboard';
+import { PerformanceHeatMap } from '../components/heatmap/PerformanceHeatMap';
 import { useDashboardStore } from '../store/dashboardStore';
 import { SpotlightTour } from '../components/onboarding';
+import { type WidgetId, type WidgetPosition } from '../store/layoutStore';
+import { useLayoutSync } from '../hooks/useLayoutSync';
+import { QuickTradePanel } from '../components/common/QuickTradePanel';
+import { ShortcutsModal } from '../components/common/ShortcutsModal';
 
 const styles: Record<string, CSSProperties> = {
   container: {
     display: 'flex',
     flexDirection: 'column',
-    gap: theme.spacing.lg,
-    minHeight: 'calc(100vh - 80px)',
-  },
-  mainGrid: {
-    display: 'grid',
-    gridTemplateColumns: '1.5fr 1fr 1fr',
-    gap: theme.spacing.lg,
-    flex: 1,
-  },
-  positionsColumn: {
-    display: 'flex',
-    flexDirection: 'column',
-  },
-  quoteColumn: {
-    display: 'flex',
-    flexDirection: 'column',
-  },
-  tradeColumn: {
-    display: 'flex',
-    flexDirection: 'column',
-  },
-  bottomSection: {
-    display: 'flex',
-    flexDirection: 'column',
-  },
-  chartSection: {
-    display: 'flex',
-    flexDirection: 'column',
-  },
-  optionsSection: {
-    display: 'flex',
-    flexDirection: 'column',
-  },
-  bottomGrid: {
-    display: 'grid',
-    gridTemplateColumns: '2fr 1fr',
-    gap: theme.spacing.lg,
+    height: 'calc(100vh - 80px)',
+    overflow: 'hidden',
   },
 };
 
-// Responsive styles handled via CSS media query simulation
-const getResponsiveStyles = (): Record<string, CSSProperties> => {
-  // For now, we'll use fixed desktop layout
-  // In production, you'd use a useMediaQuery hook
-  return styles;
-};
-
-export function Dashboard() {
-  const responsiveStyles = getResponsiveStyles();
-  const selectedSymbol = useDashboardStore((state) => state.selectedSymbol);
-
-  return (
-    <Layout>
-      <div style={responsiveStyles.container}>
-        {/* Portfolio Summary Bar */}
+// Map widget IDs to their components
+function renderWidgetContent(widgetId: WidgetId, selectedSymbol: string | null) {
+  switch (widgetId) {
+    case 'summary':
+      return (
         <div data-tour-id="tour-portfolio-summary">
           <PortfolioSummary />
         </div>
-
-        {/* Main 3-Column Grid */}
-        <div style={responsiveStyles.mainGrid}>
-          {/* Left Column - Positions */}
-          <div style={responsiveStyles.positionsColumn} data-tour-id="tour-positions-table">
-            <PositionsTable />
-          </div>
-
-          {/* Middle Column - Quote */}
-          <div style={responsiveStyles.quoteColumn} data-tour-id="tour-quote-panel">
-            <QuotePanel />
-            {selectedSymbol && (
-              <div style={{ marginTop: theme.spacing.md }}>
-                <IVGauge symbol={selectedSymbol} />
-              </div>
-            )}
-          </div>
-
-          {/* Right Column - Trade Form */}
-          <div style={responsiveStyles.tradeColumn} data-tour-id="tour-trade-form">
-            <TradeForm />
-          </div>
+      );
+    case 'quote':
+      return (
+        <div data-tour-id="tour-quote-panel">
+          <QuotePanel />
         </div>
-
-        {/* Chart Section */}
-        <div style={responsiveStyles.chartSection}>
-          <ChartPanel />
+      );
+    case 'chart':
+      return <ChartPanel />;
+    case 'trade':
+      return (
+        <div data-tour-id="tour-trade-form">
+          <TradeForm />
         </div>
-
-        {/* Options Chain Section */}
-        <div style={responsiveStyles.optionsSection} data-tour-id="tour-options-chain">
+      );
+    case 'positions':
+      return (
+        <div data-tour-id="tour-positions-table">
+          <PositionsTable />
+        </div>
+      );
+    case 'orders':
+      return <OrderHistory />;
+    case 'watchlist':
+      return <WatchlistWidget />;
+    case 'options':
+      return (
+        <div data-tour-id="tour-options-chain">
           <OptionsChainPanel />
         </div>
+      );
+    case 'heatmap':
+      return <PerformanceHeatMap />;
+    case 'expirations':
+      return <ExpirationCalendar />;
+    case 'ivGauge':
+      return selectedSymbol ? <IVGauge symbol={selectedSymbol} /> : null;
+    default:
+      return null;
+  }
+}
 
-        {/* Bottom - Order History & Expiration Calendar */}
-        <div style={responsiveStyles.bottomGrid}>
-          <div style={responsiveStyles.bottomSection}>
-            <OrderHistory />
-          </div>
-          <div>
-            <ExpirationCalendar />
-          </div>
-        </div>
+export function Dashboard() {
+  const selectedSymbol = useDashboardStore((state) => state.selectedSymbol);
+
+  // Initialize layout sync with server
+  useLayoutSync();
+
+  return (
+    <Layout>
+      <div style={styles.container}>
+        <WidgetGrid>
+          {(visibleWidgets: WidgetPosition[]) => (
+            <>
+              {visibleWidgets.map((widget) => (
+                <GridWidget key={widget.id} widget={widget}>
+                  <DraggableWidget id={widget.id}>
+                    {renderWidgetContent(widget.id, selectedSymbol)}
+                  </DraggableWidget>
+                </GridWidget>
+              ))}
+            </>
+          )}
+        </WidgetGrid>
       </div>
+
+      {/* Global Modals */}
+      <QuickTradePanel />
+      <ShortcutsModal />
 
       {/* Spotlight Tour Overlay */}
       <SpotlightTour />

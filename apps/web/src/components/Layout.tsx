@@ -1,5 +1,5 @@
 import { Link, useNavigate } from 'react-router-dom';
-import type { CSSProperties } from 'react';
+import { useRef, type CSSProperties } from 'react';
 import { useAuthStore } from '../store/authStore';
 import { theme } from '../theme/constants';
 import { MarketStatusBadge } from './common/MarketStatusBadge';
@@ -7,6 +7,9 @@ import { ConnectionStatusBadge } from './common/ConnectionStatus';
 import { NotificationBell } from './notifications/NotificationBell';
 import { ToastContainer } from './notifications/ToastContainer';
 import { useNotifications } from '../hooks/useNotifications';
+import { useKeyboardShortcuts } from '../hooks/useKeyboardShortcuts';
+import { useQuickTradePanel } from '../store/quickTradePanelStore';
+import { useShortcutsStore } from '../store/shortcutsStore';
 
 interface LayoutProps {
   children: React.ReactNode;
@@ -81,9 +84,23 @@ const styles: Record<string, CSSProperties> = {
 export function Layout({ children }: LayoutProps) {
   const { user, logout, isAuthenticated } = useAuthStore();
   const navigate = useNavigate();
+  const searchInputRef = useRef<HTMLInputElement>(null);
+  const { open: openQuickTrade } = useQuickTradePanel();
+  const { openShortcutsModal } = useShortcutsStore();
 
   // Initialize notifications WebSocket connection
   useNotifications();
+
+  // Initialize keyboard shortcuts
+  useKeyboardShortcuts({
+    onFocusSearch: () => {
+      // Focus the search input in the header (if present)
+      searchInputRef.current?.focus();
+    },
+    onOpenTrade: () => {
+      openQuickTrade();
+    },
+  });
 
   const handleLogout = () => {
     logout();
@@ -127,6 +144,14 @@ export function Layout({ children }: LayoutProps) {
             </Link>
             <span style={styles.userEmail}>{user?.email}</span>
             <NotificationBell />
+            <button
+              onClick={openShortcutsModal}
+              style={styles.settingsLink}
+              title="Keyboard Shortcuts (Ctrl+/)"
+              data-tour-id="tour-keyboard-shortcuts"
+            >
+              &#8984;
+            </button>
             <Link to="/settings" style={styles.settingsLink} title="Settings">
               &#9881;
             </Link>

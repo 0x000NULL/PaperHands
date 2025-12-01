@@ -11,6 +11,13 @@ import {
   OptionContract,
 } from './dto/options.dto';
 
+export interface SymbolSearchResult {
+  symbol: string;
+  name: string;
+  exchange: string;
+  type: string;
+}
+
 export interface Quote {
   symbol: string;
   description: string;
@@ -1020,6 +1027,84 @@ export class TradierService {
         continue;
       }
     }
+
+    return results;
+  }
+
+  /**
+   * Search for symbols by company name or ticker
+   * Uses Tradier's /markets/lookup endpoint
+   * @param query Search query (company name or symbol prefix)
+   */
+  async searchSymbols(query: string): Promise<SymbolSearchResult[]> {
+    if (!query || query.trim().length < 1) {
+      return [];
+    }
+
+    const trimmedQuery = query.trim();
+    const cacheKey = `search:${trimmedQuery.toLowerCase()}`;
+
+    // Check cache first (1 minute TTL - search results don't change often)
+    const cached = await this.cacheManager.get<SymbolSearchResult[]>(cacheKey);
+    if (cached) {
+      return cached;
+    }
+
+    const response = await this.fetchWithRetry(
+      `${this.baseUrl}/markets/lookup?q=${encodeURIComponent(trimmedQuery)}`,
+      {
+        headers: {
+          Authorization: `Bearer ${this.apiToken}`,
+          Accept: 'application/json',
+        },
+      },
+    );
+
+    if (!response.ok) {
+      // Return empty array on errors instead of throwing
+      return [];
+    }
+
+    const data = (await response.json()) as {
+      securities: {
+        security:
+          | {
+              symbol: string;
+              description: string;
+              exchange: string;
+              type: string;
+            }
+          | Array<{
+              symbol: string;
+              description: string;
+              exchange: string;
+              type: string;
+            }>
+          | null;
+      } | null;
+    };
+
+    if (!data.securities || !data.securities.security) {
+      return [];
+    }
+
+    const securities = Array.isArray(data.securities.security)
+      ? data.securities.security
+      : [data.securities.security];
+
+    // Map and filter results (only include stocks/etfs, limit to 10)
+    const results: SymbolSearchResult[] = securities
+      .filter((s) => s.type === 'stock' || s.type === 'etf')
+      .slice(0, 10)
+      .map((s) => ({
+        symbol: s.symbol,
+        name: s.description,
+        exchange: s.exchange,
+        type: s.type,
+      }));
+
+    // Cache for 1 minute
+    await this.cacheManager.set(cacheKey, results, 60_000);
 
     return results;
   }

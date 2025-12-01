@@ -23,7 +23,7 @@ const sessionConfig: Record<
   },
   after_hours: {
     label: 'AFTER HOURS',
-    color: '#ff9500',
+    color: theme.colors.warning,
     bgColor: 'rgba(255, 149, 0, 0.15)',
   },
   closed: {

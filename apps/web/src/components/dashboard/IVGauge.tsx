@@ -1,21 +1,12 @@
 import type { CSSProperties } from 'react';
+import { useMemo } from 'react';
 import { theme } from '../../theme/constants';
-import { useVolatilityMetrics } from '../../hooks';
+import { useVolatilityMetrics, useChartTheme, getGaugeColor } from '../../hooks';
 
 interface IVGaugeProps {
   symbol: string;
   compact?: boolean;
 }
-
-// IV Rank color scale
-const getIVRankColor = (rank: number | null): string => {
-  if (rank === null) return '#6B7280'; // gray
-  if (rank <= 20) return '#3B82F6'; // blue - very low
-  if (rank <= 40) return '#10B981'; // green - low
-  if (rank <= 60) return '#F59E0B'; // yellow - moderate
-  if (rank <= 80) return '#F97316'; // orange - high
-  return '#EF4444'; // red - very high
-};
 
 const getIVRankLabel = (rank: number | null): string => {
   if (rank === null) return 'N/A';
@@ -31,7 +22,7 @@ const formatPercent = (value: number | null): string => {
   return `${(value * 100).toFixed(1)}%`;
 };
 
-const styles: Record<string, CSSProperties> = {
+const baseStyles: Record<string, CSSProperties> = {
   container: {
     padding: theme.spacing.md,
     backgroundColor: theme.colors.bgTertiary,
@@ -56,23 +47,12 @@ const styles: Record<string, CSSProperties> = {
     borderRadius: theme.radius.full,
     fontSize: theme.typography.xs,
     fontWeight: theme.typography.medium,
-    color: '#FFFFFF',
+    color: theme.colors.textPrimary,
   },
   gaugeContainer: {
     position: 'relative',
     height: '24px',
     marginBottom: theme.spacing.md,
-  },
-  gaugeTrack: {
-    position: 'absolute',
-    top: '50%',
-    transform: 'translateY(-50%)',
-    left: 0,
-    right: 0,
-    height: '8px',
-    borderRadius: theme.radius.full,
-    background: 'linear-gradient(to right, #3B82F6 0%, #10B981 25%, #F59E0B 50%, #F97316 75%, #EF4444 100%)',
-    opacity: 0.3,
   },
   gaugeFill: {
     position: 'absolute',
@@ -90,7 +70,7 @@ const styles: Record<string, CSSProperties> = {
     width: '16px',
     height: '16px',
     borderRadius: '50%',
-    border: '2px solid white',
+    border: `2px solid ${theme.colors.textPrimary}`,
     boxShadow: '0 2px 4px rgba(0,0,0,0.3)',
     transition: 'left 0.3s ease',
   },
@@ -132,16 +112,34 @@ const styles: Record<string, CSSProperties> = {
     fontSize: theme.typography.sm,
     padding: theme.spacing.sm,
   },
-  spreadPositive: {
-    color: '#EF4444', // red - IV premium (elevated)
-  },
-  spreadNegative: {
-    color: '#10B981', // green - IV discount
-  },
 };
 
 export function IVGauge({ symbol, compact = false }: IVGaugeProps) {
   const { data: metrics, isLoading, isError } = useVolatilityMetrics(symbol, !!symbol);
+  const chartColors = useChartTheme();
+
+  // Build gradient string from theme colors
+  const gaugeGradient = useMemo(
+    () =>
+      `linear-gradient(to right, ${chartColors.gaugeVeryLow} 0%, ${chartColors.gaugeLow} 25%, ${chartColors.gaugeModerate} 50%, ${chartColors.gaugeHigh} 75%, ${chartColors.gaugeVeryHigh} 100%)`,
+    [chartColors]
+  );
+
+  // Dynamic styles that depend on theme colors
+  const gaugeTrackStyle: CSSProperties = useMemo(
+    () => ({
+      position: 'absolute',
+      top: '50%',
+      transform: 'translateY(-50%)',
+      left: 0,
+      right: 0,
+      height: '8px',
+      borderRadius: theme.radius.full,
+      background: gaugeGradient,
+      opacity: 0.3,
+    }),
+    [gaugeGradient]
+  );
 
   if (!symbol) {
     return null;
@@ -149,41 +147,42 @@ export function IVGauge({ symbol, compact = false }: IVGaugeProps) {
 
   if (isLoading) {
     return (
-      <div style={styles.container}>
-        <div style={styles.loading}>Loading volatility data...</div>
+      <div style={baseStyles.container}>
+        <div style={baseStyles.loading}>Loading volatility data...</div>
       </div>
     );
   }
 
   if (isError || !metrics) {
     return (
-      <div style={styles.container}>
-        <div style={styles.noData}>Volatility data unavailable</div>
+      <div style={baseStyles.container}>
+        <div style={baseStyles.noData}>Volatility data unavailable</div>
       </div>
     );
   }
 
   const ivRank = metrics.ivRank;
-  const ivRankColor = getIVRankColor(ivRank);
+  const ivRankColor = getGaugeColor(ivRank, chartColors);
   const ivRankLabel = getIVRankLabel(ivRank);
   const gaugePosition = ivRank !== null ? Math.min(100, Math.max(0, ivRank)) : 0;
 
-  // Determine IV-HV spread color
+  // Determine IV-HV spread color (positive = elevated IV = red/high, negative = IV discount = green/low)
   const spreadStyle: CSSProperties = {
-    ...styles.statValue,
-    ...(metrics.ivHvSpread !== null && metrics.ivHvSpread > 0
-      ? styles.spreadPositive
-      : styles.spreadNegative),
+    ...baseStyles.statValue,
+    color:
+      metrics.ivHvSpread !== null && metrics.ivHvSpread > 0
+        ? chartColors.gaugeVeryHigh
+        : chartColors.gaugeLow,
   };
 
   if (compact) {
     return (
-      <div style={{ ...styles.container, padding: theme.spacing.sm }}>
+      <div style={{ ...baseStyles.container, padding: theme.spacing.sm }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: theme.spacing.sm }}>
-          <span style={{ ...styles.title, margin: 0 }}>IV Rank</span>
+          <span style={{ ...baseStyles.title, margin: 0 }}>IV Rank</span>
           <span
             style={{
-              ...styles.ivRankBadge,
+              ...baseStyles.ivRankBadge,
               backgroundColor: ivRankColor,
             }}
           >
@@ -198,12 +197,12 @@ export function IVGauge({ symbol, compact = false }: IVGaugeProps) {
   }
 
   return (
-    <div style={styles.container}>
-      <div style={styles.header}>
-        <h4 style={styles.title}>Implied Volatility</h4>
+    <div style={baseStyles.container}>
+      <div style={baseStyles.header}>
+        <h4 style={baseStyles.title}>Implied Volatility</h4>
         <span
           style={{
-            ...styles.ivRankBadge,
+            ...baseStyles.ivRankBadge,
             backgroundColor: ivRankColor,
           }}
         >
@@ -212,41 +211,41 @@ export function IVGauge({ symbol, compact = false }: IVGaugeProps) {
       </div>
 
       {/* IV Rank Gauge */}
-      <div style={styles.gaugeContainer}>
-        <div style={styles.gaugeTrack} />
+      <div style={baseStyles.gaugeContainer}>
+        <div style={gaugeTrackStyle} />
         <div
           style={{
-            ...styles.gaugeFill,
+            ...baseStyles.gaugeFill,
             width: `${gaugePosition}%`,
-            background: `linear-gradient(to right, #3B82F6, ${ivRankColor})`,
+            background: `linear-gradient(to right, ${chartColors.gaugeVeryLow}, ${ivRankColor})`,
           }}
         />
         <div
           style={{
-            ...styles.gaugeMarker,
+            ...baseStyles.gaugeMarker,
             left: `${gaugePosition}%`,
             backgroundColor: ivRankColor,
           }}
         />
       </div>
-      <div style={styles.gaugeLabels}>
+      <div style={baseStyles.gaugeLabels}>
         <span>0</span>
         <span>IV Rank: {ivRank !== null ? `${ivRank}%` : 'N/A'}</span>
         <span>100</span>
       </div>
 
       {/* Stats */}
-      <div style={{ ...styles.statsRow, marginTop: theme.spacing.md }}>
-        <div style={styles.stat}>
-          <div style={styles.statLabel}>Current IV</div>
-          <div style={styles.statValue}>{formatPercent(metrics.currentIV)}</div>
+      <div style={{ ...baseStyles.statsRow, marginTop: theme.spacing.md }}>
+        <div style={baseStyles.stat}>
+          <div style={baseStyles.statLabel}>Current IV</div>
+          <div style={baseStyles.statValue}>{formatPercent(metrics.currentIV)}</div>
         </div>
-        <div style={styles.stat}>
-          <div style={styles.statLabel}>HV (20d)</div>
-          <div style={styles.statValue}>{formatPercent(metrics.hv20)}</div>
+        <div style={baseStyles.stat}>
+          <div style={baseStyles.statLabel}>HV (20d)</div>
+          <div style={baseStyles.statValue}>{formatPercent(metrics.hv20)}</div>
         </div>
-        <div style={styles.stat}>
-          <div style={styles.statLabel}>IV-HV Spread</div>
+        <div style={baseStyles.stat}>
+          <div style={baseStyles.statLabel}>IV-HV Spread</div>
           <div style={spreadStyle}>
             {metrics.ivHvSpread !== null
               ? `${metrics.ivHvSpread > 0 ? '+' : ''}${(metrics.ivHvSpread * 100).toFixed(1)}%`
@@ -256,20 +255,20 @@ export function IVGauge({ symbol, compact = false }: IVGaugeProps) {
       </div>
 
       {/* 52-Week Range */}
-      <div style={{ ...styles.statsRow, marginTop: theme.spacing.sm }}>
-        <div style={styles.stat}>
-          <div style={styles.statLabel}>52W Low</div>
-          <div style={styles.statValue}>{formatPercent(metrics.iv52WeekLow)}</div>
+      <div style={{ ...baseStyles.statsRow, marginTop: theme.spacing.sm }}>
+        <div style={baseStyles.stat}>
+          <div style={baseStyles.statLabel}>52W Low</div>
+          <div style={baseStyles.statValue}>{formatPercent(metrics.iv52WeekLow)}</div>
         </div>
-        <div style={styles.stat}>
-          <div style={styles.statLabel}>IV Percentile</div>
-          <div style={styles.statValue}>
+        <div style={baseStyles.stat}>
+          <div style={baseStyles.statLabel}>IV Percentile</div>
+          <div style={baseStyles.statValue}>
             {metrics.ivPercentile !== null ? `${metrics.ivPercentile}%` : '-'}
           </div>
         </div>
-        <div style={styles.stat}>
-          <div style={styles.statLabel}>52W High</div>
-          <div style={styles.statValue}>{formatPercent(metrics.iv52WeekHigh)}</div>
+        <div style={baseStyles.stat}>
+          <div style={baseStyles.statLabel}>52W High</div>
+          <div style={baseStyles.statValue}>{formatPercent(metrics.iv52WeekHigh)}</div>
         </div>
       </div>
     </div>

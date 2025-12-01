@@ -60,7 +60,7 @@ const styles: Record<string, CSSProperties> = {
   },
   roleAdmin: {
     backgroundColor: 'rgba(255, 193, 7, 0.2)',
-    color: '#ffc107',
+    color: theme.colors.warning,
   },
   roleSuperAdmin: {
     backgroundColor: 'rgba(59, 130, 246, 0.2)',

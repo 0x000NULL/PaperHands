@@ -8,6 +8,8 @@ export type TourStopId =
   | 'trade-form'
   | 'positions-table'
   | 'options-chain'
+  | 'layout-toolbar'
+  | 'keyboard-shortcuts'
   | 'navigation';
 
 export const TOUR_STOPS: { id: TourStopId; title: string; description: string }[] = [
@@ -40,6 +42,18 @@ export const TOUR_STOPS: { id: TourStopId; title: string; description: string }[
     title: 'Trade Options',
     description:
       'Explore calls and puts across different expirations. View Greeks, open interest, and click to trade directly.',
+  },
+  {
+    id: 'layout-toolbar',
+    title: 'Customize Your Layout',
+    description:
+      'Click "Edit Layout" to drag, resize, show, or hide widgets. Choose from preset layouts or create your own. Changes sync automatically.',
+  },
+  {
+    id: 'keyboard-shortcuts',
+    title: 'Pro Tips: Keyboard Shortcuts',
+    description:
+      'Press Ctrl+/ (Cmd+/ on Mac) to see all shortcuts. Quick trade with Ctrl+T, search with Ctrl+K, and navigate pages with Ctrl+1-7.',
   },
   {
     id: 'navigation',

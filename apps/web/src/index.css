@@ -9,8 +9,8 @@ body {
     sans-serif;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
-  background-color: #0a0a0f;
-  color: #ffffff;
+  background-color: var(--color-bgPrimary);
+  color: var(--color-textPrimary);
 }
 
 input,
@@ -23,27 +23,27 @@ select {
   min-height: 100vh;
 }
 
-/* Scrollbar styling for dark theme */
+/* Scrollbar styling - uses theme colors */
 ::-webkit-scrollbar {
   width: 8px;
   height: 8px;
 }
 
 ::-webkit-scrollbar-track {
-  background: #12121a;
+  background: var(--color-bgSecondary);
 }
 
 ::-webkit-scrollbar-thumb {
-  background: #2a2a3e;
+  background: var(--color-border);
   border-radius: 4px;
 }
 
 ::-webkit-scrollbar-thumb:hover {
-  background: #3a3a4e;
+  background: var(--color-bgHover);
 }
 
 /* Selection styling */
 ::selection {
-  background-color: rgba(0, 255, 136, 0.3);
-  color: #ffffff;
+  background-color: var(--color-accentGlow);
+  color: var(--color-textPrimary);
 }

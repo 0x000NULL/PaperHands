@@ -28,3 +28,4 @@ export {
   useCompanyFundamentals,
   researchKeys,
 } from './useResearch';
+export { useChartTheme, getGaugeColor } from './useChartTheme';

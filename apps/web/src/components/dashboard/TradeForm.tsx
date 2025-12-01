@@ -127,7 +127,7 @@ const styles: Record<string, CSSProperties> = {
   warning: {
     padding: theme.spacing.sm,
     backgroundColor: 'rgba(255, 200, 0, 0.1)',
-    color: '#FFD700',
+    color: theme.colors.warning,
     borderRadius: theme.radius.sm,
     fontSize: theme.typography.xs,
   },

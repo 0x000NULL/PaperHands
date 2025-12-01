@@ -118,7 +118,12 @@ export class AlertMonitorService implements OnModuleInit {
       if (!alert.isActive) continue;
 
       try {
-        const triggered = await this.evaluateAlert(alert, price, prevPrice, volume);
+        const triggered = await this.evaluateAlert(
+          alert,
+          price,
+          prevPrice,
+          volume,
+        );
         if (triggered) {
           await this.triggerAlert(alert, price);
         }
@@ -145,7 +150,7 @@ export class AlertMonitorService implements OnModuleInit {
         break;
 
       case AlertType.PERCENT_CHANGE:
-        const openPrice = this.openPrices.get(alert.symbol!);
+        const openPrice = this.openPrices.get(alert.symbol);
         if (!openPrice) return false;
         currentValue = ((currentPrice - openPrice) / openPrice) * 100;
         break;
@@ -161,9 +166,10 @@ export class AlertMonitorService implements OnModuleInit {
     }
 
     const targetValue = Number(alert.targetValue);
-    const lastCheckedValue = alert.lastCheckedValue !== null
-      ? Number(alert.lastCheckedValue)
-      : undefined;
+    const lastCheckedValue =
+      alert.lastCheckedValue !== null
+        ? Number(alert.lastCheckedValue)
+        : undefined;
 
     let triggered = false;
 
@@ -199,8 +205,13 @@ export class AlertMonitorService implements OnModuleInit {
   /**
    * Trigger an alert and send notification
    */
-  private async triggerAlert(alert: Alert, currentValue: number): Promise<void> {
-    this.logger.log(`Alert triggered: ${alert.id} for ${alert.symbol} at ${currentValue}`);
+  private async triggerAlert(
+    alert: Alert,
+    currentValue: number,
+  ): Promise<void> {
+    this.logger.log(
+      `Alert triggered: ${alert.id} for ${alert.symbol} at ${currentValue}`,
+    );
 
     // Deactivate alert (one-time)
     await this.alertsService.deactivate(alert.id);
@@ -366,17 +377,25 @@ export class AlertMonitorService implements OnModuleInit {
               totalValue,
               Number(alert.targetValue),
               alert.condition,
-              alert.lastCheckedValue !== null ? Number(alert.lastCheckedValue) : undefined,
+              alert.lastCheckedValue !== null
+                ? Number(alert.lastCheckedValue)
+                : undefined,
             );
 
             if (triggered) {
               await this.triggerPortfolioAlert(alert, totalValue);
             } else if (alert.condition === AlertCondition.CROSSES) {
-              await this.alertsService.updateLastCheckedValue(alert.id, totalValue);
+              await this.alertsService.updateLastCheckedValue(
+                alert.id,
+                totalValue,
+              );
             }
           }
         } catch (error) {
-          this.logger.error(`Failed to check portfolio alerts for user ${userId}:`, error);
+          this.logger.error(
+            `Failed to check portfolio alerts for user ${userId}:`,
+            error,
+          );
         }
       }
     } catch (error) {
@@ -408,7 +427,8 @@ export class AlertMonitorService implements OnModuleInit {
       // Check alerts for each user
       for (const [userId, userAlerts] of alertsByUser) {
         try {
-          const greeksSummary = await this.portfolioGreeksService.getPortfolioGreeks(userId);
+          const greeksSummary =
+            await this.portfolioGreeksService.getPortfolioGreeks(userId);
 
           for (const alert of userAlerts) {
             const greekType = alert.greekType?.toLowerCase();
@@ -439,17 +459,25 @@ export class AlertMonitorService implements OnModuleInit {
               currentValue,
               Number(alert.targetValue),
               alert.condition,
-              alert.lastCheckedValue !== null ? Number(alert.lastCheckedValue) : undefined,
+              alert.lastCheckedValue !== null
+                ? Number(alert.lastCheckedValue)
+                : undefined,
             );
 
             if (triggered) {
               await this.triggerGreeksAlert(alert, currentValue);
             } else if (alert.condition === AlertCondition.CROSSES) {
-              await this.alertsService.updateLastCheckedValue(alert.id, currentValue);
+              await this.alertsService.updateLastCheckedValue(
+                alert.id,
+                currentValue,
+              );
             }
           }
         } catch (error) {
-          this.logger.error(`Failed to check Greeks alerts for user ${userId}:`, error);
+          this.logger.error(
+            `Failed to check Greeks alerts for user ${userId}:`,
+            error,
+          );
         }
       }
     } catch (error) {
@@ -491,8 +519,13 @@ export class AlertMonitorService implements OnModuleInit {
   /**
    * Trigger a portfolio value alert
    */
-  private async triggerPortfolioAlert(alert: Alert, currentValue: number): Promise<void> {
-    this.logger.log(`Portfolio alert triggered: ${alert.id} at $${currentValue.toFixed(2)}`);
+  private async triggerPortfolioAlert(
+    alert: Alert,
+    currentValue: number,
+  ): Promise<void> {
+    this.logger.log(
+      `Portfolio alert triggered: ${alert.id} at $${currentValue.toFixed(2)}`,
+    );
 
     await this.alertsService.deactivate(alert.id);
 
@@ -524,9 +557,16 @@ export class AlertMonitorService implements OnModuleInit {
   /**
    * Trigger a Greeks alert
    */
-  private async triggerGreeksAlert(alert: Alert, currentValue: number): Promise<void> {
-    const greekName = alert.greekType?.charAt(0).toUpperCase() + (alert.greekType?.slice(1) || '');
-    this.logger.log(`Greeks alert triggered: ${alert.id} - ${greekName} at ${currentValue.toFixed(4)}`);
+  private async triggerGreeksAlert(
+    alert: Alert,
+    currentValue: number,
+  ): Promise<void> {
+    const greekName =
+      alert.greekType?.charAt(0).toUpperCase() +
+      (alert.greekType?.slice(1) || '');
+    this.logger.log(
+      `Greeks alert triggered: ${alert.id} - ${greekName} at ${currentValue.toFixed(4)}`,
+    );
 
     await this.alertsService.deactivate(alert.id);
 

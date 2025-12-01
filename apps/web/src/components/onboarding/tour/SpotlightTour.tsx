@@ -12,6 +12,8 @@ const TOUR_ELEMENT_IDS: Record<TourStopId, string> = {
   'trade-form': 'tour-trade-form',
   'positions-table': 'tour-positions-table',
   'options-chain': 'tour-options-chain',
+  'layout-toolbar': 'tour-layout-toolbar',
+  'keyboard-shortcuts': 'tour-keyboard-shortcuts',
   'navigation': 'tour-navigation',
 };
 

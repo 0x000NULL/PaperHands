@@ -38,7 +38,7 @@ A comprehensive checklist combining the feature roadmap with implementation stat
 |---|------|---------|-------|
 | 16 | Leaderboards | §10 | Competition |
 | 17 | Trading Journal | §15 | Notes, screenshots |
-| 18 | Keyboard Shortcuts | §11 | Power users |
+| 18 | ~~Keyboard Shortcuts~~ | §11 | ✅ Done |
 | 19 | ~~Earnings Calendar~~ | §9 | ✅ Done |
 | 20 | Public Profiles | §10 | Opt-in sharing |
 
@@ -227,12 +227,12 @@ A comprehensive checklist combining the feature roadmap with implementation stat
 |---------|--------|-------|
 | Dark Mode | ⬜ Todo | |
 | Light Mode Toggle | ⬜ Todo | |
-| Keyboard Shortcuts | ⬜ Todo | |
-| Widget Dashboard | ⬜ Todo | Draggable layout |
-| Quick Trade Widget | ⬜ Todo | Floating panel |
-| Recent Symbols | ⬜ Todo | |
-| Search Autocomplete | ⬜ Todo | Symbol + company name |
-| Onboarding Tutorial | ⬜ Todo | |
+| Keyboard Shortcuts | ✅ Done | Ctrl+K search, Ctrl+T trade, Ctrl+1-7 nav, Ctrl+/ help |
+| Widget Dashboard | ✅ Done | Drag-drop, show/hide, presets, server sync |
+| Quick Trade Widget | ✅ Done | Floating slide-in panel |
+| Recent Symbols | ✅ Done | Persisted in searchStore |
+| Search Autocomplete | ✅ Done | Tradier symbol lookup with company names |
+| Onboarding Tutorial | ✅ Done | Spotlight tour with 8 stops |
 
 ---
 
@@ -744,14 +744,14 @@ This section tracks non-feature improvements to code quality, architecture, test
 | 8. Alerts & Notifications | 7 | 4 | 11 |
 | 9. News & Research | 8 | 0 | 8 |
 | 10. Social & Community | 0 | 7 | 7 |
-| 11. User Experience | 0 | 8 | 8 |
+| 11. User Experience | 6 | 2 | 8 |
 | 12. Mobile Responsive | 0 | 20 | 20 |
 | 13. Progressive Web App | 0 | 15 | 15 |
 | 14. Paper Trading Specific | 0 | 10 | 10 |
 | 15. Power User Features | 0 | 9 | 9 |
 | 16. Account & Security | 0 | 7 | 7 |
 | 17. Native Mobile Apps | 0 | 7 | 7 |
-| **Features Subtotal** | **75** | **107** | **182** |
+| **Features Subtotal** | **81** | **101** | **182** |
 | | | | |
 | **Technical Debt** | | | |
 | 18. DevOps & Tooling | 0 | 14 | 14 |
@@ -764,8 +764,8 @@ This section tracks non-feature improvements to code quality, architecture, test
 | 25. Documentation | 0 | 13 | 13 |
 | **Tech Debt Subtotal** | **0** | **114** | **114** |
 | | | | |
-| **GRAND TOTAL** | **75** | **221** | **296** |
+| **GRAND TOTAL** | **81** | **215** | **296** |
 
-**Feature Progress: 41% Complete**
+**Feature Progress: 45% Complete**
 **Tech Debt Progress: 0% Complete**
-**Overall Progress: 25% Complete**
+**Overall Progress: 27% Complete**

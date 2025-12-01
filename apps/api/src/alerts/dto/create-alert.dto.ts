@@ -17,9 +17,7 @@ export class CreateAlertDto {
   type: AlertType;
 
   // Required for non-portfolio alerts
-  @ValidateIf(
-    (o: CreateAlertDto) => o.type !== AlertType.PORTFOLIO_VALUE,
-  )
+  @ValidateIf((o: CreateAlertDto) => o.type !== AlertType.PORTFOLIO_VALUE)
   @IsString()
   @Matches(/^[A-Z]{1,5}$/, { message: 'Symbol must be 1-5 uppercase letters' })
   @MaxLength(5)

@@ -43,6 +43,7 @@ import type {
   SecFiling,
   InsiderSummary,
   CompanyFundamentals,
+  SymbolSearchResult,
 } from '../types';
 
 // API base URL from build-time environment variable
@@ -284,6 +285,10 @@ export const api = {
   // Volatility
   getVolatilityMetrics: (symbol: string) =>
     request<VolatilityMetrics>(`/market-data/volatility/${symbol}`),
+
+  // Symbol Search
+  searchSymbols: (query: string) =>
+    request<SymbolSearchResult[]>(`/market-data/search?q=${encodeURIComponent(query)}`),
 
   // Analytics
   getPerformanceHistory: (period: string = '1M') =>
@@ -627,6 +632,32 @@ export const api = {
 
   getCompanyFundamentals: (symbol: string) =>
     request<CompanyFundamentals>(`/research/fundamentals/${symbol}`),
+
+  // Layouts
+  getLayouts: () => request<UserLayout[]>('/layouts'),
+
+  getDefaultLayout: () => request<UserLayout | null>('/layouts/default'),
+
+  createLayout: (name: string, widgets: WidgetPositionDto[], isDefault?: boolean) =>
+    request<UserLayout>('/layouts', {
+      method: 'POST',
+      body: JSON.stringify({ name, widgets, isDefault }),
+    }),
+
+  updateLayout: (
+    id: string,
+    data: { name?: string; widgets?: WidgetPositionDto[]; isDefault?: boolean },
+  ) =>
+    request<UserLayout>(`/layouts/${id}`, {
+      method: 'PATCH',
+      body: JSON.stringify(data),
+    }),
+
+  deleteLayout: (id: string) =>
+    request<void>(`/layouts/${id}`, { method: 'DELETE' }),
+
+  setDefaultLayout: (id: string) =>
+    request<UserLayout>(`/layouts/${id}/set-default`, { method: 'POST' }),
 };
 
 // Analytics types
@@ -921,4 +952,24 @@ export interface QueryNotificationsParams {
   isRead?: boolean;
   limit?: number;
   offset?: number;
+}
+
+// Layout types
+export interface WidgetPositionDto {
+  id: string;
+  x: number;
+  y: number;
+  width: number;
+  height: number;
+  visible: boolean;
+}
+
+export interface UserLayout {
+  id: string;
+  userId: string;
+  name: string;
+  widgets: WidgetPositionDto[];
+  isDefault: boolean;
+  createdAt: string;
+  updatedAt: string;
 }

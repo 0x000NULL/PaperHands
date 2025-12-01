@@ -36,7 +36,7 @@ const typeConfig: Record<
   },
   alert: {
     icon: '\uD83D\uDD14', // bell
-    color: '#FFD60A',
+    color: theme.colors.warning,
     bgColor: 'rgba(255, 214, 10, 0.1)',
     borderColor: 'rgba(255, 214, 10, 0.3)',
   },

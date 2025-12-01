@@ -122,7 +122,10 @@ export class AlertsGateway implements OnGatewayConnection, OnGatewayDisconnect {
   }
 
   @SubscribeMessage('ping')
-  handlePing(@ConnectedSocket() client: Socket): { event: string; data: number } {
+  handlePing(@ConnectedSocket() client: Socket): {
+    event: string;
+    data: number;
+  } {
     return { event: 'pong', data: Date.now() };
   }
 

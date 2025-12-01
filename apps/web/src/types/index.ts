@@ -39,6 +39,13 @@ export interface Quote {
   pct_from_52_low: number | null;
 }
 
+export interface SymbolSearchResult {
+  symbol: string;
+  name: string;
+  exchange: string;
+  type: string;
+}
+
 export interface Position {
   symbol: string;
   quantity: number;

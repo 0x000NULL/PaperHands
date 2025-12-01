@@ -11,6 +11,7 @@ import {
   useSecFilings,
   useInsiderTransactions,
   useCompanyFundamentals,
+  useChartTheme,
 } from '../hooks';
 import type {
   NewsItem,
@@ -129,7 +130,7 @@ const styles: Record<string, CSSProperties> = {
   },
   badgeMedium: {
     backgroundColor: 'rgba(251, 191, 36, 0.2)',
-    color: '#fbbf24',
+    color: theme.colors.warning,
   },
   badgeLow: {
     backgroundColor: 'rgba(34, 197, 94, 0.2)',
@@ -375,6 +376,7 @@ function EconomicTab() {
 function AnalystTab({ symbol }: { symbol: string }) {
   const { data: ratings, isLoading } = useAnalystRatings(symbol || null);
   const { data: fundamentals } = useCompanyFundamentals(symbol || null);
+  const chartColors = useChartTheme();
 
   if (!symbol) return <div style={styles.symbolRequired}>Enter a symbol above to see analyst ratings</div>;
   if (isLoading) return <div style={styles.loading}>Loading analyst data...</div>;
@@ -415,27 +417,27 @@ function AnalystTab({ symbol }: { symbol: string }) {
         {latestRec && total > 0 && (
           <div style={styles.ratingBar}>
             {latestRec.strongBuy > 0 && (
-              <div style={{ ...styles.ratingSegment, flex: latestRec.strongBuy, backgroundColor: '#22c55e' }}>
+              <div style={{ ...styles.ratingSegment, flex: latestRec.strongBuy, backgroundColor: chartColors.gaugeVeryLow }}>
                 {latestRec.strongBuy}
               </div>
             )}
             {latestRec.buy > 0 && (
-              <div style={{ ...styles.ratingSegment, flex: latestRec.buy, backgroundColor: '#86efac' }}>
+              <div style={{ ...styles.ratingSegment, flex: latestRec.buy, backgroundColor: chartColors.gaugeLow }}>
                 {latestRec.buy}
               </div>
             )}
             {latestRec.hold > 0 && (
-              <div style={{ ...styles.ratingSegment, flex: latestRec.hold, backgroundColor: '#9ca3af' }}>
+              <div style={{ ...styles.ratingSegment, flex: latestRec.hold, backgroundColor: chartColors.gaugeNeutral }}>
                 {latestRec.hold}
               </div>
             )}
             {latestRec.sell > 0 && (
-              <div style={{ ...styles.ratingSegment, flex: latestRec.sell, backgroundColor: '#fca5a5' }}>
+              <div style={{ ...styles.ratingSegment, flex: latestRec.sell, backgroundColor: chartColors.gaugeHigh }}>
                 {latestRec.sell}
               </div>
             )}
             {latestRec.strongSell > 0 && (
-              <div style={{ ...styles.ratingSegment, flex: latestRec.strongSell, backgroundColor: '#ef4444' }}>
+              <div style={{ ...styles.ratingSegment, flex: latestRec.strongSell, backgroundColor: chartColors.gaugeVeryHigh }}>
                 {latestRec.strongSell}
               </div>
             )}

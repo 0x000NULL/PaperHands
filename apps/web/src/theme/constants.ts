@@ -28,6 +28,40 @@ export const theme = {
     // Borders
     border: 'var(--color-border)',
     borderFocus: 'var(--color-borderFocus)',
+
+    // Chart colors (note: lightweight-charts needs actual hex values via useChartTheme hook)
+    chartPositive: 'var(--color-chartPositive)',
+    chartNegative: 'var(--color-chartNegative)',
+    chartAccent: 'var(--color-chartAccent)',
+    chartBackground: 'var(--color-chartBackground)',
+    chartText: 'var(--color-chartText)',
+    chartGrid: 'var(--color-chartGrid)',
+    chartCrosshair: 'var(--color-chartCrosshair)',
+    chartVolumePositive: 'var(--color-chartVolumePositive)',
+    chartVolumeNegative: 'var(--color-chartVolumeNegative)',
+
+    // Gauge/indicator colors (5-level scale)
+    gaugeVeryLow: 'var(--color-gaugeVeryLow)',
+    gaugeLow: 'var(--color-gaugeLow)',
+    gaugeModerate: 'var(--color-gaugeModerate)',
+    gaugeHigh: 'var(--color-gaugeHigh)',
+    gaugeVeryHigh: 'var(--color-gaugeVeryHigh)',
+    gaugeNeutral: 'var(--color-gaugeNeutral)',
+
+    // Heatmap colors
+    heatmapPositive: 'var(--color-heatmapPositive)',
+    heatmapNegative: 'var(--color-heatmapNegative)',
+    heatmapNeutral: 'var(--color-heatmapNeutral)',
+
+    // Pie chart palette
+    chartPalette1: 'var(--color-chartPalette1)',
+    chartPalette2: 'var(--color-chartPalette2)',
+    chartPalette3: 'var(--color-chartPalette3)',
+    chartPalette4: 'var(--color-chartPalette4)',
+    chartPalette5: 'var(--color-chartPalette5)',
+    chartPalette6: 'var(--color-chartPalette6)',
+    chartPalette7: 'var(--color-chartPalette7)',
+    chartPalette8: 'var(--color-chartPalette8)',
   },
 
   typography: {
